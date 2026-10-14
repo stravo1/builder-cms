@@ -40,7 +40,7 @@ CMS collections use extension-owned `CMS <name>` DocTypes. `CMS Collection` stor
 
 Each page data source has a marked section in `page_data_script`. The plugin updates its own sections and keeps other script content. Public rendering reads the configured fields with `frappe.db.get_all`; a configured published field excludes drafts. Removing or adding a CMS field updates these generated sources.
 
-Content edits appear on published pages without republishing their layouts. Draft or unknown detail slugs currently render empty content rather than a 404. Image fields accept URLs; upload files through Desk.
+Content edits appear on published pages without republishing their layouts. A detail page answers 404 for a draft or unknown slug. In the editor, **Preview content** also lists drafts. This needs a Builder version that gives page scripts `in_preview`. A page connected with version 0.1.0 gets this after you connect it again. Image fields accept URLs; upload files through Desk.
 
 ## Development
 

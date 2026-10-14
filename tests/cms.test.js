@@ -129,12 +129,41 @@ describe("DataSource", () => {
 		);
 	});
 
-	it("reads one document, or an empty one", () => {
+	it("reads the entry a route names, shows drafts in the editor, and answers 404 on a live page", () => {
+		const post = new DataSource({
+			...posts.toJSON(),
+			name: "post",
+			type: "Document",
+			fields: ["title"],
+			filters: [["slug", "=", "{{ route.slug }}"]],
+			publishedField: "published",
+		});
+
+		expect(post.toPython()).toBe(
+			[
+				'cms_post_filters = {"slug": frappe.form_dict.get("slug")}',
+				"if not in_preview:",
+				'    cms_post_filters["published"] = 1',
+				"cms_post_rows = frappe.db.get_all(",
+				'    "Blog Post",',
+				"    filters=cms_post_filters,",
+				'    fields=["name", "title"],',
+				'    order_by="creation desc",',
+				"    limit_page_length=1,",
+				")",
+				"if not cms_post_rows and not in_preview:",
+				'    raise frappe.PageDoesNotExistError("No entry at this address.")',
+				"data.post = (cms_post_rows or [{}])[0]",
+			].join("\n"),
+		);
+		expect(post.getPreviewOptions().filters).toEqual({});
+	});
+
+	it("reads a fixed single entry without a 404", () => {
 		const post = new DataSource({ ...posts.toJSON(), name: "post", type: "Document", filters: [] });
 
-		expect(post.toPython()).toMatch(/^data\.post = \(frappe\.db\.get_all\(/);
-		expect(post.toPython()).toContain("limit_page_length=1,");
-		expect(post.toPython()).toMatch(/\) or \[\{\}\]\)\[0\]$/);
+		expect(post.toPython()).not.toContain("PageDoesNotExistError");
+		expect(post.toPython()).toMatch(/\ndata\.post = \(cms_post_rows or \[\{\}\]\)\[0\]$/);
 	});
 
 	it("keeps drafts out with a setting, not a filter row", () => {

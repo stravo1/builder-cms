@@ -59,9 +59,9 @@ export class DataSource {
 	}
 
 	/** The Frappe filter form. The preview leaves out route filters: the editor has no route. */
-	getFilters(forPreview = false) {
+	getFilters(forPreview = false, publishedOnly = true) {
 		// a setting, not a filter row, so nobody removes it by mistake and puts drafts on a public page
-		const filters = this.publishedField ? { [this.publishedField]: 1 } : {};
+		const filters = this.publishedField && publishedOnly ? { [this.publishedField]: 1 } : {};
 		for (const [field, operator, value] of this.filters) {
 			const sent = this.getFilterValue(value, forPreview);
 			if (sent === undefined) continue;
@@ -70,12 +70,16 @@ export class DataSource {
 		return filters;
 	}
 
-	getReadCall() {
+	get hasRouteFilter() {
+		return this.filters.some(([, , value]) => typeof value === "string" && ROUTE_VALUE.test(value));
+	}
+
+	getReadCall(filters = toPython(this.getFilters())) {
 		const limit = this.isList ? this.limit : 1;
 		return [
 			`frappe.db.get_all(`,
 			`    ${toPython(this.doctype)},`,
-			`    filters=${toPython(this.getFilters())},`,
+			`    filters=${filters},`,
 			`    fields=${toPython(this.readFields)},`,
 			`    order_by=${toPython(this.orderBy)},`,
 			`    limit_page_length=${limit},`,
@@ -117,10 +121,28 @@ export class DataSource {
 		];
 	}
 
+	/**
+	 * One entry. `in_preview` is true in the editor, which shows drafts too. A live
+	 * page whose route names no entry answers 404.
+	 */
+	getEntryLines() {
+		const filters = `cms_${this.name}_filters`;
+		const rows = `cms_${this.name}_rows`;
+		const published = this.publishedField ? [`if not in_preview:`, `    ${filters}[${toPython(this.publishedField)}] = 1`] : [];
+		const missing = [`if not ${rows} and not in_preview:`, `    raise frappe.PageDoesNotExistError("No entry at this address.")`];
+		return [
+			`${filters} = ${toPython(this.getFilters(false, false))}`,
+			...published,
+			`${rows} = ${this.getReadCall(filters).join("\n")}`,
+			...(this.hasRouteFilter ? missing : []),
+			`data.${this.name} = (${rows} or [{}])[0]`,
+		];
+	}
+
 	/** The Python of the section. A list with a link adds `url` to each row. */
 	toPython() {
+		if (!this.isList) return this.getEntryLines().join("\n");
 		const read = this.getReadCall();
-		if (!this.isList) return [`data.${this.name} = (${read[0]}`, ...read.slice(1, -1), `) or [{}])[0]`].join("\n");
 		if (!this.link) return [`data.${this.name} = ${read[0]}`, ...read.slice(1)].join("\n");
 		return [...this.getLinkLines(), `    for row in ${read.join("\n    ")}`, `]`].join("\n");
 	}
@@ -130,7 +152,8 @@ export class DataSource {
 		return {
 			doctype: this.doctype,
 			fields: this.readFields,
-			filters: this.getFilters(true),
+			// like the script in the editor, one entry may be a draft
+			filters: this.getFilters(true, this.isList),
 			orderBy: this.orderBy,
 			pageLength: this.isList ? this.limit : 1,
 		};

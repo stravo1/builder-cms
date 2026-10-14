@@ -7,10 +7,10 @@
 			type="combobox"
 			label="Entry"
 			placeholder="Choose an entry…"
-			:options="entries.map((entry) => ({ label: entry.title, value: entry.slug }))"
+			:options="entries.map((entry) => ({ label: entry.published ? entry.title : `${entry.title} · Draft`, value: entry.slug }))"
 			@update:model-value="preview"
 		/>
-		<p v-else class="cms-hint">Publish an entry to preview this template with its content.</p>
+		<p v-else class="cms-hint">Add an entry to preview this template with its content.</p>
 		<Button label="Manage entries" icon-left="lucide-database" variant="subtle" @click="manage" />
 	</section>
 </template>
@@ -26,7 +26,7 @@ const entries = shallowRef([]);
 const { run } = useTask();
 const load = () =>
 	run(async () => {
-		entries.value = (await props.collection.getEntries()).filter((entry) => entry.published);
+		entries.value = await props.collection.getEntries();
 	});
 watch(() => props.collection.doctype, load, { immediate: true });
 const preview = (slug) => slug && run(() => builder.page.setRouteVariables({ slug }));
