@@ -51,7 +51,7 @@ npm test
 npm run build
 ```
 
-Load the dev server through Builder's **Extensions → Load dev extension**. The SDK origin in `vite.config.js` must match the editor origin.
+Load the dev server through Builder's **Extensions → Load dev extension**. The SDK origin in `vite.config.js` must match the editor origin. Restart the dev server after changing dependencies.
 
 The host needs `data.subscribe` for live table updates across extension frames, the block binding APIs, `page.open`, `page.setRouteVariables`, `page.refreshData`, `ui.openUrl`, dialog sizing, and `schema.updateDoctype` with explicit `removeFields`. After changing the host SDK, run `yarn build:sdk` from Builder's `frontend` directory.
 

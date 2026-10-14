@@ -39,10 +39,8 @@ export default defineConfig({
 		// frappe-ui ships source, and several of its dependencies are CommonJS. A
 		// frame importing one of those unbundled fails on a missing named export
 		include: [
-			"frappe-ui > feather-icons",
 			"frappe-ui > debug",
 			"engine.io-client",
-			"interactjs",
 			"highlight.js/lib/core",
 		],
 		esbuildOptions: { plugins: [IconsEsbuild({ compiler: "vue3" })] },
