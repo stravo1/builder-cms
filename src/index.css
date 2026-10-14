@@ -26,7 +26,8 @@
 	}
 }
 
-/* match Builder's dark base, which pins surface-base to gray-950 */
-[data-theme="dark"] .bg-surface-base {
+/* match Builder's dark base, which pins surface-base to gray-950. Not a checkbox:
+   this rule would beat its checked fill and hide its dark tick */
+[data-theme="dark"] .bg-surface-base:not([type="checkbox"]) {
 	background-color: var(--gray-950);
 }
