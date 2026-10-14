@@ -1,20 +1,35 @@
 <template>
-	<div class="flex h-full min-h-0 flex-col bg-surface-base text-ink-gray-8">
-		<EntryEditor
-			v-if="collection && view === 'entry'"
-			:collection="collection"
-			:entry-name="entryName"
-			@back="view = 'table'"
-			@saved="view = 'table'"
-		/>
-		<CollectionEntries
-			v-else-if="collection"
-			:collection="collection"
-			@create="
-				entryName = '';
-				view = 'entry';
-			"
-		/>
+	<div class="cms-dialog relative flex h-full min-h-0 overflow-hidden text-ink-gray-8">
+		<template v-if="collection">
+			<div class="flex min-h-0 min-w-0 flex-1 flex-col">
+				<CollectionEntries
+					ref="entries"
+					:collection="collection"
+					:selected-entry-name="selection?.name || ''"
+					@edit="selectEntry"
+					@create="selectEntry({ name: '' })"
+				/>
+			</div>
+			<aside
+				v-if="selection"
+				aria-label="Entry details"
+				class="entry-drawer absolute inset-y-0 right-0 z-40 flex min-h-0 w-3/5 max-w-2xl flex-col border-l border-outline-gray-2"
+			>
+				<p v-if="hasUnsavedWarning" role="status" class="cms-hint px-3 py-2">
+					Save or cancel your changes before opening another entry.
+				</p>
+				<EntryEditor
+					:key="selection.name"
+					ref="editor"
+					:collection="collection"
+					:entry-name="selection.name"
+					:field-name="selection.fieldName"
+					is-drawer
+					@back="closeEntry"
+					@saved="entrySaved"
+				/>
+			</aside>
+		</template>
 		<div v-else class="cms-empty">
 			<p role="status">{{ error || "Loading collection…" }}</p>
 			<Button v-if="error" label="Try again" @click="load" />
@@ -34,11 +49,34 @@ const props = defineProps({
 	doctype: { type: String, required: true },
 	view: { type: String, default: "table" },
 	entryName: { type: String, default: "" },
+	fieldName: { type: String, default: "" },
 });
 const collection = shallowRef(null);
-const view = ref(props.view);
-const entryName = ref(props.entryName);
+const selection = shallowRef(props.view === "entry" ? { name: props.entryName, fieldName: props.fieldName } : null);
+const entries = ref(null);
+const editor = ref(null);
+const hasUnsavedWarning = ref(false);
 const { error, run } = useTask();
+const selectEntry = (row, fieldName = "") => {
+	if (selection.value?.name === row.name) {
+		if (fieldName) selection.value = { ...selection.value, fieldName };
+		return;
+	}
+	if (editor.value?.isDirty || editor.value?.isRunning) {
+		hasUnsavedWarning.value = true;
+		return;
+	}
+	selection.value = { name: row.name, fieldName };
+	hasUnsavedWarning.value = false;
+};
+const closeEntry = () => {
+	selection.value = null;
+	hasUnsavedWarning.value = false;
+};
+const entrySaved = async () => {
+	closeEntry();
+	await entries.value.reload();
+};
 const load = () =>
 	run(async () => {
 		collection.value = (await Collection.all()).find((each) => each.doctype === props.doctype);
@@ -46,3 +84,11 @@ const load = () =>
 	});
 onMounted(load);
 </script>
+
+<style scoped>
+.cms-dialog,
+.cms-dialog :deep(.bg-surface-base),
+.entry-drawer {
+	background-color: var(--surface-base);
+}
+</style>

@@ -6,7 +6,7 @@
 		</p>
 		<TabButtons v-model="tab" :options="tabs" />
 	</div>
-	<EntryList v-if="tab === 'entries'" :collection="collection" />
+	<CollectionEntries v-if="tab === 'entries'" :collection="collection" is-panel />
 	<div v-else-if="tab === 'pages'" class="flex flex-col gap-3 p-3">
 		<div class="cms-card">
 			<span class="cms-section-label">Index page</span>
@@ -44,7 +44,7 @@ import builder from "frappe-builder-extension-sdk";
 import { Button, TabButtons } from "frappe-ui";
 import { ref } from "vue";
 import PanelHeader from "../PanelHeader.vue";
-import EntryList from "../entries/EntryList.vue";
+import CollectionEntries from "../table/CollectionEntries.vue";
 import CollectionConfig from "./CollectionConfig.vue";
 import { useTask } from "../useTask.js";
 

@@ -9,12 +9,21 @@ import { useTask } from "../useTask.js";
 export const useCollectionRows = (collection) => {
 	const fields = shallowRef([]);
 	const rows = ref([]);
-	const { isRunning, run } = useTask();
+	const hasMore = ref(false);
+	const { isRunning, error, run } = useTask();
 
 	const reload = () =>
 		run(async () => {
 			fields.value = await collection.getTableFields();
 			rows.value = await collection.getRows(fields.value);
+			hasMore.value = rows.value.length === 200;
+		});
+
+	const loadMore = () =>
+		run(async () => {
+			const loaded = await collection.getRows(fields.value, { start: rows.value.length });
+			rows.value.push(...loaded);
+			hasMore.value = loaded.length === 200;
 		});
 
 	const replaceRow = (saved) => {
@@ -36,5 +45,5 @@ export const useCollectionRows = (collection) => {
 			rows.value = rows.value.filter((each) => each.name !== row.name);
 		}, "Entry deleted");
 
-	return { fields, rows, isRunning, reload, saveCell, deleteRow };
+	return { fields, rows, hasMore, isRunning, error, run, reload, loadMore, saveCell, deleteRow };
 };

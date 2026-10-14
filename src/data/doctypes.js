@@ -51,14 +51,13 @@ export const getDoctypeFields = async (doctype) => {
 	return fields.filter((field) => field.fieldname && !NO_VALUE_TYPES.has(field.fieldtype) && !isSecretField(field));
 };
 
+const MULTILINE_TYPES = new Set(["Small Text", "Text", "Long Text", "Text Editor", "Markdown Editor", "Code"]);
+
+export const isMultilineField = (field) => MULTILINE_TYPES.has(field.fieldtype);
+
 const EDITABLE_TYPES = new Set([
 	"Data",
-	"Small Text",
-	"Text",
-	"Long Text",
-	"Text Editor",
-	"Markdown Editor",
-	"Code",
+	...MULTILINE_TYPES,
 	"Attach",
 	"Attach Image",
 	"Date",

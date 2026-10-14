@@ -3,15 +3,17 @@
 		v-if="field.fieldtype === 'Check'"
 		:model-value="Boolean(value)"
 		:disabled="readOnly"
+		:aria-label="field.label || field.fieldname"
 		@update:model-value="(checked) => emit('save', checked ? 1 : 0)"
 	/>
 	<button
-		v-else-if="field.fieldtype === 'Text Editor'"
+		v-else-if="isMultilineField(field)"
 		class="line-clamp-2 w-full rounded px-2 text-left text-sm text-ink-gray-7 hover:bg-surface-gray-2"
 		:disabled="readOnly"
+		:aria-label="field.label || field.fieldname"
 		@click="emit('open')"
 	>
-		{{ plainText || "Empty" }}
+		{{ preview || "Empty" }}
 	</button>
 	<FormControl
 		v-else-if="field.fieldtype === 'Select'"
@@ -21,6 +23,7 @@
 		:model-value="value ?? ''"
 		:options="selectOptions"
 		:disabled="readOnly"
+		:aria-label="field.label || field.fieldname"
 		@update:model-value="(chosen) => emit('save', chosen)"
 	/>
 	<FormControl
@@ -30,6 +33,7 @@
 		variant="ghost"
 		:model-value="value ?? ''"
 		:disabled="readOnly"
+		:aria-label="field.label || field.fieldname"
 		@update:model-value="(picked) => picked !== value && emit('save', picked || null)"
 	/>
 	<div v-else class="flex items-center gap-2">
@@ -47,6 +51,7 @@
 			:type="isNumber ? 'number' : 'text'"
 			:placeholder="field.fieldtype === 'Attach Image' ? 'Image URL' : ''"
 			:disabled="readOnly"
+			:aria-label="field.label || field.fieldname"
 			@keydown.enter="($event) => $event.target.blur()"
 			@keydown.esc="cancel"
 			@blur="commit"
@@ -57,6 +62,7 @@
 <script setup>
 import { Checkbox, FormControl, TextInput } from "frappe-ui";
 import { computed, ref, watch } from "vue";
+import { isMultilineField } from "../../data/doctypes.js";
 
 const NUMBER_TYPES = ["Int", "Float", "Currency", "Percent"];
 
@@ -65,10 +71,10 @@ const emit = defineEmits(["save", "open"]);
 
 const isNumber = computed(() => NUMBER_TYPES.includes(props.field.fieldtype));
 const selectOptions = computed(() => ["", ...(props.field.options || "").split("\n").filter(Boolean)]);
-/** Rich text shows as plain text. DOMParser runs no scripts and loads no images. */
-const plainText = computed(() =>
-	props.value ? new DOMParser().parseFromString(String(props.value), "text/html").body.textContent : "",
-);
+const preview = computed(() => {
+	if (props.field.fieldtype !== "Text Editor") return String(props.value ?? "");
+	return props.value ? new DOMParser().parseFromString(String(props.value), "text/html").body.textContent : "";
+});
 
 /** The text being typed. It follows the saved value until the user types. */
 const draft = ref("");

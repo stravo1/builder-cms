@@ -25,7 +25,7 @@ import CollectionWorkspace from "./CollectionWorkspace.vue";
 import CollectionList from "./CollectionList.vue";
 import NewCollection from "./NewCollection.vue";
 
-/** The panel configures collections. Their entries open in a large dialog, from "Show entries". */
+/** The panel owns collection navigation. */
 const emit = defineEmits(["usePage"]);
 const view = ref({ name: "collections" });
 </script>

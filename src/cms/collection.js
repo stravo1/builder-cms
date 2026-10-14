@@ -317,11 +317,12 @@ export class Collection {
 	}
 
 	/** Every row, with the fields the table shows. */
-	getRows(fields) {
+	getRows(fields, { start = 0 } = {}) {
 		return builder.data.getList(this.doctype, {
 			fields: ["name", ...fields.map((field) => field.fieldname)],
 			orderBy: "modified desc",
 			pageLength: 200,
+			start,
 		});
 	}
 

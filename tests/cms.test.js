@@ -22,7 +22,7 @@ vi.mock("frappe-builder-extension-sdk", () => ({
 
 const { Collection, getCustomFields, markSameLabels, normalizeUrl } = await import("../src/cms/collection.js");
 const { getRetiredRoute } = await import("../src/cms/routes.js");
-const { getDoctypeFields } = await import("../src/data/doctypes.js");
+const { getDoctypeFields, isMultilineField } = await import("../src/data/doctypes.js");
 const { getListBlock } = await import("../src/blocks/pageBlocks.js");
 const { getPageRole, isCollectionPageOf, isIndexPageOf } = await import("../src/cms/pageActions.js");
 const { DataSource } = await import("../src/data/dataSource.js");
@@ -390,5 +390,17 @@ describe("collections", () => {
 		],
 	])("refuses %s", (_case, fields) => {
 		expect(() => getCustomFields(fields)).toThrow("Pick another name");
+	});
+});
+
+describe("multiline fields", () => {
+	it.each(["Small Text", "Text", "Long Text", "Text Editor", "Markdown Editor", "Code"])(
+		"opens %s in the entry editor",
+		(fieldtype) => {
+			expect(isMultilineField({ fieldtype })).toBe(true);
+		},
+	);
+	it.each(["Data", "Check", "Date", "Select", "Attach Image"])("keeps %s inline", (fieldtype) => {
+		expect(isMultilineField({ fieldtype })).toBe(false);
 	});
 });

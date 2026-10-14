@@ -6,8 +6,8 @@ Create content in Frappe and connect it to Builder pages. A collection can be a 
 
 Open **CMS → Collections**, then choose a collection.
 
-- **Entries** shows searchable content. Choose an entry to edit it, or **New entry** to create one. The form saves when you submit it. Leave a new CMS entry's slug empty to generate it from its title.
-- **Table view** lets you edit cells directly. Text saves on Enter or blur. Escape cancels a text edit. Rich text has a separate editor; a failed save keeps it open.
+- **Entries** shows an editable table in the panel. Search the loaded rows, edit a cell, or choose **New entry**. The edit button opens the entry form in the panel. Click rich text or another multiline field to open the same form and focus that field. **Save** returns to the table; **Cancel** discards the draft. Leave a new CMS entry's slug empty to generate it from its title.
+- **View in dialog** expands the table into a large dialog. The edit button and multiline cells open an entry drawer over its right side. The table keeps its width and columns. The clicked field receives focus. **Save** closes the drawer and updates both tables immediately; **Cancel** discards the draft. A failed save keeps it open. The drawer has only a left divider, with no shadow or animation. Save or cancel pending changes before switching entries. Simple text cells save on Enter or blur; Escape cancels the edit.
 - **Pages** opens the collection's index and detail pages, or takes you to page setup.
 - **Settings** manages the URL and CMS fields. Fields show ten at a time; **Load more fields** reveals the next ten. Custom CMS fields can be removed after confirmation. Title, Slug, and Published are required by the CMS.
 
@@ -53,7 +53,7 @@ npm run build
 
 Load the dev server through Builder's **Extensions → Load dev extension**. The SDK origin in `vite.config.js` must match the editor origin.
 
-The host needs the block binding APIs, `page.open`, `page.setRouteVariables`, `ui.openUrl`, dialog sizing, and `schema.updateDoctype` with explicit `removeFields`. After changing the host SDK, run `yarn build:sdk` from Builder's `frontend` directory.
+The host needs `data.subscribe` for live table updates across extension frames, the block binding APIs, `page.open`, `page.setRouteVariables`, `ui.openUrl`, dialog sizing, and `schema.updateDoctype` with explicit `removeFields`. After changing the host SDK, run `yarn build:sdk` from Builder's `frontend` directory.
 
 The extension uses `page.edit`, `data.access`, and `schema.write`. Schema changes require the site's normal System Manager permissions. Removing a field uses `update_doctype(remove_fields=[...])`; omitted fields remain.
 
@@ -65,5 +65,10 @@ Optional variables:
 
 - `CMS_TEST_ORIGIN`, `CMS_TEST_USER`, `CMS_TEST_DEV_SERVER`: local site and extension connection.
 - `CMS_TEST_MAPPED_COLLECTION`, `CMS_TEST_OWNED_COLLECTION`: collections for the table restrictions and entry form checks.
+- `CMS_TEST_COMPLEX_FIELDS`: comma-separated multiline field labels to check in the mapped collection (defaults to `Bio,Email Signature` for `User`).
 - `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH`: an existing Chromium executable.
+- `CMS_TEST_COLOR_SCHEME`: `light` or `dark` for theme checks.
+- `CMS_TEST_PANEL_SCREENSHOT`, `CMS_TEST_TABLE_SCREENSHOT`: screenshots of the panel and expanded table.
+- `CMS_TEST_ENTRY_PANEL_SCREENSHOT`, `CMS_TEST_ENTRY_DIALOG_SCREENSHOT`: screenshots of the entry form in each view.
+- `CMS_TEST_EDIT_ENTRY=1`: verify saves across panel and dialog, restore the first entry's title, then create, edit, and remove test entries. Use only disposable QA content.
 - `CMS_TEST_SCREENSHOT`: screenshot output path (defaults to `/tmp/cms-browser-check.png`).
