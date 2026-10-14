@@ -1,19 +1,22 @@
 <template>
 	<div class="flex h-full flex-col bg-surface-base text-ink-gray-8">
-		<Tabs v-model="activeTab" :tabs="TABS" class="flex h-full flex-col">
-			<template #tab-panel="{ tab }">
-				<div class="flex h-full flex-col overflow-y-auto">
-					<CollectionsTab v-if="tab.label === 'Collections'" @use-page="activeTab = 1" />
+		<Tabs v-model="activeTab" class="flex h-full flex-col">
+			<TabList class="shrink-0 px-3 py-1">
+				<TabTrigger v-for="tab in TABS" :key="tab.value" :value="tab.value" :label="tab.label" />
+			</TabList>
+			<TabPanel v-for="tab in TABS" :key="tab.value" :value="tab.value" class="min-h-0 flex-1 overflow-y-auto">
+				<div class="flex h-full flex-col">
+					<CollectionsTab v-if="tab.value === 0" @use-page="activeTab = 1" />
 					<PageTab v-else @collections="activeTab = 0" />
 				</div>
-			</template>
+			</TabPanel>
 		</Tabs>
 	</div>
 </template>
 
 <script setup>
 import builder from "frappe-builder-extension-sdk";
-import { setConfig, Tabs } from "frappe-ui";
+import { setConfig, TabList, TabPanel, Tabs, TabTrigger } from "frappe-ui";
 import { ref } from "vue";
 import CollectionsTab from "./collections/CollectionsTab.vue";
 import PageTab from "./page/PageTab.vue";

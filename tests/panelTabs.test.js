@@ -4,6 +4,9 @@ import { renderToString } from "@vue/server-renderer";
 
 vi.mock("frappe-ui", async () => ({
 	Tabs: (await import("../node_modules/frappe-ui/src/components/Tabs/Tabs.vue")).default,
+	TabList: (await import("../node_modules/frappe-ui/src/components/Tabs/TabList.vue")).default,
+	TabPanel: (await import("../node_modules/frappe-ui/src/components/Tabs/TabPanel.vue")).default,
+	TabTrigger: (await import("../node_modules/frappe-ui/src/components/Tabs/TabTrigger.vue")).default,
 	setConfig: vi.fn(),
 }));
 vi.mock("frappe-builder-extension-sdk", () => ({ default: { data: { fetcher: vi.fn() } } }));
