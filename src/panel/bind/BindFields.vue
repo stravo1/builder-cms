@@ -2,7 +2,7 @@
 	<div class="flex min-h-0 flex-col gap-3 p-3">
 		<p v-if="context.selection.count !== 1" class="cms-hint">Select one text, image, link, or container block.</p>
 		<p v-else-if="context.readOnly" class="cms-hint">This page is read-only.</p>
-		<p v-else-if="isRunning && !source" class="cms-hint">Loading fields…</p>
+		<SectionLoader v-else-if="isRunning && !source" label="Loading fields" />
 		<p v-else-if="!fitting.length" class="cms-hint">
 			{{
 				sources.length
@@ -67,6 +67,7 @@ import { Collection } from "../../cms/collection.js";
 import { getDoctypeFields } from "../../data/doctypes.js";
 import { PageData } from "../../data/pageData.js";
 import { useTask } from "../useTask.js";
+import SectionLoader from "../SectionLoader.vue";
 
 const props = defineProps({ revision: { type: Number, default: 0 } });
 const context = useBuilderContext(["selection", "page", "routeVariables", "readOnly"]);

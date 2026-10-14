@@ -11,7 +11,8 @@
 			class="mb-2"
 		/>
 		<p v-if="error" role="alert" class="cms-error p-2">{{ error }}</p>
-		<p v-else-if="isRunning" class="p-2 text-p-sm text-ink-gray-5">Loading…</p>
+		<!-- only with nothing to show yet, so a refresh does not flash it -->
+		<SectionLoader v-else-if="isRunning && !collections.length" label="Loading collections" />
 		<p v-else-if="!collections.length" class="p-2 text-p-sm text-ink-gray-5">
 			No collections yet. A collection is a content type, such as Blog Post.
 		</p>
@@ -41,6 +42,7 @@ import { computed, onMounted, ref } from "vue";
 import { Collection } from "../../cms/collection.js";
 import PanelHeader from "../PanelHeader.vue";
 import { useTask } from "../useTask.js";
+import SectionLoader from "../SectionLoader.vue";
 
 const emit = defineEmits(["open", "create"]);
 const collections = ref([]);

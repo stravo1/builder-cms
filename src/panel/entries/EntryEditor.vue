@@ -9,7 +9,7 @@
 			</p>
 		</header>
 		<div class="min-h-0 flex-1 overflow-y-auto p-3">
-			<p v-if="!isLoaded && !error" class="cms-hint">Loading entry…</p>
+			<SectionLoader v-if="!isLoaded && !error" label="Loading entry" />
 			<div v-if="isLoaded" class="flex flex-col gap-4">
 				<p v-if="!collection.isOwned" class="cms-hint">
 					Saved to {{ collection.doctype }}. Use Desk for child tables and advanced fields.
@@ -49,6 +49,7 @@ import { slugify } from "../../cms/collection.js";
 import { getWritableFields } from "../../data/doctypes.js";
 import { useTask } from "../useTask.js";
 import EntryField from "./EntryField.vue";
+import SectionLoader from "../SectionLoader.vue";
 
 const props = defineProps({
 	collection: { type: Object, required: true },
@@ -62,7 +63,7 @@ const fieldControls = new Map();
 const draft = ref({});
 const initialDraft = ref("");
 const isLoaded = ref(false);
-const { run, isRunning, error } = useTask();
+const { run, runCached, isRunning, error } = useTask();
 const isDirty = computed(() => isLoaded.value && JSON.stringify(draft.value) !== initialDraft.value);
 defineExpose({ isDirty, isRunning });
 
@@ -74,17 +75,23 @@ watch(
 	{ flush: "post" },
 );
 
-onMounted(() =>
-	run(async () => {
-		fields.value = getWritableFields(await props.collection.getTableFields());
-		const entry = props.entryName ? await props.collection.getEntry(props.entryName) : {};
-		draft.value = Object.fromEntries(
-			fields.value.map((field) => [field.fieldname, entry[field.fieldname] ?? getDefault(field)]),
-		);
-		initialDraft.value = JSON.stringify(draft.value);
-		isLoaded.value = true;
-	}),
-);
+const readEntry = async () => ({
+	fields: getWritableFields(await props.collection.getTableFields()),
+	entry: props.entryName ? await props.collection.getEntry(props.entryName) : {},
+});
+
+/** Only before the user types, so a fresh read never replaces their draft. */
+const show = (read) => {
+	if (isDirty.value) return;
+	fields.value = read.fields;
+	draft.value = Object.fromEntries(
+		read.fields.map((field) => [field.fieldname, read.entry[field.fieldname] ?? getDefault(field)]),
+	);
+	initialDraft.value = JSON.stringify(draft.value);
+	isLoaded.value = true;
+};
+
+onMounted(() => runCached(`entry:${props.collection.doctype}:${props.entryName}`, readEntry, show));
 
 // a new entry's slug follows its title. An existing slug stays, because live links use it
 watch(

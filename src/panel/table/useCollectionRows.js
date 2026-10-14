@@ -10,14 +10,21 @@ export const useCollectionRows = (collection) => {
 	const fields = shallowRef([]);
 	const rows = ref([]);
 	const hasMore = ref(false);
-	const { isRunning, error, run } = useTask();
+	const { isRunning, error, run, runCached } = useTask();
 
-	const reload = () =>
-		run(async () => {
-			fields.value = await collection.getTableFields();
-			rows.value = await collection.getRows(fields.value);
-			hasMore.value = rows.value.length === 200;
-		});
+	const readTable = async () => {
+		const tableFields = await collection.getTableFields();
+		return { fields: tableFields, rows: await collection.getRows(tableFields) };
+	};
+
+	// a copy, so an edit in this table does not change the cached rows
+	const show = (table) => {
+		fields.value = table.fields;
+		rows.value = [...table.rows];
+		hasMore.value = table.rows.length === 200;
+	};
+
+	const reload = () => runCached(`rows:${collection.doctype}`, readTable, show);
 
 	const loadMore = () =>
 		run(async () => {

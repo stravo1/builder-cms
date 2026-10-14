@@ -10,7 +10,8 @@
 	<div v-else class="flex min-h-0 flex-1 flex-col">
 		<header class="flex shrink-0 flex-col gap-2 border-b border-outline-gray-1" :class="isPanel ? 'p-3' : 'pb-3'">
 			<div class="flex items-center justify-between gap-2">
-				<span class="text-p-sm text-ink-gray-5"
+				<!-- invisible, not removed, so the buttons keep their place while the rows load -->
+				<span class="text-p-sm text-ink-gray-5" :class="{ invisible: !fields.length }"
 					>{{ query ? `${shownRows.length} of ${rows.length}` : rows.length }} entries</span
 				>
 				<div class="flex items-center gap-1">
@@ -28,7 +29,7 @@
 			<FormControl v-model="query" placeholder="Search entries…" aria-label="Search entries" />
 		</header>
 		<p v-if="error" role="alert" class="cms-error p-3">{{ error }}</p>
-		<p v-if="isRunning && !fields.length" class="cms-hint p-3">Loading entries…</p>
+		<SectionLoader v-if="isRunning && !fields.length" label="Loading entries" />
 		<template v-else>
 			<p v-if="!collection.isOwned" class="cms-hint px-3 py-2">
 				Edit the simple fields here. Open a row in Desk for the rest.
@@ -63,6 +64,7 @@ import { Button, FormControl } from "frappe-ui";
 import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, ref, shallowRef } from "vue";
 import CollectionTable from "./CollectionTable.vue";
 import { useCollectionRows } from "./useCollectionRows.js";
+import SectionLoader from "../SectionLoader.vue";
 
 const EntryEditor = defineAsyncComponent(() => import("../entries/EntryEditor.vue"));
 const props = defineProps({

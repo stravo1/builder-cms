@@ -3,7 +3,7 @@
 	<div v-else :key="context.page.name" class="flex flex-col">
 		<p v-if="context.readOnly" class="cms-hint p-3">This page is read-only.</p>
 		<p v-if="error" role="alert" class="cms-error p-3">{{ error }}</p>
-		<p v-if="isRunning && !isLoaded" class="cms-hint p-3">Loading page connection…</p>
+		<SectionLoader v-if="isRunning && !isLoaded" label="Loading page connection" />
 		<fieldset v-else :disabled="context.readOnly" class="min-w-0">
 			<PageRoleChooser
 				:collections="collections"
@@ -36,6 +36,7 @@ import BindFields from "../bind/BindFields.vue";
 import AddToPage from "../collections/AddToPage.vue";
 import DetailPagePreview from "./DetailPagePreview.vue";
 import PageRoleChooser from "./PageRoleChooser.vue";
+import SectionLoader from "../SectionLoader.vue";
 
 const emit = defineEmits(["collections"]);
 const context = useBuilderContext(["page", "readOnly"]);

@@ -8,7 +8,7 @@ const { builder } = vi.hoisted(() => ({
 }));
 vi.mock("frappe-builder-extension-sdk", () => ({ default: builder }));
 
-const { cached, forget } = await import("../src/data/cache.js");
+const { cached, forget, hasCopy, showThenRefresh } = await import("../src/data/cache.js");
 const { Collection } = await import("../src/cms/collection.js");
 
 describe("the read cache", () => {
@@ -55,5 +55,25 @@ describe("the read cache", () => {
 		builder.data.getList.mockResolvedValue([{ name: "row", collection: "Blog Post", label: "Articles" }]);
 		await posts.saveSettings({ label: "Articles" });
 		expect((await Collection.all())[0].label).toBe("Articles");
+	});
+
+	it("shows the last copy at once, then the fresh value", async () => {
+		const shown = [];
+		await showThenRefresh("rows:Blog", async () => ["first"], (rows) => shown.push(rows));
+		expect(hasCopy("rows:Blog")).toBe(true);
+
+		let finish;
+		const refresh = showThenRefresh("rows:Blog", () => new Promise((resolve) => (finish = resolve)), (rows) => shown.push(rows));
+		// the copy shows before the read ends
+		expect(shown).toEqual([["first"], ["first"]]);
+		finish(["second"]);
+		await refresh;
+		expect(shown).toEqual([["first"], ["first"], ["second"]]);
+	});
+
+	it("keeps copies when the reads are forgotten", async () => {
+		await showThenRefresh("rows:Kept", async () => ["row"], () => {});
+		forget();
+		expect(hasCopy("rows:Kept")).toBe(true);
 	});
 });

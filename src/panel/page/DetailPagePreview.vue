@@ -23,11 +23,13 @@ import { useTask } from "../useTask.js";
 const props = defineProps({ collection: { type: Object, required: true } });
 const context = useBuilderContext(["routeVariables"]);
 const entries = shallowRef([]);
-const { run } = useTask();
+const { run, runCached } = useTask();
 const load = () =>
-	run(async () => {
-		entries.value = await props.collection.getEntries();
-	});
+	runCached(
+		`entries:${props.collection.doctype}`,
+		() => props.collection.getEntries(),
+		(list) => (entries.value = list),
+	);
 watch(() => props.collection.doctype, load, { immediate: true });
 const preview = (slug) => slug && run(() => builder.page.setRouteVariables({ slug }));
 const manage = async () => {

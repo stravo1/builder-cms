@@ -30,10 +30,11 @@
 				/>
 			</aside>
 		</template>
-		<div v-else class="cms-empty">
-			<p role="status">{{ error || "Loading collection…" }}</p>
-			<Button v-if="error" label="Try again" @click="load" />
+		<div v-else-if="error" class="cms-empty">
+			<p role="alert">{{ error }}</p>
+			<Button label="Try again" @click="load" />
 		</div>
+		<SectionLoader v-else label="Loading collection" />
 	</div>
 </template>
 
@@ -45,6 +46,7 @@ import { forget } from "../../data/cache.js";
 import { useTask } from "../useTask.js";
 import EntryEditor from "../entries/EntryEditor.vue";
 import CollectionEntries from "./CollectionEntries.vue";
+import SectionLoader from "../SectionLoader.vue";
 
 const props = defineProps({
 	doctype: { type: String, required: true },
@@ -57,7 +59,7 @@ const selection = shallowRef(props.view === "entry" ? { name: props.entryName, f
 const entries = ref(null);
 const editor = ref(null);
 const hasUnsavedWarning = ref(false);
-const { error, run } = useTask();
+const { error, runCached } = useTask();
 const selectEntry = (row, fieldName = "") => {
 	if (selection.value?.name === row.name) {
 		if (fieldName) selection.value = { ...selection.value, fieldName };
@@ -78,11 +80,13 @@ const entrySaved = async () => {
 	closeEntry();
 	await entries.value.reload();
 };
-const load = () =>
-	run(async () => {
-		collection.value = (await Collection.all()).find((each) => each.doctype === props.doctype);
-		if (!collection.value) throw new Error("This collection no longer exists.");
-	});
+const findCollection = async () => {
+	const found = (await Collection.all()).find((each) => each.doctype === props.doctype);
+	if (!found) throw new Error("This collection no longer exists.");
+	return found;
+};
+// a reopened dialog shows its last copy at once, while the fresh read checks it
+const load = () => runCached(`collection:${props.doctype}`, findCollection, (found) => (collection.value = found));
 // the panel can change a schema while this frame is hidden, and a schema write sends no event
 forget();
 onMounted(load);

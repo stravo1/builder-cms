@@ -26,3 +26,21 @@ export const forget = (...prefixes) => {
 		if (!prefixes.length || prefixes.some((prefix) => key.startsWith(prefix))) reads.delete(key);
 	}
 };
+
+/** The last value of each key. A write does not forget it, because a fresh read always follows. */
+const copies = new Map();
+
+export const hasCopy = (key) => copies.has(key);
+
+/**
+ * Shows the last copy of `key` at once, then reads again and shows the fresh
+ * value. For content that can change outside this extension, such as entries,
+ * so a stale copy never stays.
+ */
+export const showThenRefresh = async (key, read, show) => {
+	if (copies.has(key)) show(copies.get(key));
+	const value = await read();
+	copies.set(key, value);
+	show(value);
+	return value;
+};
