@@ -216,19 +216,39 @@ export class Collection {
 		await this.refreshPageFields(fieldname);
 	}
 
-	async refreshPageFields(fieldname) {
-		let start = 0;
+	/** Reads every name before a caller writes, because a page without CMS sections leaves the filter and shifts the paging. */
+	static async getCmsPageNames() {
+		const names = [];
 		while (true) {
 			const pages = await builder.data.getList("Builder Page", {
 				fields: ["name"],
 				filters: [["page_data_script", "like", "%builder-cms:start%"]],
 				pageLength: 100,
-				start,
+				start: names.length,
 			});
-			for (const page of pages) await this.removePageField(page.name, fieldname);
-			if (pages.length < 100) return;
-			start += pages.length;
+			names.push(...pages.map((page) => page.name));
+			if (pages.length < 100) return names;
 		}
+	}
+
+	async refreshPageFields(fieldname) {
+		for (const name of await Collection.getCmsPageNames()) await this.removePageField(name, fieldname);
+	}
+
+	/**
+	 * A collection this extension made loses its doctype first, so a refusal in
+	 * Builder's confirm dialog changes nothing. Frappe keeps the table. A mapped doctype stays.
+	 */
+	async delete() {
+		if (this.isOwned) await builder.schema.deleteDoctype(this.doctype);
+		for (const name of await Collection.getCmsPageNames()) await this.removePageSources(name);
+		if (this.settings?.name) await builder.data.delete(SETTINGS_DOCTYPE, this.settings.name);
+	}
+
+	async removePageSources(pageName) {
+		const page = new PageData(pageName);
+		const sources = await page.load();
+		for (const source of sources.filter((each) => each.doctype === this.doctype)) await page.remove(source.name);
 	}
 
 	async removePageField(pageName, fieldname) {

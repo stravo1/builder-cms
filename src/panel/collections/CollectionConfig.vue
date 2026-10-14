@@ -25,6 +25,23 @@
 				@click="run(() => builder.ui.openUrl(`/app/${slugify(collection.doctype)}`))"
 			/>
 		</div>
+		<section class="flex flex-col gap-2 border-t border-outline-gray-1 pt-4">
+			<span class="cms-section-label">{{ collection.isOwned ? "Delete collection" : "Disconnect DocType" }}</span>
+			<p class="cms-hint">
+				{{
+					collection.isOwned
+						? "Pages stop showing its entries. Builder asks before it deletes the DocType."
+						: `Pages stop showing its entries. ${collection.doctype} and its records stay.`
+				}}
+			</p>
+			<Button
+				theme="red"
+				:variant="isArmed ? 'solid' : 'subtle'"
+				:label="isArmed ? 'Click again to confirm' : collection.isOwned ? 'Delete collection' : 'Disconnect'"
+				:loading="isRunning"
+				@click="remove"
+			/>
+		</section>
 		<p v-if="error" role="alert" class="cms-error">{{ error }}</p>
 	</div>
 </template>
@@ -39,6 +56,7 @@ import FieldList from "./FieldList.vue";
 import FieldRows from "./FieldRows.vue";
 
 const props = defineProps({ collection: { type: Object, required: true } });
+const emit = defineEmits(["deleted"]);
 
 const url = ref(props.collection.url);
 /** The rows of the Add fields form. The collection's own fields are `collectionFields`. */
@@ -67,6 +85,15 @@ const addFields = async () => {
 	if (!added) return;
 	newFields.value = [];
 	await loadFields();
+};
+
+// the frame cannot open a confirm() dialog, so a delete takes two clicks
+const isArmed = ref(false);
+const remove = async () => {
+	if (!isArmed.value) return void (isArmed.value = true);
+	isArmed.value = false;
+	const message = props.collection.isOwned ? "Collection deleted" : "DocType disconnected";
+	if (await run(async () => (await props.collection.delete(), true), message)) emit("deleted");
 };
 
 onMounted(loadFields);

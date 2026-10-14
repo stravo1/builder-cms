@@ -36,7 +36,7 @@
 		</div>
 		<Button label="Set up the current page" icon-left="lucide-file-plus" variant="solid" @click="emit('usePage')" />
 	</div>
-	<div v-else class="overflow-y-auto"><CollectionConfig :collection="collection" /></div>
+	<div v-else class="overflow-y-auto"><CollectionConfig :collection="collection" @deleted="emit('back')" /></div>
 </template>
 
 <script setup>
