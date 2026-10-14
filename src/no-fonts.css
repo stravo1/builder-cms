@@ -1,0 +1,10 @@
+/**
+ * Stands in for frappe-ui's Inter stylesheet, which this extension does not ship.
+ *
+ * An extension builds to one file, so a font it imports becomes base64, once for
+ * every @font-face rule that names it. Inter lands twelve times that way, which
+ * adds 4.5 MB.
+ *
+ * The frame runs inside Builder, which loads Inter already, so the text renders
+ * either way. See vite.config.js for the alias that points here.
+ */
