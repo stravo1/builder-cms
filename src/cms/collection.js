@@ -74,6 +74,19 @@ export const markSameLabels = (collections) => {
 	return collections;
 };
 
+/** A completed write must not look like a failed save if the canvas refresh fails. */
+const refreshAfterEntryWrite = async (write) => {
+	const entry = await write;
+	try {
+		await builder.page.refreshData();
+	} catch (error) {
+		builder.ui.toast(`The entry changed, but page data could not refresh: ${error.message || String(error)}`, {
+			type: "error",
+		});
+	}
+	return entry;
+};
+
 export class Collection {
 	constructor(doctype, settings = null) {
 		this.doctype = doctype;
@@ -377,7 +390,7 @@ export class Collection {
 
 	/** Saves one or more fields of one row. Frappe validates, and answers with the saved row. */
 	updateEntry(name, patch) {
-		return builder.data.update(this.doctype, name, patch);
+		return refreshAfterEntryWrite(builder.data.update(this.doctype, name, patch));
 	}
 
 	getEntry(name) {
@@ -390,12 +403,12 @@ export class Collection {
 			fields.filter((field) => field.fieldname in entry).map((field) => [field.fieldname, entry[field.fieldname]]),
 		);
 		if (this.isOwned) doc.slug = doc.slug || slugify(doc.title || "");
-		if (entry.name) return builder.data.update(this.doctype, entry.name, doc);
-		return builder.data.insert(this.doctype, doc);
+		if (entry.name) return this.updateEntry(entry.name, doc);
+		return refreshAfterEntryWrite(builder.data.insert(this.doctype, doc));
 	}
 
 	deleteEntry(name) {
 		if (!this.isOwned) throw new Error("Manage deletion of existing DocType entries in Desk.");
-		return builder.data.delete(this.doctype, name);
+		return refreshAfterEntryWrite(builder.data.delete(this.doctype, name));
 	}
 }

@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const builder = vi.hoisted(() => ({
 	context: { get: vi.fn() },
-	page: { getBlocks: vi.fn(), setRouteVariables: vi.fn() },
+	page: { getBlocks: vi.fn(), setRouteVariables: vi.fn(), refreshData: vi.fn() },
 	block: { get: vi.fn(), update: vi.fn(), insert: vi.fn() },
 	data: { getList: vi.fn(), getDoc: vi.fn(), update: vi.fn(), insert: vi.fn(), subscribe: vi.fn() },
 	schema: { listDoctypes: vi.fn(), getDoctype: vi.fn() },

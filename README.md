@@ -38,7 +38,7 @@ Choose **Collections → New → Existing doctype**. Select a DocType, a slug fi
 
 CMS collections use extension-owned `CMS <name>` DocTypes. `CMS Collection` stores collection settings and page assignments. Frappe applies its normal permissions and document validation when you edit entries.
 
-Each page data source has a marked section in `page_data_script`. The plugin updates its own sections and keeps other script content. Public rendering reads the configured fields with `frappe.db.get_all`; a configured published field excludes drafts. Removing or adding a CMS field updates these generated sources.
+Each page data source has a marked section in `page_data_script`. The plugin updates its own sections and keeps other script content. Public rendering reads the configured fields with `frappe.db.get_all`; a configured published field excludes drafts. Removing or adding a CMS field updates these generated sources. After an entry changes, the extension calls `builder.page.refreshData()` to update the canvas with the current page data.
 
 Content edits appear on published pages without republishing their layouts. A detail page answers 404 for a draft or unknown slug. In the editor, **Preview content** also lists drafts. This needs a Builder version that gives page scripts `in_preview`. A page connected with version 0.1.0 gets this after you connect it again. Image fields accept URLs; upload files through Desk.
 
