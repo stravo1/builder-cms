@@ -26,7 +26,7 @@ Each collection has one index page and one detail page. Assigning a replacement 
 
 An empty page gets bound starter blocks. A designed page keeps its layout. On an index page, insert a **Cards** or **Table** list, or select a container and choose **Use selected container as list**. Its children repeat for each entry.
 
-To map content, select a block on the canvas and choose a field under **Connect a field**. The CMS panel stays open while you select blocks. Text, image source, link URL, and visibility bindings are available for compatible blocks. The toolbar's **Bind to data** popover provides the same field picker.
+To map content, select a block on the canvas and choose a field under **Connect a field**. The CMS panel stays open while you select blocks. Text, image source, link URL, and visibility bindings are available for compatible blocks. Text and container blocks can also bind a **Link URL**. Binding a URL turns the block into a link and keeps its text and visibility bindings. Right-click **Bind to data** for the same field picker.
 
 Inside a list, fields come from the current item. On a detail page, they come from the page entry. **Disconnect field** removes that property's binding. The detail page's **Preview content** picker switches between published entries.
 
@@ -53,7 +53,7 @@ npm run build
 
 Load the dev server through Builder's **Extensions → Load dev extension**. The SDK origin in `vite.config.js` must match the editor origin.
 
-The host needs `data.subscribe` for live table updates across extension frames, the block binding APIs, `page.open`, `page.setRouteVariables`, `ui.openUrl`, dialog sizing, and `schema.updateDoctype` with explicit `removeFields`. After changing the host SDK, run `yarn build:sdk` from Builder's `frontend` directory.
+The host needs `data.subscribe` for live table updates across extension frames, the block binding APIs, `page.open`, `page.setRouteVariables`, `page.refreshData`, `ui.openUrl`, dialog sizing, and `schema.updateDoctype` with explicit `removeFields`. After changing the host SDK, run `yarn build:sdk` from Builder's `frontend` directory.
 
 The extension uses `page.edit`, `data.access`, and `schema.write`. Schema changes require the site's normal System Manager permissions. Removing a field uses `update_doctype(remove_fields=[...])`; omitted fields remain.
 

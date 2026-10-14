@@ -62,7 +62,13 @@ import builder from "frappe-builder-extension-sdk";
 import { useBuilderContext } from "frappe-builder-extension-sdk/vue";
 import { Button, FormControl, ItemListRow } from "frappe-ui";
 import { computed, ref, shallowRef, watch } from "vue";
-import { bindBlock, fitsBlock, getBoundKey, getSourcesForBlock } from "../../blocks/blockActions.js";
+import {
+	bindBlock,
+	fitsBlock,
+	getBindingTargets,
+	getBoundKey,
+	getSourcesForBlock,
+} from "../../blocks/blockActions.js";
 import { Collection } from "../../cms/collection.js";
 import { getDoctypeFields } from "../../data/doctypes.js";
 import { PageData } from "../../data/pageData.js";
@@ -89,12 +95,7 @@ let loadVersion = 0;
 let fieldVersion = 0;
 const source = computed(() => fitting.value.find((each) => each.source.name === sourceName.value)?.source);
 const prefix = computed(() => fitting.value.find((each) => each.source.name === sourceName.value)?.prefix || "");
-const targets = computed(() => [
-	...(context.selection.isText || context.selection.isHTML ? [{ label: "Text content", value: "text" }] : []),
-	...(context.selection.isImage ? [{ label: "Image source", value: "image" }] : []),
-	...(context.selection.isLink ? [{ label: "Link URL", value: "link" }] : []),
-	{ label: "Visibility", value: "visibility" },
-]);
+const targets = computed(() => getBindingTargets(context.selection));
 const sourceOptions = computed(() =>
 	fitting.value.map(({ source }) => ({
 		value: source.name,

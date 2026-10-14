@@ -4,7 +4,7 @@
  * A collection is a doctype this extension makes, or an existing one a user
  * maps. Each list or collection page reads it through a section of the page
  * data script, on the server for each request. A block binds to a field in the
- * "Bind to data" popover, and it stays live.
+ * CMS panel or the "Bind to data" context menu, and it stays live.
  */
 
 import builder from "frappe-builder-extension-sdk";
@@ -29,16 +29,6 @@ builder.dialog.register({ component: () => import("./panel/table/CollectionDialo
 
 /** The popover follows the selection, so it stays open while the user clicks through blocks. */
 const openBindPopover = () => builder.ui.openPopover({ title: "Bind to data", width: 320, height: 440 });
-
-builder.toolbar.register({
-	name: "cms-bind",
-	region: "right",
-	icon: "lucide-database",
-	tooltip: "Bind to data",
-	action: openBindPopover,
-	showWhen: { count: 1 },
-	enableWhen: { readOnly: false },
-});
 
 builder.contextMenu.register({
 	name: "cms-bind",

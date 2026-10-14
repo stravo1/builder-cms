@@ -31,6 +31,15 @@ export const getSourcesForBlock = async (sources, blockId) => {
 	return [...sources.filter((source) => !source.isList).map((source) => ({ source, prefix: `${source.name}.` }))];
 };
 
+export const getBindingTargets = (selection) => [
+	...(selection.isText || selection.isHTML ? [{ label: "Text content", value: "text" }] : []),
+	...(selection.isImage ? [{ label: "Image source", value: "image" }] : []),
+	...(selection.isLink || selection.isText || selection.isHTML || selection.isContainer
+		? [{ label: "Link URL", value: "link" }]
+		: []),
+	{ label: "Visibility", value: "visibility" },
+];
+
 export const getBoundProperty = (target) => {
 	if (target === "link") return { type: "attribute", property: "href" };
 	return target === true || target === "image"
@@ -68,7 +77,11 @@ export const bindBlock = async (blockId, key, target) => {
 	const dynamicValues = key ? [...others, { key, ...property, comesFrom: "dataScript" }] : others;
 	const legacy = block.dataKey;
 	const clearLegacy = legacy?.property === property.property && (legacy.type || "key") === property.type;
-	await builder.block.update(blockId, { dynamicValues, ...(clearLegacy && { dataKey: null }) });
+	await builder.block.update(blockId, {
+		...(target === "link" && key && block.element !== "a" && { element: "a" }),
+		dynamicValues,
+		...(clearLegacy && { dataKey: null }),
+	});
 };
 
 /** Into the selected container, or at the end of the page. */
