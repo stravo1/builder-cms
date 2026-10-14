@@ -8,7 +8,7 @@
 	/>
 	<button
 		v-else-if="isMultilineField(field)"
-		class="line-clamp-2 w-full rounded px-2 text-left text-sm text-ink-gray-7 hover:bg-surface-gray-2"
+		class="line-clamp-2 w-full rounded-1 px-2 text-left text-sm text-ink-gray-7 hover:bg-surface-gray-2"
 		:disabled="readOnly"
 		:aria-label="field.label || field.fieldname"
 		@click="emit('open')"
@@ -41,7 +41,7 @@
 			v-if="field.fieldtype === 'Attach Image' && value"
 			:src="value"
 			alt=""
-			class="size-7 shrink-0 rounded object-cover"
+			class="size-7 shrink-0 rounded-1 object-cover"
 		/>
 		<TextInput
 			v-model="draft"

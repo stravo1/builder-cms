@@ -19,7 +19,7 @@
 				label="Content from"
 				:options="sourceOptions"
 			/>
-			<div v-else class="rounded bg-surface-gray-2 px-2 py-1.5 text-sm text-ink-gray-7">
+			<div v-else class="rounded-1 bg-surface-gray-2 px-2 py-1.5 text-sm text-ink-gray-7">
 				{{ sourceOptions[0]?.label }}
 			</div>
 			<FormControl v-model="query" placeholder="Search fields…" aria-label="Search fields" />

@@ -11,7 +11,7 @@
     "test:browser": "node tests/browser/cms.mjs"
   },
   "dependencies": {
-    "frappe-ui": "1.0.0-beta.21",
+    "frappe-ui": "1.0.1",
     "vue": "^3.5.0",
     "vue-router": "^4.1.6"
   },

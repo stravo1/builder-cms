@@ -13,7 +13,7 @@
 		@apply text-p-sm text-ink-gray-5;
 	}
 	.cms-card {
-		@apply rounded-lg border border-outline-gray-1 p-3;
+		@apply rounded-4 border border-outline-gray-1 p-3;
 	}
 	.cms-empty {
 		@apply flex flex-col items-center gap-2 px-4 py-8 text-center text-p-sm text-ink-gray-5;

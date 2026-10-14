@@ -2,7 +2,7 @@
 	<div class="flex flex-col gap-1.5">
 		<span v-if="label" class="text-xs text-ink-gray-5">{{ label }}</span>
 		<Editor ref="editor" v-model="model" :extensions="extensions">
-			<div class="overflow-hidden rounded border border-outline-gray-2 bg-surface-base">
+			<div class="overflow-hidden rounded-1 border border-outline-gray-2 bg-surface-base">
 				<EditorFixedMenu :items="toolbar" class="overflow-x-auto border-b border-outline-gray-2" />
 				<EditorContent
 					role="textbox"
