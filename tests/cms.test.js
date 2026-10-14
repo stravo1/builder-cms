@@ -23,7 +23,7 @@ vi.mock("frappe-builder-extension-sdk", () => ({
 const { Collection, getCustomFields, markSameLabels, normalizeUrl } = await import("../src/cms/collection.js");
 const { getRetiredRoute } = await import("../src/cms/routes.js");
 const { getDoctypeFields, isMultilineField } = await import("../src/data/doctypes.js");
-const { getListBlock } = await import("../src/blocks/pageBlocks.js");
+const { getCardListBlock, getDocumentBlock, getListBlock } = await import("../src/blocks/pageBlocks.js");
 const { getPageRole, isCollectionPageOf, isIndexPageOf } = await import("../src/cms/pageActions.js");
 const { DataSource } = await import("../src/data/dataSource.js");
 const { isIdentifier, toPython } = await import("../src/data/python.js");
@@ -62,6 +62,19 @@ describe("getListBlock", () => {
 
 	it("uses no table tags", () => {
 		expect(new Set(elements(table))).toEqual(new Set(["div", "span", "a", "img"]));
+	});
+
+	it.each([
+		["table", getListBlock],
+		["cards", getCardListBlock],
+		["detail page", getDocumentBlock],
+	])("shows rich text in a block span in the %s, a text block that can hold a heading or a list", (_, getBlock) => {
+		const body = { fieldname: "body", label: "Body", fieldtype: "Text Editor" };
+		const find = (block) => (block.blockName === "Body" ? block : (block.children || []).map(find).find(Boolean));
+		const richText = find(getBlock(new DataSource({ name: "posts" }), [{ ...fields[0] }, body]));
+
+		expect(richText.element).toBe("span");
+		expect(richText.styles.display).toMatch(/block|box/);
 	});
 
 	it("reads as a table, with a heading for each field", () => {

@@ -7,6 +7,13 @@
 
 const column = { display: "flex", flexDirection: "column" };
 
+/**
+ * Rich text is a text block, so Builder edits and styles it as text. Not a `p`:
+ * the browser closes a `p` at the first heading, list, or paragraph in the
+ * content, and the content falls out of the block. A `span` keeps it.
+ */
+const richText = { element: "span", styles: { display: "block" } };
+
 /** How a field shows: an image sets `src`, every other field sets the text. */
 const getBinding = (field, key) =>
 	field.fieldtype === "Attach Image"
@@ -19,8 +26,8 @@ const fieldBlock = (field, key, isFirst) => {
 	if (binding.type === "attribute") {
 		return { ...shared, element: "img", attributes: { alt: "" }, styles: { width: "100%", objectFit: "cover" } };
 	}
-	const element = field.fieldtype === "Text Editor" ? "div" : isFirst ? "h3" : "p";
-	return { ...shared, element };
+	if (field.fieldtype === "Text Editor") return { ...shared, ...richText };
+	return { ...shared, element: isFirst ? "h3" : "p" };
 };
 
 const fieldBlocks = (fields, keyOf) =>
@@ -93,7 +100,7 @@ const valueBlock = (field, key) => {
 	if (field.fieldtype === "Text Editor") {
 		return {
 			...shared,
-			element: "div",
+			element: richText.element,
 			styles: {
 				display: "-webkit-box",
 				WebkitLineClamp: "2",
