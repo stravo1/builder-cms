@@ -12,34 +12,41 @@
 					v-for="(field, index) in fields"
 					:key="`${field.fieldname}-${row.revision ?? 0}`"
 					class="cell"
-					:class="{ first: index === 0 }">
+					:class="{ first: index === 0 }"
+				>
 					<TableCell
 						:field="field"
+						:read-only="Boolean(field.read_only)"
 						:value="row[field.fieldname]"
 						@save="(value) => emit('save', row, field, value)"
-						@open="emit('openRichText', row, field)" />
+						@open="emit('openRichText', row, field)"
+					/>
 				</div>
-				<div class="cell flex items-center gap-0.5 opacity-0 group-hover:opacity-100">
+				<div class="cell flex items-center gap-0.5">
 					<Button
 						v-if="collection.collectionPage && row[collection.slugField]"
 						size="sm"
 						variant="ghost"
 						icon="lucide-eye"
 						label="Preview on the detail page"
-						@click="emit('preview', row)" />
+						@click="emit('preview', row)"
+					/>
 					<Button
 						size="sm"
 						variant="ghost"
 						icon="lucide-external-link"
 						label="Open in Desk"
-						@click="builder.ui.openUrl(collection.getDeskUrl(row.name))" />
+						@click="builder.ui.openUrl(collection.getDeskUrl(row.name))"
+					/>
 					<Button
 						size="sm"
 						variant="ghost"
+						v-if="collection.isOwned"
 						:theme="armed === row.name ? 'red' : 'gray'"
 						icon="lucide-trash-2"
 						:label="armed === row.name ? 'Click again to delete' : 'Delete'"
-						@click="remove(row)" />
+						@click="remove(row)"
+					/>
 				</div>
 			</div>
 		</div>

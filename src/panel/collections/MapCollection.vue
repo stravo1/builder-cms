@@ -5,13 +5,22 @@
 			<FormControl v-model="label" label="Name" :placeholder="doctype" />
 			<FormControl v-model="url" label="URL" :placeholder="normalizeUrl(label || doctype)" />
 			<FormControl v-model="slugField" type="select" label="Slug field" :options="slugOptions" />
-			<p class="text-p-sm text-ink-gray-5">It names each entry in its URL, such as {{ normalizeUrl(url || label || doctype) }}/my-entry.</p>
+			<p class="text-p-sm text-ink-gray-5">
+				It names each entry in its URL, such as {{ normalizeUrl(url || label || doctype) }}/my-entry.
+			</p>
 			<FormControl v-model="publishedField" type="select" label="Published field" :options="publishedOptions" />
 			<p v-if="!publishedField" class="text-p-sm text-ink-amber-6">
 				Every row of {{ doctype }} will be public on pages that list it.
 			</p>
 		</template>
-		<Button type="submit" variant="solid" label="Use as collection" :disabled="!doctype || !slugField" :loading="isRunning" />
+		<p v-if="error" role="alert" class="text-p-sm text-ink-red-5">{{ error }}</p>
+		<Button
+			type="submit"
+			variant="solid"
+			label="Use as collection"
+			:disabled="!doctype || !slugField"
+			:loading="isRunning"
+		/>
 	</form>
 </template>
 
@@ -30,7 +39,7 @@ const url = ref("");
 const slugField = ref("name");
 const publishedField = ref("");
 const fields = shallowRef([]);
-const { isRunning, run } = useTask();
+const { isRunning, error, run } = useTask();
 
 /** A slug is text in one URL segment, so text fields and the name fit. */
 const slugOptions = computed(() => [
@@ -60,10 +69,21 @@ watch(doctype, (name) =>
 );
 
 const map = async () => {
-	const settings = { label: label.value.trim(), url: url.value, slugField: slugField.value, publishedField: publishedField.value };
+	const settings = {
+		label: label.value.trim(),
+		url: url.value,
+		slugField: slugField.value,
+		publishedField: publishedField.value,
+	};
 	const collection = await run(() => Collection.map(doctype.value, settings), "Collection added");
 	if (collection) emit("created", collection);
 };
 
-onMounted(() => run(async () => (doctypeNames.value = await getDoctypeNames())));
+onMounted(() =>
+	run(async () => {
+		const [names, existing] = await Promise.all([getDoctypeNames(), Collection.all()]);
+		const taken = new Set(["CMS Collection", ...existing.map((collection) => collection.doctype)]);
+		doctypeNames.value = names.filter((name) => !taken.has(name));
+	}),
+);
 </script>

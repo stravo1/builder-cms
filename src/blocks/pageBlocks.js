@@ -23,7 +23,8 @@ const fieldBlock = (field, key, isFirst) => {
 	return { ...shared, element };
 };
 
-const fieldBlocks = (fields, keyOf) => fields.map((field, index) => fieldBlock(field, keyOf(field.fieldname), index === 0));
+const fieldBlocks = (fields, keyOf) =>
+	fields.map((field, index) => fieldBlock(field, keyOf(field.fieldname), index === 0));
 
 /**
  * One opinionated look: a white card with a soft border, a muted header band,
@@ -111,7 +112,12 @@ const linked = (source, block) =>
 		? {
 				element: "a",
 				blockName: "Link",
-				styles: { color: COLORS.strong, fontWeight: "500", textDecoration: "none", "hover:textDecoration": "underline" },
+				styles: {
+					color: COLORS.strong,
+					fontWeight: "500",
+					textDecoration: "none",
+					"hover:textDecoration": "underline",
+				},
 				dynamicValues: [{ key: "url", type: "attribute", property: "href" }],
 				children: [block],
 			}
@@ -192,4 +198,33 @@ export const getDocumentBlock = (source, fields, label = source.name) => ({
 	blockName: label,
 	styles: { ...column, gap: "16px", width: "100%" },
 	children: fieldBlocks(fields, (fieldname) => `${source.name}.${fieldname}`),
+});
+
+/** The container repeats one editable card. All its children remain normal Builder blocks. */
+export const getCardListBlock = (source, fields, label = source.name) => ({
+	element: "div",
+	blockName: `${label} list`,
+	isRepeaterBlock: true,
+	dataKey: { key: source.name, comesFrom: "dataScript" },
+	styles: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "24px", width: "100%" },
+	children: [
+		{
+			element: "div",
+			blockName: `${label} item`,
+			styles: { ...column, gap: "12px", padding: "20px", border: "1px solid #e5e7eb", borderRadius: "12px" },
+			children: [
+				...fieldBlocks(fields.filter((field) => field.fieldtype !== "Check").slice(0, 4), (name) => name),
+				...(source.link
+					? [
+							{
+								element: "a",
+								innerHTML: "Read more →",
+								dynamicValues: [{ key: "url", type: "attribute", property: "href" }],
+								visibilityCondition: { key: "url" },
+							},
+						]
+					: []),
+			],
+		},
+	],
 });

@@ -1,10 +1,10 @@
 <template>
-	<div class="flex h-full flex-col bg-surface text-ink-gray-8">
+	<div class="flex h-full flex-col bg-surface-base text-ink-gray-8">
 		<Tabs v-model="activeTab" :tabs="TABS" class="flex h-full flex-col">
 			<template #tab-panel="{ tab }">
 				<div class="flex h-full flex-col overflow-y-auto">
-					<CollectionsTab v-if="tab.label === 'Collections'" />
-					<PageTab v-else />
+					<CollectionsTab v-if="tab.label === 'Collections'" @use-page="activeTab = 1" />
+					<PageTab v-else @collections="activeTab = 0" />
 				</div>
 			</template>
 		</Tabs>
@@ -21,6 +21,6 @@ import PageTab from "./page/PageTab.vue";
 // only this frame fetches. Its resources go through the SDK, as Studio's go through Frappe
 setConfig("resourceFetcher", builder.data.fetcher);
 
-const TABS = [{ label: "This page" }, { label: "Collections" }];
+const TABS = [{ label: "Collections" }, { label: "This page" }];
 const activeTab = ref(0);
 </script>

@@ -4,7 +4,7 @@
  */
 
 import builder from "frappe-builder-extension-sdk";
-import { getDocumentBlock, getListBlock } from "./pageBlocks.js";
+import { getDocumentBlock, getListBlock, getCardListBlock } from "./pageBlocks.js";
 
 /** The blocks from a root down to `blockId`, or null when the tree does not hold it. */
 const findPath = (block, blockId, path = []) => {
@@ -27,39 +27,48 @@ export const getSourcesForBlock = async (sources, blockId) => {
 	const ancestors = (findPath(root, blockId) || []).slice(0, -1);
 	const nearestList = ancestors.filter((block) => block.isRepeaterBlock).at(-1)?.dataKey?.key;
 	const row = sources.find((source) => source.isList && source.name === nearestList);
-	return [
-		...(row ? [{ source: row, prefix: "" }] : []),
-		...sources.filter((source) => !source.isList).map((source) => ({ source, prefix: `${source.name}.` })),
-	];
+	if (nearestList) return row ? [{ source: row, prefix: "" }] : [];
+	return [...sources.filter((source) => !source.isList).map((source) => ({ source, prefix: `${source.name}.` }))];
 };
 
-/** What a binding sets: the `src` of an image, the text of anything else. */
-export const getBoundProperty = (isImage) =>
-	isImage ? { type: "attribute", property: "src" } : { type: "key", property: "innerHTML" };
-
-/** Text fields for a text block, image fields for an image. A yes or no fits neither. */
-export const fitsBlock = (field, selection) => {
-	if (field.fieldtype === "Check") return false;
-	return field.fieldtype === "Attach Image" ? selection.isImage : selection.isText || selection.isHTML;
+export const getBoundProperty = (target) => {
+	if (target === "link") return { type: "attribute", property: "href" };
+	return target === true || target === "image"
+		? { type: "attribute", property: "src" }
+		: { type: "key", property: "innerHTML" };
 };
 
-/** The key the selected block is bound to now, or "". */
-export const getBoundKey = async (selection) => {
-	const target = getBoundProperty(selection.isImage);
-	const { dynamicValues = [] } = await builder.block.get(selection.blockId);
-	const bound = dynamicValues.find((value) => value.property === target.property && value.type === target.type);
-	return bound?.key ?? "";
+export const fitsBlock = (field, selection, target = selection.isImage ? "image" : "text") => {
+	if (target === "visibility") return true;
+	if (target === "link") return ["Data", "Link", "Read Only"].includes(field.fieldtype);
+	if (target === "image") return ["Attach Image", "Attach", "Data"].includes(field.fieldtype);
+	return field.fieldtype !== "Check" && field.fieldtype !== "Attach Image";
 };
 
-/** Binds the block to `key`, or removes its binding when `key` is empty. Other bindings stay. */
-export const bindBlock = async (blockId, key, isImage) => {
-	const target = getBoundProperty(isImage);
+export const getBoundKey = async (selection, target = selection.isImage ? "image" : "text") => {
+	const block = await builder.block.get(selection.blockId);
+	if (target === "visibility") return block.visibilityCondition?.key || "";
+	const property = getBoundProperty(target);
+	const bound = (block.dynamicValues || []).find(
+		(value) => value.property === property.property && value.type === property.type,
+	);
+	const legacy = block.dataKey?.property === property.property ? block.dataKey : null;
+	return (bound || legacy)?.key || "";
+};
+
+export const bindBlock = async (blockId, key, target) => {
+	if (target === "visibility") {
+		return builder.block.update(blockId, { visibilityCondition: key ? { key, comesFrom: "dataScript" } : null });
+	}
+	const property = getBoundProperty(target);
 	const block = await builder.block.get(blockId);
 	const others = (block.dynamicValues || []).filter(
-		(value) => !(value.property === target.property && value.type === target.type),
+		(value) => !(value.property === property.property && value.type === property.type),
 	);
-	const dynamicValues = key ? [...others, { key, ...target, comesFrom: "dataScript" }] : others;
-	await builder.block.update(blockId, { dynamicValues });
+	const dynamicValues = key ? [...others, { key, ...property, comesFrom: "dataScript" }] : others;
+	const legacy = block.dataKey;
+	const clearLegacy = legacy?.property === property.property && (legacy.type || "key") === property.type;
+	await builder.block.update(blockId, { dynamicValues, ...(clearLegacy && { dataKey: null }) });
 };
 
 /** Into the selected container, or at the end of the page. */
@@ -70,8 +79,9 @@ const getParentId = async () => {
 	return root.blockId;
 };
 
-export const insertBlocks = async (source, fields, label) => {
+export const insertBlocks = async (source, fields, label, layout = "cards") => {
 	const chosen = fields.filter((field) => source.fields.includes(field.fieldname));
-	const tree = source.isList ? getListBlock(source, chosen, label) : getDocumentBlock(source, chosen, label);
+	const listBlock = layout === "table" ? getListBlock : getCardListBlock;
+	const tree = source.isList ? listBlock(source, chosen, label) : getDocumentBlock(source, chosen, label);
 	return builder.block.insert(await getParentId(), tree);
 };

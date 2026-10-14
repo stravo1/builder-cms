@@ -1,33 +1,64 @@
 <template>
-	<section class="mt-auto flex flex-col gap-2 border-t border-outline-gray-1 p-3">
-		<h3 class="text-sm font-medium text-ink-gray-9">Add to this page</h3>
-		<p v-if="!context.page" class="text-p-sm text-ink-gray-5">Open a page to list {{ collection.label }} on it.</p>
-		<template v-else>
-			<div class="flex gap-2">
-				<FormControl v-model="orderBy" type="select" :options="SORT_OPTIONS" class="flex-1" />
-				<FormControl v-model.number="limit" type="number" class="w-20" />
-			</div>
-			<Button variant="subtle" label="Insert list" :loading="isRunning" @click="insert" />
-			<p class="text-p-sm text-ink-gray-5">
-				A table of published entries. Each row links to the detail page.
-			</p>
-		</template>
+	<section class="flex flex-col gap-3 border-t border-outline-gray-1 p-3">
+		<span class="cms-section-label">Collection list</span>
+		<p class="cms-hint">
+			Insert a list, or repeat the children of a container you designed. Select a block inside it to connect fields.
+		</p>
+		<div class="flex gap-2">
+			<FormControl
+				v-model="layout"
+				type="select"
+				label="Layout"
+				:options="[
+					{ label: 'Cards', value: 'cards' },
+					{ label: 'Table', value: 'table' },
+				]"
+				class="flex-1"
+			/>
+		</div>
+		<Button
+			variant="subtle"
+			icon-left="lucide-plus"
+			label="Insert collection list"
+			:loading="isRunning"
+			@click="insert"
+		/>
+		<Button
+			v-if="canConnect"
+			variant="ghost"
+			label="Use selected container as list"
+			:loading="isRunning"
+			@click="connect"
+		/>
+		<p v-if="error" role="alert" class="text-p-sm text-ink-red-5">{{ error }}</p>
 	</section>
 </template>
-
 <script setup>
 import { useBuilderContext } from "frappe-builder-extension-sdk/vue";
 import { Button, FormControl } from "frappe-ui";
-import { ref } from "vue";
-import { addCollectionList, SORT_OPTIONS } from "../../cms/pageActions.js";
+import { computed, ref } from "vue";
+import { addCollectionList, connectCollectionList } from "../../cms/pageActions.js";
 import { useTask } from "../useTask.js";
-
 const props = defineProps({ collection: { type: Object, required: true } });
-const context = useBuilderContext(["page"]);
-const orderBy = ref(SORT_OPTIONS[0].value);
-const limit = ref(10);
-const { isRunning, run } = useTask();
-
-const insert = () =>
-	run(() => addCollectionList(props.collection, { orderBy: orderBy.value, limit: limit.value }), "List inserted");
+const emit = defineEmits(["changed"]);
+const context = useBuilderContext(["page", "selection"]);
+const layout = ref("cards");
+const { isRunning, run, error } = useTask();
+const canConnect = computed(
+	() => context.selection.count === 1 && context.selection.isContainer && !context.selection.isRoot,
+);
+const insert = async () => {
+	const inserted = await run(
+		() => addCollectionList(props.collection, { layout: layout.value }),
+		"Collection list inserted",
+	);
+	if (inserted) emit("changed");
+};
+const connect = async () => {
+	const source = await run(
+		() => connectCollectionList(props.collection, context.selection.blockId),
+		"Container connected. Connect its child blocks to fields.",
+	);
+	if (source) emit("changed");
+};
 </script>

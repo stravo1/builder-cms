@@ -22,13 +22,18 @@ const NO_VALUE_TYPES = new Set([
 
 /** Child tables are left out. Their rows belong to a parent document. */
 export const getDoctypeNames = async () => {
-	const rows = await builder.data.getList("DocType", {
-		fields: ["name"],
-		filters: { istable: 0, issingle: 0 },
-		orderBy: "name asc",
-		pageLength: 500,
-	});
-	return rows.map((row) => row.name);
+	const names = [];
+	while (true) {
+		const rows = await builder.data.getList("DocType", {
+			fields: ["name"],
+			filters: { istable: 0, issingle: 0 },
+			orderBy: "name asc",
+			pageLength: 500,
+			start: names.length,
+		});
+		names.push(...rows.map((row) => row.name));
+		if (rows.length < 500) return names;
+	}
 };
 
 /**
@@ -45,3 +50,29 @@ export const getDoctypeFields = async (doctype) => {
 	const { fields } = await builder.schema.getDoctype(doctype);
 	return fields.filter((field) => field.fieldname && !NO_VALUE_TYPES.has(field.fieldtype) && !isSecretField(field));
 };
+
+const EDITABLE_TYPES = new Set([
+	"Data",
+	"Small Text",
+	"Text",
+	"Long Text",
+	"Text Editor",
+	"Markdown Editor",
+	"Code",
+	"Attach",
+	"Attach Image",
+	"Date",
+	"Datetime",
+	"Time",
+	"Int",
+	"Float",
+	"Currency",
+	"Percent",
+	"Check",
+	"Select",
+	"Link",
+	"Dynamic Link",
+]);
+
+export const getWritableFields = (fields) =>
+	fields.filter((field) => !field.read_only && EDITABLE_TYPES.has(field.fieldtype));

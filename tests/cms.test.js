@@ -33,7 +33,10 @@ const posts = new DataSource({
 	name: "posts",
 	doctype: "Blog Post",
 	fields: ["title", "slug"],
-	filters: [["published", "=", 1], ["category", "!=", "News"]],
+	filters: [
+		["published", "=", 1],
+		["category", "!=", "News"],
+	],
 	limit: 5,
 });
 
@@ -50,7 +53,10 @@ describe("getListBlock", () => {
 		{ fieldname: "title", label: "Title", fieldtype: "Data" },
 		{ fieldname: "cover", label: "Cover", fieldtype: "Attach Image" },
 	];
-	const table = getListBlock(new DataSource({ name: "posts", link: { collection: "CMS Post", field: "slug" } }), fields);
+	const table = getListBlock(
+		new DataSource({ name: "posts", link: { collection: "CMS Post", field: "slug" } }),
+		fields,
+	);
 	const [header, rows] = table.children;
 	const elements = (block) => [block.element, ...(block.children || []).flatMap(elements)];
 
@@ -99,10 +105,13 @@ describe("toPython", () => {
 		expect(toPython({ a: true, b: null, c: [1, "x", false] })).toBe('{"a": True, "b": None, "c": [1, "x", False]}');
 	});
 
-	it.each([["posts", true], ["_draft2", true], ["2posts", false], ["my-posts", false], ["class", false]])(
-		"knows that %s is a name: %s",
-		(name, expected) => expect(isIdentifier(name)).toBe(expected),
-	);
+	it.each([
+		["posts", true],
+		["_draft2", true],
+		["2posts", false],
+		["my-posts", false],
+		["class", false],
+	])("knows that %s is a name: %s", (name, expected) => expect(isIdentifier(name)).toBe(expected));
 });
 
 describe("DataSource", () => {
@@ -199,7 +208,10 @@ describe("script sections", () => {
 		let script = write(write("data.title = 'Hi'", posts), other);
 		script = write(script, new DataSource({ ...posts.toJSON(), limit: 9 }));
 
-		expect(readSections(script).map((section) => [section.name, section.limit])).toEqual([["posts", 9], ["authors", 5]]);
+		expect(readSections(script).map((section) => [section.name, section.limit])).toEqual([
+			["posts", 9],
+			["authors", 5],
+		]);
 		expect(script).toContain("data.title = 'Hi'");
 	});
 
@@ -228,9 +240,9 @@ describe("collections", () => {
 		// complete on its own: nothing else fills in the doctype now
 		expect(() => new DataSource(defaults).validate()).not.toThrow();
 		expect(defaults).toEqual({
-			name: "blog_post",
+			name: "collection_blog_post",
 			doctype: "CMS Blog Post",
-			fields: ["title", "body"],
+			fields: ["name", "title", "slug", "published", "body"],
 			orderBy: "creation desc",
 			publishedField: "published",
 			link: { collection: "CMS Blog Post", field: "slug", variable: "slug" },
@@ -259,7 +271,12 @@ describe("collections", () => {
 		const pages = new Collection("Web Page", { name: "row-2", slug_field: "name", published_field: null });
 
 		it("reads its slug and published fields from the mapping", () => {
-			expect([posts.isOwned, posts.label, posts.slugField, posts.publishedField]).toEqual([false, "Posts", "route", "published"]);
+			expect([posts.isOwned, posts.label, posts.slugField, posts.publishedField]).toEqual([
+				false,
+				"Posts",
+				"route",
+				"published",
+			]);
 		});
 
 		it("treats no published field as every row public", () => {
@@ -282,7 +299,7 @@ describe("collections", () => {
 
 		it("opens its rows in Desk", () => {
 			expect(posts.getDeskUrl("my post")).toBe("/app/blog-post/my%20post");
-			expect(pages.getDeskUrl()).toBe("/app/web-page/new");
+			expect(pages.getDeskUrl()).toBe("/app/web-page/new-web-page-1");
 		});
 	});
 
@@ -311,7 +328,12 @@ describe("collections", () => {
 	});
 
 	describe("page roles", () => {
-		const blog = new Collection("CMS Blog Post", { name: "row", url: "/blog", index_page: "page-index", entry_page: "page-detail" });
+		const blog = new Collection("CMS Blog Post", {
+			name: "row",
+			url: "/blog",
+			index_page: "page-index",
+			entry_page: "page-detail",
+		});
 		const entry = { name: "entry", doctype: "CMS Blog Post" };
 
 		it("knows an index page by the pointer and the collection URL", () => {
@@ -321,7 +343,9 @@ describe("collections", () => {
 
 		it("tells an index page from a detail page", () => {
 			expect(getPageRole([blog], { name: "page-index", route: "blog" }, [])).toMatchObject({ kind: "index" });
-			expect(getPageRole([blog], { name: "page-detail", route: "blog/:slug" }, [entry])).toMatchObject({ kind: "detail" });
+			expect(getPageRole([blog], { name: "page-detail", route: "blog/:slug" }, [entry])).toMatchObject({
+				kind: "detail",
+			});
 			expect(getPageRole([blog], { name: "page-other", route: "about" }, [])).toBe(null);
 		});
 	});
@@ -334,13 +358,20 @@ describe("collections", () => {
 			{ fieldname: "published" },
 			{ fieldname: "title" },
 		];
-		expect((await blog.getTableFields()).map((field) => field.fieldname)).toEqual(["title", "body", "slug", "published"]);
+		expect((await blog.getTableFields()).map((field) => field.fieldname)).toEqual([
+			"title",
+			"body",
+			"slug",
+			"published",
+		]);
 	});
 
-	it.each([["blog", "/blog"], [" /Blog/ ", "/blog"], ["/blog/news", "/blog/news"], ["Blog Posts", "/blog-posts"]])(
-		"writes the URL %j as %j",
-		(url, expected) => expect(normalizeUrl(url)).toBe(expected),
-	);
+	it.each([
+		["blog", "/blog"],
+		[" /Blog/ ", "/blog"],
+		["/blog/news", "/blog/news"],
+		["Blog Posts", "/blog-posts"],
+	])("writes the URL %j as %j", (url, expected) => expect(normalizeUrl(url)).toBe(expected));
 
 	it("names custom fields from their labels", () => {
 		expect(getCustomFields([{ label: "Cover Image", fieldtype: "Attach Image" }])).toEqual([
@@ -350,7 +381,13 @@ describe("collections", () => {
 
 	it.each([
 		["a standard field", [{ label: "Title", fieldtype: "Data" }]],
-		["two fields with one name", [{ label: "Body", fieldtype: "Data" }, { label: "body", fieldtype: "Data" }]],
+		[
+			"two fields with one name",
+			[
+				{ label: "Body", fieldtype: "Data" },
+				{ label: "body", fieldtype: "Data" },
+			],
+		],
 	])("refuses %s", (_case, fields) => {
 		expect(() => getCustomFields(fields)).toThrow("Pick another name");
 	});

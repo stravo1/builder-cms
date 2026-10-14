@@ -1,78 +1,69 @@
 # CMS
 
-Manage content in Frappe, and show it on your Builder pages.
+Create content in Frappe and connect it to Builder pages. A collection can be a CMS content type or an existing DocType.
 
-Open the **CMS** tab in the left panel. It has two tabs.
+## Manage content
 
-| Tab | What you do there |
-|---|---|
-| This page | Turn the open page into the index page or the detail page of a collection |
-| Collections | Make a collection, or use an existing doctype as one. Configure its fields, and show its entries |
+Open **CMS → Collections**, then choose a collection.
 
-## Pages
+- **Entries** shows searchable content. Choose an entry to edit it, or **New entry** to create one. The form saves when you submit it. Leave a new CMS entry's slug empty to generate it from its title.
+- **Table view** lets you edit cells directly. Text saves on Enter or blur. Escape cancels a text edit. Rich text has a separate editor; a failed save keeps it open.
+- **Pages** opens the collection's index and detail pages, or takes you to page setup.
+- **Settings** manages the URL and CMS fields. Fields show ten at a time; **Load more fields** reveals the next ten. Custom CMS fields can be removed after confirmation. Title, Slug, and Published are required by the CMS.
 
-- **Index page:** gets the collection URL, such as `/blog`, and a list of its published entries.
-- **Detail page:** gets `/blog/:slug`, and shows the entry that the URL names. An empty page also
-  gets a bound title, cover, and body.
+Existing DocTypes support simple entry fields in the same editor. Use **Open in Desk** for child tables, naming rules, and advanced fields. The plugin offers no schema removal or entry deletion for these collections.
 
-Each collection has one index page and one detail page. Turning another page into one moves the old
-page aside to `…/previous-<page>`. To bind any other block, select it and choose **Bind to data**.
+## Connect a page
 
-## Collections
+Open a Builder page and select **CMS → This page**. Choose a collection, select a page type, then click **Connect page**.
 
-Click a collection to configure it: its fields, its URL, and its detail page. **Show entries** opens
-its entries in a large dialog.
+| Page type | Content | URL |
+|---|---|---|
+| Index | A repeating collection list | `/blog` |
+| Detail | One entry selected by its slug | `/blog/:slug` |
 
-In the dialog, click a cell to edit it. Text saves when you press Enter or leave the cell, and
-Escape cancels. Check boxes, dates, and selects save at once. A rich text cell opens its own
-editor, with a **Back** button. Each row can open in Desk, or preview on the detail page.
+Each collection has one index page and one detail page. Assigning a replacement moves the previous page to a `previous-<page>` URL. Route conflicts with unrelated pages stop the change.
 
-An entry edit shows on the published page at once. You do not publish the page again.
+An empty page gets bound starter blocks. A designed page keeps its layout. On an index page, insert a **Cards** or **Table** list, or select a container and choose **Use selected container as list**. Its children repeat for each entry.
 
-## Use an existing doctype
+To map content, select a block on the canvas and choose a field under **Connect a field**. The CMS panel stays open while you select blocks. Text, image source, link URL, and visibility bindings are available for compatible blocks. The toolbar's **Bind to data** popover provides the same field picker.
 
-In **Collections › New**, choose **Existing doctype**. Pick the doctype, the field that names each
-entry in its URL (the slug), and the yes/no field that marks an entry as published. With no
-published field, every row is public. Its entries open in Desk, which knows the doctype's rules.
+Inside a list, fields come from the current item. On a detail page, they come from the page entry. **Disconnect field** removes that property's binding. The detail page's **Preview content** picker switches between published entries.
 
-## How it works
+## Connect an existing DocType
 
-A collection is a doctype that this extension makes, with the name `CMS <collection>`. Frappe stores,
-permits, and versions its entries. You can also edit them in Desk. The `CMS Collection` doctype
-keeps the URL and the collection page of each collection.
+Choose **Collections → New → Existing doctype**. Select a DocType, a slug field, and an optional published checkbox field. Use a unique text field that fits in one URL segment. With no published field, all entries can appear on the page. Child tables and Single DocTypes are not independent collections.
 
-Every collection has a title, a slug, and a published flag. The slug comes from the title when you
-leave it empty.
+## Storage and rendering
 
-A data source is one section of the page data script, between `# builder-cms:start <name>` and
-`# builder-cms:end <name>`. The extension replaces only those lines. Your own lines stay. The
-section reads with `frappe.db.get_all`. A visitor is a Guest, so "Published entries only" is what
-keeps drafts off the page.
+CMS collections use extension-owned `CMS <name>` DocTypes. `CMS Collection` stores collection settings and page assignments. Frappe applies its normal permissions and document validation when you edit entries.
 
-A list finds the collection page, and its route, each time the page renders. So a new URL or a moved
-collection page never breaks a link.
+Each page data source has a marked section in `page_data_script`. The plugin updates its own sections and keeps other script content. Public rendering reads the configured fields with `frappe.db.get_all`; a configured published field excludes drafts. Removing or adding a CMS field updates these generated sources.
 
-## Permissions
+Content edits appear on published pages without republishing their layouts. Draft or unknown detail slugs currently render empty content rather than a 404. Image fields accept URLs; upload files through Desk.
 
-| Permission | Why |
-|---|---|
-| `schema.write` | Makes a doctype for each collection. You must be a System Manager |
-| `data.access` | Reads and writes entries, settings, and the data script of the page |
-| `page.edit` | Adds the bound blocks to the page |
-
-## Limits
-
-- A collection page shows an empty page for a draft or an unknown slug. It does not answer 404 yet.
-- An image field takes a URL. Upload the file in Desk first, and paste its URL.
-- A collection can add fields. It cannot rename or remove one.
-
-## Develop
+## Development
 
 ```sh
 npm install
 npm run dev
 npm test
+npm run build
 ```
 
-The editor half needs a Builder with the generic block fields, `page.open`,
-`page.setRouteVariables`, and `ui.openUrl`.
+Load the dev server through Builder's **Extensions → Load dev extension**. The SDK origin in `vite.config.js` must match the editor origin.
+
+The host needs the block binding APIs, `page.open`, `page.setRouteVariables`, `ui.openUrl`, dialog sizing, and `schema.updateDoctype` with explicit `removeFields`. After changing the host SDK, run `yarn build:sdk` from Builder's `frontend` directory.
+
+The extension uses `page.edit`, `data.access`, and `schema.write`. Schema changes require the site's normal System Manager permissions. Removing a field uses `update_doctype(remove_fields=[...])`; omitted fields remain.
+
+### Browser checks
+
+The Playwright checks use a separate browser and keep authentication in memory. Start the dev server and install Chromium with `npx playwright install chromium`. Set `CMS_TEST_PAGE` to an unpublished test page and supply `CMS_TEST_PASSWORD` through your environment, then run `npm run test:browser`.
+
+Optional variables:
+
+- `CMS_TEST_ORIGIN`, `CMS_TEST_USER`, `CMS_TEST_DEV_SERVER`: local site and extension connection.
+- `CMS_TEST_MAPPED_COLLECTION`, `CMS_TEST_OWNED_COLLECTION`: collections for the table restrictions and entry form checks.
+- `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH`: an existing Chromium executable.
+- `CMS_TEST_SCREENSHOT`: screenshot output path (defaults to `/tmp/cms-browser-check.png`).

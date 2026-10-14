@@ -4,7 +4,8 @@
  */
 
 import builder from "frappe-builder-extension-sdk";
-import { getDoctypeFields } from "../data/doctypes.js";
+import { getDoctypeFields, getWritableFields } from "../data/doctypes.js";
+import { PageData } from "../data/pageData.js";
 import { claimRoute } from "./routes.js";
 import { ensureSettingsDoctype, getAllSettings, saveSettings, SETTINGS_DOCTYPE } from "./settings.js";
 
@@ -76,7 +77,15 @@ export class Collection {
 		// the settings doctype has the prefix too, and it is not a collection
 		const owned = made.filter((doctype) => doctype.startsWith(PREFIX) && doctype !== SETTINGS_DOCTYPE);
 		const doctypes = [...new Set([...owned, ...rows.map((row) => row.collection)])];
-		return markSameLabels(doctypes.map((doctype) => new Collection(doctype, rows.find((row) => row.collection === doctype))));
+		return markSameLabels(
+			doctypes.map(
+				(doctype) =>
+					new Collection(
+						doctype,
+						rows.find((row) => row.collection === doctype),
+					),
+			),
+		);
 	}
 
 	/**
@@ -122,7 +131,8 @@ export class Collection {
 
 	/** Where Desk edits one row. Desk names a doctype by its slug: `blog-post`. */
 	getDeskUrl(name = "new") {
-		return `/app/${slugify(this.doctype)}/${encodeURIComponent(name)}`;
+		const route = slugify(this.doctype);
+		return `/app/${route}/${name === "new" ? `new-${route}-1` : encodeURIComponent(name)}`;
 	}
 
 	static async create(label, url, fields) {
@@ -182,6 +192,7 @@ export class Collection {
 
 	/** Shows one entry on the collection page: previewed in the editor, or live in a new tab. */
 	async openEntry(slug, live = false) {
+		if (!this.collectionPage) throw new Error("Set up a detail page first.");
 		if (!live) {
 			await builder.page.open(this.collectionPage);
 			return builder.page.setRouteVariables({ slug });
@@ -194,6 +205,40 @@ export class Collection {
 	async addFields(fields) {
 		const existing = (await this.getFields()).map((field) => field.fieldname);
 		await builder.schema.updateDoctype(this.doctype, getCustomFields(fields, existing));
+		await this.refreshPageFields();
+	}
+
+	async removeField(fieldname) {
+		if (!this.isOwned) throw new Error("Manage existing DocType fields in Desk.");
+		if (["title", "slug", "published"].includes(fieldname))
+			throw new Error("This field is required by the collection.");
+		await builder.schema.updateDoctype(this.doctype, [], { removeFields: [fieldname] });
+		await this.refreshPageFields(fieldname);
+	}
+
+	async refreshPageFields(fieldname) {
+		let start = 0;
+		while (true) {
+			const pages = await builder.data.getList("Builder Page", {
+				fields: ["name"],
+				filters: [["page_data_script", "like", "%builder-cms:start%"]],
+				pageLength: 100,
+				start,
+			});
+			for (const page of pages) await this.removePageField(page.name, fieldname);
+			if (pages.length < 100) return;
+			start += pages.length;
+		}
+	}
+
+	async removePageField(pageName, fieldname) {
+		const page = new PageData(pageName);
+		const sources = await page.load();
+		for (const source of sources.filter((each) => each.doctype === this.doctype)) {
+			source.fields = ["name", ...(await this.getFields()).map((field) => field.fieldname)];
+			source.filters = source.filters.filter(([name]) => name !== fieldname);
+			await page.save(source);
+		}
 	}
 
 	getFields() {
@@ -206,10 +251,10 @@ export class Collection {
 	 */
 	getSourceDefaults(fields) {
 		return {
-			name: snakeCase(this.label),
+			name: `collection_${snakeCase(this.label) || "items"}`,
 			doctype: this.doctype,
 			// the slug only steers the link, and the link reads it by itself
-			fields: this.getDisplayFields(fields).map((field) => field.fieldname),
+			fields: [...new Set(["name", ...fields.map((field) => field.fieldname)])],
 			orderBy: "creation desc",
 			publishedField: this.publishedField || null,
 			// the slug field gives the value. The collection page route names it `:slug`
@@ -220,20 +265,30 @@ export class Collection {
 	/** The fields a visitor reads. The slug and the flags only steer the page. */
 	getDisplayFields(fields) {
 		const steering = [this.slugField, this.publishedField];
-		return fields.filter((field) => !steering.includes(field.fieldname) && field.fieldtype !== "Check");
+		const display = fields.filter((field) => !steering.includes(field.fieldname) && field.fieldtype !== "Check");
+		return display.length ? display : [{ fieldname: "name", label: "Name", fieldtype: "Data" }];
 	}
 
 	/**
 	 * Each entry has `slug` and `published` under those names, whatever the
 	 * mapping calls them, so the panel reads one shape. `title` falls back to the slug.
 	 */
-	async getEntries() {
+	async getEntries({ start = 0 } = {}) {
 		const fields = await this.getFields();
 		const hasTitle = fields.some((field) => field.fieldname === "title");
 		const rows = await builder.data.getList(this.doctype, {
-			fields: [...new Set(["name", "modified", this.slugField, ...(this.publishedField ? [this.publishedField] : []), ...(hasTitle ? ["title"] : [])])],
+			fields: [
+				...new Set([
+					"name",
+					"modified",
+					this.slugField,
+					...(this.publishedField ? [this.publishedField] : []),
+					...(hasTitle ? ["title"] : []),
+				]),
+			],
 			orderBy: "modified desc",
 			pageLength: 100,
+			start,
 		});
 		return rows.map((row) => ({
 			...row,
@@ -275,27 +330,22 @@ export class Collection {
 		return builder.data.update(this.doctype, name, patch);
 	}
 
-	/**
-	 * A new draft entry, ready to fill in the table. The slug is unique, so a
-	 * second new entry must not take the same placeholder.
-	 */
-	createEntry() {
-		const slug = `untitled-${Date.now().toString(36)}`;
-		return builder.data.insert(this.doctype, { title: "Untitled", slug, published: 0 });
-	}
-
 	getEntry(name) {
 		return builder.data.getDoc(this.doctype, name);
 	}
 
-	/** A new entry gets its slug from the title, when the author leaves it empty. */
-	saveEntry(entry) {
-		const doc = { ...entry, slug: entry.slug || slugify(entry.title || "") };
+	async saveEntry(entry) {
+		const fields = getWritableFields(await this.getFields());
+		const doc = Object.fromEntries(
+			fields.filter((field) => field.fieldname in entry).map((field) => [field.fieldname, entry[field.fieldname]]),
+		);
+		if (this.isOwned) doc.slug = doc.slug || slugify(doc.title || "");
 		if (entry.name) return builder.data.update(this.doctype, entry.name, doc);
 		return builder.data.insert(this.doctype, doc);
 	}
 
 	deleteEntry(name) {
+		if (!this.isOwned) throw new Error("Manage deletion of existing DocType entries in Desk.");
 		return builder.data.delete(this.doctype, name);
 	}
 }

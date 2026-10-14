@@ -1,22 +1,27 @@
 import builder from "frappe-builder-extension-sdk";
 import { ref } from "vue";
 
-/** Runs one async task at a time, and shows its error as a Builder toast. */
+/** Tracks pending work and shows failures in the view and a Builder toast. */
 export const useTask = () => {
 	const isRunning = ref(false);
+	const error = ref("");
+	let pending = 0;
 
 	const run = async (task, success) => {
+		pending++;
 		isRunning.value = true;
+		error.value = "";
 		try {
 			const result = await task();
 			if (success) builder.ui.toast(success, { type: "success" });
 			return result;
-		} catch (error) {
-			builder.ui.toast(error.message || String(error), { type: "error" });
+		} catch (cause) {
+			error.value = cause.message || String(cause);
+			builder.ui.toast(error.value, { type: "error" });
 		} finally {
-			isRunning.value = false;
+			isRunning.value = --pending > 0;
 		}
 	};
 
-	return { isRunning, run };
+	return { isRunning, error, run };
 };

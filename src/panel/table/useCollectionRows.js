@@ -27,13 +27,8 @@ export const useCollectionRows = (collection) => {
 		const saved = await run(() => collection.updateEntry(row.name, { [field.fieldname]: value }));
 		if (saved) replaceRow(saved);
 		else row.revision = (row.revision ?? 0) + 1;
+		return saved;
 	};
-
-	const addRow = () =>
-		run(async () => {
-			const created = await collection.createEntry();
-			rows.value = [created, ...rows.value];
-		}, "Entry added");
 
 	const deleteRow = (row) =>
 		run(async () => {
@@ -41,5 +36,5 @@ export const useCollectionRows = (collection) => {
 			rows.value = rows.value.filter((each) => each.name !== row.name);
 		}, "Entry deleted");
 
-	return { fields, rows, isRunning, reload, saveCell, addRow, deleteRow };
+	return { fields, rows, isRunning, reload, saveCell, deleteRow };
 };

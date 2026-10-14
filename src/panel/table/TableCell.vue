@@ -3,11 +3,14 @@
 		v-if="field.fieldtype === 'Check'"
 		:model-value="Boolean(value)"
 		:disabled="readOnly"
-		@update:model-value="(checked) => emit('save', checked ? 1 : 0)" />
+		@update:model-value="(checked) => emit('save', checked ? 1 : 0)"
+	/>
 	<button
 		v-else-if="field.fieldtype === 'Text Editor'"
 		class="line-clamp-2 w-full text-left text-p-sm text-ink-gray-6 hover:text-ink-gray-9"
-		@click="emit('open')">
+		:disabled="readOnly"
+		@click="emit('open')"
+	>
 		{{ plainText || "Empty" }}
 	</button>
 	<FormControl
@@ -18,7 +21,8 @@
 		:model-value="value ?? ''"
 		:options="selectOptions"
 		:disabled="readOnly"
-		@update:model-value="(chosen) => emit('save', chosen)" />
+		@update:model-value="(chosen) => emit('save', chosen)"
+	/>
 	<FormControl
 		v-else-if="field.fieldtype === 'Date'"
 		type="date"
@@ -26,9 +30,15 @@
 		variant="ghost"
 		:model-value="value ?? ''"
 		:disabled="readOnly"
-		@update:model-value="(picked) => picked !== value && emit('save', picked || null)" />
+		@update:model-value="(picked) => picked !== value && emit('save', picked || null)"
+	/>
 	<div v-else class="flex items-center gap-2">
-		<img v-if="field.fieldtype === 'Attach Image' && value" :src="value" alt="" class="size-7 shrink-0 rounded object-cover" />
+		<img
+			v-if="field.fieldtype === 'Attach Image' && value"
+			:src="value"
+			alt=""
+			class="size-7 shrink-0 rounded object-cover"
+		/>
 		<TextInput
 			v-model="draft"
 			size="sm"
@@ -39,7 +49,8 @@
 			:disabled="readOnly"
 			@keydown.enter="($event) => $event.target.blur()"
 			@keydown.esc="cancel"
-			@blur="commit" />
+			@blur="commit"
+		/>
 	</div>
 </template>
 
@@ -61,7 +72,11 @@ const plainText = computed(() =>
 
 /** The text being typed. It follows the saved value until the user types. */
 const draft = ref("");
-watch(() => props.value, (value) => (draft.value = value ?? ""), { immediate: true });
+watch(
+	() => props.value,
+	(value) => (draft.value = value ?? ""),
+	{ immediate: true },
+);
 
 const typed = () => (isNumber.value ? (draft.value === "" ? null : Number(draft.value)) : draft.value);
 
