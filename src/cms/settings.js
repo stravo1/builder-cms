@@ -7,6 +7,8 @@
  */
 
 import builder from "frappe-builder-extension-sdk";
+import { forget } from "../data/cache.js";
+import { forgetSchema, getDoctype, listMadeDoctypes } from "../data/doctypes.js";
 
 export const SETTINGS_DOCTYPE = "CMS Collection";
 
@@ -27,13 +29,16 @@ const READ_FIELDS = ["name", ...SETTINGS_FIELDS.map((field) => field.fieldname)]
  * needs. It writes only when something is missing, so a panel load changes nothing.
  */
 export const ensureSettingsDoctype = async () => {
-	const made = await builder.schema.listDoctypes();
+	const made = await listMadeDoctypes();
 	if (!made.some((row) => row.doctype === SETTINGS_DOCTYPE && row.exists)) {
-		return builder.schema.createDoctype(SETTINGS_DOCTYPE, SETTINGS_FIELDS, { naming: "hash" });
+		await builder.schema.createDoctype(SETTINGS_DOCTYPE, SETTINGS_FIELDS, { naming: "hash" });
+		return forgetSchema(SETTINGS_DOCTYPE);
 	}
-	const { fields } = await builder.schema.getDoctype(SETTINGS_DOCTYPE);
+	const { fields } = await getDoctype(SETTINGS_DOCTYPE);
 	const missing = SETTINGS_FIELDS.filter((field) => !fields.some((each) => each.fieldname === field.fieldname));
-	if (missing.length) await builder.schema.updateDoctype(SETTINGS_DOCTYPE, missing);
+	if (!missing.length) return;
+	await builder.schema.updateDoctype(SETTINGS_DOCTYPE, missing);
+	forgetSchema(SETTINGS_DOCTYPE);
 };
 
 export const getAllSettings = async () => {
@@ -43,7 +48,12 @@ export const getAllSettings = async () => {
 
 /** A collection made before the settings doctype has no row yet. The first save adds it. */
 export const saveSettings = async (collection, current, patch) => {
-	if (current?.name) return builder.data.update(SETTINGS_DOCTYPE, current.name, patch);
-	await ensureSettingsDoctype();
-	return builder.data.insert(SETTINGS_DOCTYPE, { collection, ...patch });
+	try {
+		if (current?.name) return await builder.data.update(SETTINGS_DOCTYPE, current.name, patch);
+		await ensureSettingsDoctype();
+		return await builder.data.insert(SETTINGS_DOCTYPE, { collection, ...patch });
+	} finally {
+		// after the write, so a read that ran during it does not stay
+		forget("collections");
+	}
 };

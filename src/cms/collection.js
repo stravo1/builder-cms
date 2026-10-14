@@ -4,10 +4,20 @@
  */
 
 import builder from "frappe-builder-extension-sdk";
-import { getDoctypeFields, getWritableFields } from "../data/doctypes.js";
+import { cached, forget } from "../data/cache.js";
+import { forgetSchema, getDoctypeFields, getWritableFields, listMadeDoctypes } from "../data/doctypes.js";
 import { PageData } from "../data/pageData.js";
 import { claimRoute } from "./routes.js";
 import { ensureSettingsDoctype, getAllSettings, saveSettings, SETTINGS_DOCTYPE } from "./settings.js";
+
+let isListening = false;
+
+/** A settings write in another frame of this extension, such as the dialog, reaches this frame here. */
+const listenForSettings = () => {
+	if (isListening) return;
+	isListening = true;
+	builder.data.subscribe(SETTINGS_DOCTYPE, () => forget("collections"));
+};
 
 /** Our doctypes start with this, so a collection cannot take the name of a Frappe doctype. */
 export const PREFIX = "CMS ";
@@ -71,8 +81,13 @@ export class Collection {
 	}
 
 	/** The doctypes this extension made, and every doctype a user mapped, each once. */
-	static async all() {
-		const made = (await builder.schema.listDoctypes()).filter((row) => row.exists).map((row) => row.doctype);
+	static all() {
+		listenForSettings();
+		return cached("collections", Collection.read);
+	}
+
+	static async read() {
+		const made = (await listMadeDoctypes()).filter((row) => row.exists).map((row) => row.doctype);
 		const rows = made.includes(SETTINGS_DOCTYPE) ? await getAllSettings() : [];
 		// the settings doctype has the prefix too, and it is not a collection
 		const owned = made.filter((doctype) => doctype.startsWith(PREFIX) && doctype !== SETTINGS_DOCTYPE);
@@ -148,6 +163,7 @@ export class Collection {
 		const custom = getCustomFields(fields);
 		await ensureSettingsDoctype();
 		await builder.schema.createDoctype(`${PREFIX}${label}`, [...STANDARD_FIELDS, ...custom], { naming: "hash" });
+		forgetSchema(`${PREFIX}${label}`);
 		const collection = new Collection(`${PREFIX}${label}`);
 		await collection.saveSettings({ url: normalizeUrl(url || label) });
 		return collection;
@@ -213,6 +229,8 @@ export class Collection {
 	async addFields(fields) {
 		const existing = (await this.getFields()).map((field) => field.fieldname);
 		await builder.schema.updateDoctype(this.doctype, getCustomFields(fields, existing));
+		// before the pages read the fields again
+		forgetSchema(this.doctype);
 		await this.refreshPageFields();
 	}
 
@@ -221,6 +239,7 @@ export class Collection {
 		if (["title", "slug", "published"].includes(fieldname))
 			throw new Error("This field is required by the collection.");
 		await builder.schema.updateDoctype(this.doctype, [], { removeFields: [fieldname] });
+		forgetSchema(this.doctype);
 		await this.refreshPageFields(fieldname);
 	}
 
@@ -249,8 +268,10 @@ export class Collection {
 	 */
 	async delete() {
 		if (this.isOwned) await builder.schema.deleteDoctype(this.doctype);
+		forgetSchema(this.doctype);
 		for (const name of await Collection.getCmsPageNames()) await this.removePageSources(name);
 		if (this.settings?.name) await builder.data.delete(SETTINGS_DOCTYPE, this.settings.name);
+		forget("collections");
 	}
 
 	async removePageSources(pageName) {

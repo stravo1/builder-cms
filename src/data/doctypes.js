@@ -1,6 +1,7 @@
 /** The doctypes and fields a data source can read. */
 
 import builder from "frappe-builder-extension-sdk";
+import { cached, forget } from "./cache.js";
 
 /**
  * Fields with no database column, as `frappe.model.no_value_fields` lists them.
@@ -20,8 +21,19 @@ const NO_VALUE_TYPES = new Set([
 	"Heading",
 ]);
 
+/** A doctype as the schema API gives it. */
+export const getDoctype = (doctype) => cached(`doctype:${doctype}`, () => builder.schema.getDoctype(doctype));
+
+/** The doctypes this extension made, whether or not each still exists. */
+export const listMadeDoctypes = () => cached("made-doctypes", () => builder.schema.listDoctypes());
+
+/** After a schema write: the doctype, the lists of doctypes, and the collections built on them. */
+export const forgetSchema = (doctype) => forget(`doctype:${doctype}`, "made-doctypes", "doctype-names", "collections");
+
 /** Child tables are left out. Their rows belong to a parent document. */
-export const getDoctypeNames = async () => {
+export const getDoctypeNames = () => cached("doctype-names", readDoctypeNames);
+
+const readDoctypeNames = async () => {
 	const names = [];
 	while (true) {
 		const rows = await builder.data.getList("DocType", {
@@ -47,7 +59,7 @@ export const isSecretField = (field) => field.fieldtype === "Password" || SECRET
 
 /** The fields that hold a value, so a read can name them, and that are safe to publish. */
 export const getDoctypeFields = async (doctype) => {
-	const { fields } = await builder.schema.getDoctype(doctype);
+	const { fields } = await getDoctype(doctype);
 	return fields.filter((field) => field.fieldname && !NO_VALUE_TYPES.has(field.fieldtype) && !isSecretField(field));
 };
 

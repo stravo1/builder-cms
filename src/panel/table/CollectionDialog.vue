@@ -41,6 +41,7 @@
 import { Button } from "frappe-ui";
 import { onMounted, ref, shallowRef } from "vue";
 import { Collection } from "../../cms/collection.js";
+import { forget } from "../../data/cache.js";
 import { useTask } from "../useTask.js";
 import EntryEditor from "../entries/EntryEditor.vue";
 import CollectionEntries from "./CollectionEntries.vue";
@@ -82,6 +83,8 @@ const load = () =>
 		collection.value = (await Collection.all()).find((each) => each.doctype === props.doctype);
 		if (!collection.value) throw new Error("This collection no longer exists.");
 	});
+// the panel can change a schema while this frame is hidden, and a schema write sends no event
+forget();
 onMounted(load);
 </script>
 

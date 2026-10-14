@@ -6,8 +6,9 @@
 		</p>
 		<TabButtons v-model="tab" :options="tabs" />
 	</div>
-	<CollectionEntries v-if="tab === 'entries'" :collection="collection" is-panel />
-	<div v-else-if="tab === 'pages'" class="flex flex-col gap-3 p-3">
+	<!-- v-show: it keeps its rows, so a return to this tab reads nothing again -->
+	<CollectionEntries v-show="tab === 'entries'" :collection="collection" is-panel />
+	<div v-if="tab === 'pages'" class="flex flex-col gap-3 p-3">
 		<div class="cms-card">
 			<span class="cms-section-label">Index page</span>
 			<p class="mt-1 truncate text-sm text-ink-gray-7">{{ collection.url }}</p>
@@ -36,7 +37,7 @@
 		</div>
 		<Button label="Set up the current page" icon-left="lucide-file-plus" variant="solid" @click="emit('usePage')" />
 	</div>
-	<div v-else class="overflow-y-auto"><CollectionConfig :collection="collection" @deleted="emit('back')" /></div>
+	<div v-else-if="tab === 'settings'" class="overflow-y-auto"><CollectionConfig :collection="collection" @deleted="emit('back')" /></div>
 </template>
 
 <script setup>

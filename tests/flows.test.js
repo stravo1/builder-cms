@@ -4,7 +4,7 @@ const builder = vi.hoisted(() => ({
 	context: { get: vi.fn() },
 	page: { getBlocks: vi.fn(), setRouteVariables: vi.fn() },
 	block: { get: vi.fn(), update: vi.fn(), insert: vi.fn() },
-	data: { getList: vi.fn(), getDoc: vi.fn(), update: vi.fn(), insert: vi.fn() },
+	data: { getList: vi.fn(), getDoc: vi.fn(), update: vi.fn(), insert: vi.fn(), subscribe: vi.fn() },
 	schema: { listDoctypes: vi.fn(), getDoctype: vi.fn() },
 }));
 vi.mock("frappe-builder-extension-sdk", () => ({ default: builder }));
