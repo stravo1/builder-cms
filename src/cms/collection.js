@@ -124,6 +124,14 @@ export class Collection {
 		return this.settings?.slug_field || "slug";
 	}
 
+	/**
+	 * True while a slug still matches the title it came from, so it follows the
+	 * title. A slug the user typed stays. A doctype's `name` is never a draft field.
+	 */
+	isSlugFromTitle(slug, title) {
+		return this.slugField !== "name" && (slug ?? "") === slugify(title ?? "");
+	}
+
 	/** Empty when every row is public. A collection this extension made always has `published`. */
 	get publishedField() {
 		return this.settings?.published_field || (this.isOwned ? "published" : "");

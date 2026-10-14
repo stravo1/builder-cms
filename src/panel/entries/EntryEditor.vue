@@ -45,6 +45,7 @@
 import builder from "frappe-builder-extension-sdk";
 import { Button } from "frappe-ui";
 import { computed, onMounted, ref, shallowRef, watch } from "vue";
+import { slugify } from "../../cms/collection.js";
 import { getWritableFields } from "../../data/doctypes.js";
 import { useTask } from "../useTask.js";
 import EntryField from "./EntryField.vue";
@@ -83,6 +84,18 @@ onMounted(() =>
 		initialDraft.value = JSON.stringify(draft.value);
 		isLoaded.value = true;
 	}),
+);
+
+// a new entry's slug follows its title. An existing slug stays, because live links use it
+watch(
+	() => draft.value.title,
+	(title, previous) => {
+		const slugField = props.collection.slugField;
+		if (props.entryName || !(slugField in draft.value)) return;
+		if (props.collection.isSlugFromTitle(draft.value[slugField], previous)) {
+			draft.value[slugField] = slugify(title ?? "");
+		}
+	},
 );
 
 const getDefault = (field) => {

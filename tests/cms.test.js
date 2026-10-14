@@ -289,6 +289,14 @@ describe("collections", () => {
 		expect(titles).toEqual(["Sample - CMS", "Blog Post - CMS", "Blog Post - doctype", "Sample - Web Page"]);
 	});
 
+	it("lets a slug follow the title until the user types one", () => {
+		const posts = new Collection("CMS Blog Post");
+		expect(posts.isSlugFromTitle("", "")).toBe(true);
+		expect(posts.isSlugFromTitle("hello-world", "Hello World")).toBe(true);
+		expect(posts.isSlugFromTitle("my-own-slug", "Hello World")).toBe(false);
+		expect(new Collection("Web Page", { name: "row", slug_field: "name" }).isSlugFromTitle("", "")).toBe(false);
+	});
+
 	describe("a mapped doctype", () => {
 		const posts = new Collection("Blog Post", {
 			name: "row-1",
