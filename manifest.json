@@ -3,7 +3,7 @@
   "name": "stravo1/cms",
   "label": "CMS",
   "description": "Manage content in Frappe and show it on your pages.",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "entry": "main.js",
   "icon": "icon.svg",
   "permissions": ["page.edit", "data.access", "schema.write"]
