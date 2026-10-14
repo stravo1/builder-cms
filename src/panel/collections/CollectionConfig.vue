@@ -5,7 +5,8 @@
 			<FieldList :fields="collectionFields" removable :disabled="isRunning" @remove="removeField" />
 			<form class="flex flex-col gap-2 pt-2" @submit.prevent="addFields">
 				<FieldRows v-model="newFields" />
-				<Button type="submit" variant="subtle" label="Add fields" :disabled="!hasNewFields" :loading="isRunning" />
+				<!-- only once a new field has a name, so a collection with nothing to save shows no button -->
+				<Button v-if="hasNewFields" type="submit" variant="solid" label="Save" :loading="isRunning" />
 			</form>
 		</section>
 		<form class="flex flex-col gap-2" @submit.prevent="saveUrl">
@@ -59,7 +60,7 @@ const props = defineProps({ collection: { type: Object, required: true } });
 const emit = defineEmits(["deleted"]);
 
 const url = ref(props.collection.url);
-/** The rows of the Add fields form. The collection's own fields are `collectionFields`. */
+/** The rows of the new fields form. The collection's own fields are `collectionFields`. */
 const newFields = ref([]);
 const collectionFields = shallowRef([]);
 const { isRunning, error, run } = useTask();
