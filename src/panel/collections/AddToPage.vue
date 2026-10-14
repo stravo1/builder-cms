@@ -5,7 +5,7 @@
 			Insert a list, or repeat the children of a container you designed. Select a block inside it to connect fields.
 		</p>
 		<div class="flex flex-col gap-1.5">
-			<span class="text-xs text-ink-gray-5">Layout</span>
+			<FormLabel label="Layout" />
 			<TabButtons
 				v-model="layout"
 				:options="[
@@ -33,7 +33,7 @@
 </template>
 <script setup>
 import { useBuilderContext } from "frappe-builder-extension-sdk/vue";
-import { Button, TabButtons } from "frappe-ui";
+import { Button, FormLabel, TabButtons } from "frappe-ui";
 import { computed, ref } from "vue";
 import { addCollectionList, connectCollectionList } from "../../cms/pageActions.js";
 import { useTask } from "../useTask.js";

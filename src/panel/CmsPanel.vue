@@ -1,7 +1,7 @@
 <template>
 	<div class="flex h-full flex-col bg-surface-base text-ink-gray-8">
 		<Tabs v-model="activeTab" class="flex h-full flex-col">
-			<TabList class="shrink-0 px-3 py-1">
+			<TabList class="shrink-0 px-5 py-2">
 				<TabTrigger v-for="tab in TABS" :key="tab.value" :value="tab.value" :label="tab.label" />
 			</TabList>
 			<TabPanel v-for="tab in TABS" :key="tab.value" :value="tab.value" class="min-h-0 flex-1 overflow-y-auto">

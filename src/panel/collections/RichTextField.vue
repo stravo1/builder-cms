@@ -1,6 +1,6 @@
 <template>
 	<div class="flex flex-col gap-1.5">
-		<span v-if="label" class="text-xs text-ink-gray-5">{{ label }}</span>
+		<FormLabel v-if="label" :label="label" />
 		<Editor ref="editor" v-model="model" :extensions="extensions">
 			<div class="overflow-hidden rounded-1 border border-outline-gray-2 bg-surface-base">
 				<EditorFixedMenu :items="toolbar" class="overflow-x-auto border-b border-outline-gray-2" />
@@ -30,6 +30,7 @@ import {
 	RichTextKit,
 	Separator,
 } from "frappe-ui/editor";
+import { FormLabel } from "frappe-ui";
 
 defineProps({ label: { type: String, default: "" } });
 const model = defineModel();

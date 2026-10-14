@@ -18,7 +18,7 @@
 		</div>
 		<template v-if="collection">
 			<div class="flex flex-col gap-1.5">
-				<span class="text-xs text-ink-gray-5">Page type</span>
+				<FormLabel label="Page type" />
 				<TabButtons v-model="kind" :options="roles" />
 				<p class="cms-hint">
 					{{ roles.find((option) => option.value === kind).description }} at
@@ -45,7 +45,7 @@
 </template>
 
 <script setup>
-import { Badge, Button, FormControl, TabButtons } from "frappe-ui";
+import { Badge, Button, FormControl, FormLabel, TabButtons } from "frappe-ui";
 import { computed, ref, watch } from "vue";
 import { clearCollectionPage, clearIndexPage, useAsCollectionPage, useAsIndexPage } from "../../cms/pageActions.js";
 import { useTask } from "../useTask.js";

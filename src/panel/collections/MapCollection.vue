@@ -11,9 +11,10 @@
 			<FormControl v-model="publishedField" type="select" label="Published field" :options="publishedOptions" />
 			<Alert
 				v-if="!publishedField"
-				theme="yellow"
+				theme="amber"
 				:dismissible="false"
-				:title="`Every row of ${doctype} will be public on pages that list it.`"
+				title="Every row is public"
+				:description="`Pages that list ${doctype} show all of its rows.`"
 			/>
 		</template>
 		<p v-if="error" role="alert" class="cms-error">{{ error }}</p>
