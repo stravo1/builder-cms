@@ -21,6 +21,9 @@ import PageTab from "./page/PageTab.vue";
 // only this frame fetches. Its resources go through the SDK, as Studio's go through Frappe
 setConfig("resourceFetcher", builder.data.fetcher);
 
-const TABS = [{ label: "Collections" }, { label: "This page" }];
+const TABS = [
+	{ value: 0, label: "Collections" },
+	{ value: 1, label: "This page" },
+];
 const activeTab = ref(0);
 </script>
