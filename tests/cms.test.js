@@ -207,9 +207,18 @@ describe("DataSource", () => {
 		const linked = new DataSource({ ...posts.toJSON(), link: { collection: "CMS Blog Post", field: "slug" } });
 
 		expect(linked.toPython()).toContain(
-			'cms_posts_page = (frappe.db.get_all("CMS Collection", filters={"collection": "CMS Blog Post"}, fields=["entry_page"]) or [{}])[0].get("entry_page") or ""',
+			'cms_posts_collection = (frappe.db.get_all("CMS Collection", filters={"collection": "CMS Blog Post"}, fields=["entry_page", "url"]) or [{}])[0]',
 		);
+		expect(linked.toPython()).toContain('cms_posts_page = cms_posts_collection.get("entry_page") or ""');
 		expect(linked.toPython()).toContain('filters={"name": cms_posts_page}');
+	});
+
+	it("links under the collection URL while the collection has no detail page", () => {
+		const linked = new DataSource({ ...posts.toJSON(), link: { collection: "User", field: "name", variable: "slug" } });
+
+		expect(linked.toPython()).toContain(
+			'.get("route") or ((cms_posts_collection.get("url") or "").rstrip("/") + "/:slug" if cms_posts_collection.get("url") else "")',
+		);
 	});
 
 	it.each([

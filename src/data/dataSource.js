@@ -90,14 +90,21 @@ export class DataSource {
 	/**
 	 * The page a row links to. A collection names its collection page in its
 	 * settings, read on each request, so a list links as soon as the collection page
-	 * exists, and still links after it moves.
+	 * exists, and still links after it moves. Before that, `fallback` gives the
+	 * route under the collection URL, such as `/user/:slug`.
 	 */
-	getLinkPageLines() {
+	getLinkPageLines(routeVariable) {
 		const { page, collection } = this.link;
-		if (!collection) return { lines: [], page: toPython(page) };
+		if (!collection) return { lines: [], page: toPython(page), fallback: '""' };
+		const settings = `cms_${this.name}_collection`;
 		const variable = `cms_${this.name}_page`;
-		const read = `frappe.db.get_all("CMS Collection", filters={"collection": ${toPython(collection)}}, fields=["entry_page"])`;
-		return { lines: [`${variable} = (${read} or [{}])[0].get("entry_page") or ""`], page: variable };
+		const read = `frappe.db.get_all("CMS Collection", filters={"collection": ${toPython(collection)}}, fields=["entry_page", "url"])`;
+		const url = `${settings}.get("url")`;
+		return {
+			lines: [`${settings} = (${read} or [{}])[0]`, `${variable} = ${settings}.get("entry_page") or ""`],
+			page: variable,
+			fallback: `((${url} or "").rstrip("/") + ${toPython(`/:${routeVariable}`)} if ${url} else "")`,
+		};
 	}
 
 	/**
@@ -109,12 +116,12 @@ export class DataSource {
 		const { field, variable = field } = this.link;
 		const value = `str(row.get(${toPython(field)}) or "")`;
 		const route = `cms_${this.name}_route`;
-		const { lines, page } = this.getLinkPageLines();
+		const { lines, page, fallback } = this.getLinkPageLines(variable);
 		const read = `frappe.db.get_all("Builder Page", filters={"name": ${page}}, fields=["route"])`;
 		const path = `"/" + ${route}.lstrip("/").replace(${toPython(`:${variable}`)}, ${value}).replace(${toPython(`<${variable}>`)}, ${value})`;
 		return [
 			...lines,
-			`${route} = (${read} or [{}])[0].get("route") or ""`,
+			`${route} = (${read} or [{}])[0].get("route") or ${fallback}`,
 			`data.${this.name} = [`,
 			// a route without the variable cannot name a row, so the row gets no link
 			`    dict(row, url=(${path}) if ${toPython(`:${variable}`)} in ${route} or ${toPython(`<${variable}>`)} in ${route} else "")`,
