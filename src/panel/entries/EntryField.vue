@@ -1,16 +1,18 @@
 <template>
-	<div ref="container">
+	<div ref="container" :class="{ 'flex items-end gap-2': isImage }">
 		<RichTextField ref="control" v-if="field.fieldtype === 'Text Editor'" v-model="value" :label="label" />
 		<FormControl
 			ref="control"
 			v-else
 			v-model="value"
+			:class="{ 'min-w-0 flex-1': isImage }"
 			:type="type"
 			:label="label"
 			:required="Boolean(field.reqd)"
 			:options="options"
-			:placeholder="field.fieldtype === 'Attach Image' ? 'Paste an image URL' : ''"
+			:placeholder="isImage ? 'Paste an image URL' : ''"
 		/>
+		<ImageUploader v-if="isImage" @upload="(url) => (value = url)" />
 	</div>
 </template>
 
@@ -19,6 +21,7 @@ import { FormControl } from "frappe-ui";
 import { computed, ref } from "vue";
 import { isMultilineField } from "../../data/doctypes.js";
 import RichTextField from "../collections/RichTextField.vue";
+import ImageUploader from "./ImageUploader.vue";
 
 const props = defineProps({ field: { type: Object, required: true } });
 const value = defineModel();
@@ -32,6 +35,7 @@ defineExpose({
 	},
 });
 const label = computed(() => props.field.label || props.field.fieldname);
+const isImage = computed(() => props.field.fieldtype === "Attach Image");
 const options = computed(() => ["", ...(props.field.options || "").split("\n").filter(Boolean)]);
 const type = computed(() => {
 	const fieldtype = props.field.fieldtype;

@@ -37,25 +37,21 @@
 		@update:model-value="(picked) => picked !== value && emit('save', picked || null)"
 	/>
 	<div v-else class="flex items-center gap-2">
-		<img
-			v-if="field.fieldtype === 'Attach Image' && value"
-			:src="value"
-			alt=""
-			class="size-7 shrink-0 rounded-1 object-cover"
-		/>
+		<ImageThumbnail v-if="isImage && value" :src="value" />
 		<TextInput
 			v-model="draft"
 			size="sm"
 			variant="ghost"
 			class="w-full"
 			:type="isNumber ? 'number' : 'text'"
-			:placeholder="field.fieldtype === 'Attach Image' ? 'Image URL' : ''"
+			:placeholder="isImage ? 'Image URL' : ''"
 			:disabled="readOnly"
 			:aria-label="field.label || field.fieldname"
 			@keydown.enter="($event) => $event.target.blur()"
 			@keydown.esc="cancel"
 			@blur="commit"
 		/>
+		<ImageUploader v-if="isImage" :disabled="readOnly" @upload="(url) => emit('save', url)" />
 	</div>
 </template>
 
@@ -63,6 +59,8 @@
 import { Checkbox, FormControl, TextInput } from "frappe-ui";
 import { computed, ref, watch } from "vue";
 import { isMultilineField } from "../../data/doctypes.js";
+import ImageThumbnail from "../entries/ImageThumbnail.vue";
+import ImageUploader from "../entries/ImageUploader.vue";
 
 const NUMBER_TYPES = ["Int", "Float", "Currency", "Percent"];
 
@@ -70,6 +68,7 @@ const props = defineProps({ field: { type: Object, required: true }, value: null
 const emit = defineEmits(["save", "open"]);
 
 const isNumber = computed(() => NUMBER_TYPES.includes(props.field.fieldtype));
+const isImage = computed(() => props.field.fieldtype === "Attach Image");
 const selectOptions = computed(() => ["", ...(props.field.options || "").split("\n").filter(Boolean)]);
 const preview = computed(() => {
 	if (props.field.fieldtype !== "Text Editor") return String(props.value ?? "");
