@@ -1,16 +1,16 @@
 <template>
 	<PanelHeader :title="collection.label" back @back="emit('back')" />
 	<div class="border-b border-outline-gray-1 px-3 pb-3 pt-2">
-		<p class="mb-3 truncate text-xs text-ink-gray-5">
+		<p class="mb-2 truncate text-p-sm text-ink-gray-5">
 			{{ collection.isOwned ? "CMS collection" : collection.doctype + " · Connected DocType" }}
 		</p>
 		<TabButtons v-model="tab" :options="tabs" />
 	</div>
 	<EntryList v-if="tab === 'entries'" :collection="collection" />
-	<div v-else-if="tab === 'pages'" class="flex flex-col gap-4 p-3">
+	<div v-else-if="tab === 'pages'" class="flex flex-col gap-3 p-3">
 		<div class="cms-card">
 			<span class="cms-section-label">Index page</span>
-			<p class="mt-2 text-base font-medium">{{ collection.url }}</p>
+			<p class="mt-1 truncate text-sm text-ink-gray-7">{{ collection.url }}</p>
 			<p class="cms-hint mt-1">A list of entries from this collection.</p>
 			<Button
 				v-if="collection.indexPage"
@@ -23,7 +23,7 @@
 		</div>
 		<div class="cms-card">
 			<span class="cms-section-label">Detail page</span>
-			<p class="mt-2 text-base font-medium">{{ collection.url }}/:slug</p>
+			<p class="mt-1 truncate text-sm text-ink-gray-7">{{ collection.url }}/:slug</p>
 			<p class="cms-hint mt-1">One design, a page for every entry.</p>
 			<Button
 				v-if="collection.collectionPage"

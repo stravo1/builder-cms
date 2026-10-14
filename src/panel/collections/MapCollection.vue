@@ -5,15 +5,18 @@
 			<FormControl v-model="label" label="Name" :placeholder="doctype" />
 			<FormControl v-model="url" label="URL" :placeholder="normalizeUrl(label || doctype)" />
 			<FormControl v-model="slugField" type="select" label="Slug field" :options="slugOptions" />
-			<p class="text-p-sm text-ink-gray-5">
+			<p class="cms-hint">
 				It names each entry in its URL, such as {{ normalizeUrl(url || label || doctype) }}/my-entry.
 			</p>
 			<FormControl v-model="publishedField" type="select" label="Published field" :options="publishedOptions" />
-			<p v-if="!publishedField" class="text-p-sm text-ink-amber-6">
-				Every row of {{ doctype }} will be public on pages that list it.
-			</p>
+			<Alert
+				v-if="!publishedField"
+				theme="yellow"
+				:dismissible="false"
+				:title="`Every row of ${doctype} will be public on pages that list it.`"
+			/>
 		</template>
-		<p v-if="error" role="alert" class="text-p-sm text-ink-red-5">{{ error }}</p>
+		<p v-if="error" role="alert" class="cms-error">{{ error }}</p>
 		<Button
 			type="submit"
 			variant="solid"
@@ -25,7 +28,7 @@
 </template>
 
 <script setup>
-import { Button, FormControl } from "frappe-ui";
+import { Alert, Button, FormControl } from "frappe-ui";
 import { computed, onMounted, ref, shallowRef, watch } from "vue";
 import { Collection, normalizeUrl } from "../../cms/collection.js";
 import { getDoctypeFields, getDoctypeNames } from "../../data/doctypes.js";

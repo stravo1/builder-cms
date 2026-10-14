@@ -1,7 +1,7 @@
 <template>
 	<div class="flex flex-col gap-5 p-3">
 		<section v-if="collection.isOwned" class="flex flex-col gap-1">
-			<span class="text-xs text-ink-gray-5">Fields</span>
+			<span class="cms-section-label">Fields</span>
 			<FieldList :fields="collectionFields" removable :disabled="isRunning" @remove="removeField" />
 			<form class="flex flex-col gap-2 pt-2" @submit.prevent="addFields">
 				<FieldRows v-model="newFields" />
@@ -10,11 +10,11 @@
 		</section>
 		<form class="flex flex-col gap-2" @submit.prevent="saveUrl">
 			<FormControl v-model="url" label="URL" />
-			<p class="text-p-sm text-ink-gray-5">Entries live at {{ normalizeUrl(url || "/") }}/entry-slug.</p>
+			<p class="cms-hint">Entries live at {{ normalizeUrl(url || "/") }}/entry-slug.</p>
 			<Button type="submit" variant="subtle" label="Save URL" :loading="isRunning" />
 		</form>
 		<div v-if="!collection.isOwned" class="flex flex-col gap-1">
-			<span class="text-xs text-ink-gray-5">Mapping</span>
+			<span class="cms-section-label">Mapping</span>
 			<p class="text-p-sm text-ink-gray-7">
 				{{ collection.doctype }} · slug from "{{ collection.slugField }}" ·
 				{{ collection.publishedField ? `published by "${collection.publishedField}"` : "every row is public" }}
@@ -25,7 +25,7 @@
 				@click="run(() => builder.ui.openUrl(`/app/${slugify(collection.doctype)}`))"
 			/>
 		</div>
-		<p v-if="error" role="alert" class="text-p-sm text-ink-red-5">{{ error }}</p>
+		<p v-if="error" role="alert" class="cms-error">{{ error }}</p>
 	</div>
 </template>
 

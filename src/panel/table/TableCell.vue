@@ -7,7 +7,7 @@
 	/>
 	<button
 		v-else-if="field.fieldtype === 'Text Editor'"
-		class="line-clamp-2 w-full text-left text-p-sm text-ink-gray-6 hover:text-ink-gray-9"
+		class="line-clamp-2 w-full rounded px-2 text-left text-sm text-ink-gray-7 hover:bg-surface-gray-2"
 		:disabled="readOnly"
 		@click="emit('open')"
 	>

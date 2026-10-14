@@ -4,26 +4,24 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Espresso tokens, sized to match Builder's own left panel */
 @layer components {
 	.cms-section-label {
-		@apply text-xs font-medium uppercase tracking-wide text-ink-gray-5;
+		@apply text-sm font-medium text-ink-gray-9;
 	}
 	.cms-hint {
-		@apply text-p-sm leading-relaxed text-ink-gray-5;
+		@apply text-p-sm text-ink-gray-5;
 	}
 	.cms-card {
-		@apply rounded-lg border border-outline-gray-2 bg-surface-base p-3;
+		@apply rounded-lg border border-outline-gray-1 p-3;
 	}
 	.cms-empty {
-		@apply flex flex-col items-center gap-3 px-5 py-10 text-center text-p-sm text-ink-gray-5;
+		@apply flex flex-col items-center gap-2 px-4 py-8 text-center text-p-sm text-ink-gray-5;
+	}
+	.cms-error {
+		@apply text-sm text-ink-red-8;
 	}
 	.cms-list-row {
-		@apply flex items-center gap-3 rounded-lg px-3 py-3 text-left text-ink-gray-8 transition-colors hover:bg-surface-gray-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2;
-	}
-	.cms-status {
-		@apply shrink-0 rounded-full bg-surface-gray-2 px-2 py-1 text-xs text-ink-gray-5;
-	}
-	.cms-status-published {
-		@apply bg-surface-green-1 text-ink-green-5;
+		@apply text-left hover:bg-surface-gray-2 focus-visible:focus-ring;
 	}
 }

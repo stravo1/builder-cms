@@ -8,8 +8,8 @@
 		<FormControl v-model="label" label="Name" placeholder="Blog Post" required />
 		<FormControl v-model="url" label="URL" :placeholder="normalizeUrl(label || 'blog')" />
 		<div class="flex flex-col gap-2">
-			<span class="text-xs text-ink-gray-5">Fields</span>
-			<p class="text-p-sm text-ink-gray-5">Every collection has a title, a slug, and a published flag.</p>
+			<span class="cms-section-label">Fields</span>
+			<p class="cms-hint">Every collection has a title, a slug, and a published flag.</p>
 			<FieldRows v-model="fields" />
 		</div>
 		<Button type="submit" variant="solid" label="Create collection" :loading="isRunning" />

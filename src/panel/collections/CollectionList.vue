@@ -2,7 +2,7 @@
 	<PanelHeader title="Collections">
 		<Button size="sm" icon-left="lucide-plus" label="New" @click="emit('create')" />
 	</PanelHeader>
-	<div class="flex flex-col gap-1 p-2">
+	<div class="flex flex-col gap-0.5 p-2">
 		<FormControl
 			v-if="collections.length"
 			v-model="query"
@@ -10,31 +10,33 @@
 			aria-label="Search collections"
 			class="mb-2"
 		/>
-		<p v-if="error" role="alert" class="cms-hint p-2">{{ error }}</p>
+		<p v-if="error" role="alert" class="cms-error p-2">{{ error }}</p>
 		<p v-else-if="isRunning" class="p-2 text-p-sm text-ink-gray-5">Loading…</p>
 		<p v-else-if="!collections.length" class="p-2 text-p-sm text-ink-gray-5">
 			No collections yet. A collection is a content type, such as Blog Post.
 		</p>
-		<button
+		<ItemListRow
 			v-for="collection in shown"
 			:key="collection.doctype"
+			as="button"
 			class="cms-list-row"
 			@click="emit('open', collection)"
 		>
-			<span class="min-w-0 flex-1"
-				><span class="block truncate text-sm font-medium">{{ collection.title }}</span
-				><span class="mt-1 block truncate text-xs text-ink-gray-5">{{
-					collection.isOwned ? collection.url : collection.doctype + " · DocType"
-				}}</span></span
-			>
-			<LucideChevronRight class="h-4 w-4 text-ink-gray-5" />
-		</button>
+			<template #prefix>
+				<span class="lucide-database size-4 text-ink-gray-5" aria-hidden="true" />
+			</template>
+			<span class="block truncate text-sm text-ink-gray-8">{{ collection.title }}</span>
+			<template #suffix>
+				<span class="max-w-24 truncate text-sm text-ink-gray-4">{{
+					collection.isOwned ? collection.url : collection.doctype
+				}}</span>
+			</template>
+		</ItemListRow>
 	</div>
 </template>
 
 <script setup>
-import { Button, FormControl } from "frappe-ui";
-import LucideChevronRight from "~icons/lucide/chevron-right";
+import { Button, FormControl, ItemListRow } from "frappe-ui";
 import { computed, onMounted, ref } from "vue";
 import { Collection } from "../../cms/collection.js";
 import PanelHeader from "../PanelHeader.vue";

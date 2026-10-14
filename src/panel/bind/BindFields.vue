@@ -19,32 +19,30 @@
 				label="Content from"
 				:options="sourceOptions"
 			/>
-			<div v-else class="rounded bg-surface-gray-1 px-2 py-1.5 text-xs text-ink-gray-6">
+			<div v-else class="rounded bg-surface-gray-2 px-2 py-1.5 text-sm text-ink-gray-7">
 				{{ sourceOptions[0]?.label }}
 			</div>
 			<FormControl v-model="query" placeholder="Search fields…" aria-label="Search fields" />
 			<div class="flex min-h-0 flex-col gap-1 overflow-y-auto">
-				<button
+				<ItemListRow
 					v-for="field in shownFields.slice(0, visibleCount)"
 					:key="field.fieldname"
+					as="button"
 					class="cms-list-row"
-					:class="{ 'bg-surface-gray-2': keyOf(field) === boundKey }"
+					:selected="keyOf(field) === boundKey"
 					:disabled="isRunning"
 					:aria-pressed="keyOf(field) === boundKey"
 					@click="bind(field)"
 				>
-					<span
-						class="flex size-7 shrink-0 items-center justify-center rounded bg-surface-gray-2 text-xs text-ink-gray-5"
-						>{{ field.fieldtype === "Attach Image" ? "↗" : field.fieldtype === "Check" ? "✓" : "T" }}</span
-					>
-					<span class="min-w-0 flex-1"
-						><span class="block text-sm font-medium">{{ field.label || field.fieldname }}</span
-						><span class="mt-1 block truncate text-xs text-ink-gray-5">{{
-							preview(row?.[field.fieldname])
-						}}</span></span
-					>
-					<span v-if="keyOf(field) === boundKey" class="lucide-check size-4 shrink-0 text-ink-green-5" />
-				</button>
+					<template #prefix>
+						<span :class="fieldIcon(field)" class="size-4 text-ink-gray-5" aria-hidden="true" />
+					</template>
+					<span class="block truncate text-sm text-ink-gray-8">{{ field.label || field.fieldname }}</span>
+					<span class="block truncate text-xs text-ink-gray-5">{{ preview(row?.[field.fieldname]) }}</span>
+					<template #suffix>
+						<span v-if="keyOf(field) === boundKey" class="lucide-check size-4 text-ink-gray-7" />
+					</template>
+				</ItemListRow>
 				<p v-if="!shownFields.length" class="cms-hint p-2">No matching fields for this property.</p>
 			</div>
 			<Button
@@ -55,14 +53,14 @@
 			/>
 			<Button v-if="boundKey" variant="ghost" label="Disconnect field" :disabled="isRunning" @click="bind(null)" />
 		</template>
-		<p v-if="error" role="alert" class="text-p-sm text-ink-red-5">{{ error }}</p>
+		<p v-if="error" role="alert" class="cms-error">{{ error }}</p>
 	</div>
 </template>
 
 <script setup>
 import builder from "frappe-builder-extension-sdk";
 import { useBuilderContext } from "frappe-builder-extension-sdk/vue";
-import { Button, FormControl } from "frappe-ui";
+import { Button, FormControl, ItemListRow } from "frappe-ui";
 import { computed, ref, shallowRef, watch } from "vue";
 import { bindBlock, fitsBlock, getBoundKey, getSourcesForBlock } from "../../blocks/blockActions.js";
 import { Collection } from "../../cms/collection.js";
@@ -110,6 +108,8 @@ const shownFields = computed(() =>
 			(field.label || field.fieldname).toLowerCase().includes(query.value.toLowerCase()),
 	),
 );
+const FIELD_ICONS = { "Attach Image": "lucide-image", Check: "lucide-square-check", "Text Editor": "lucide-text" };
+const fieldIcon = (field) => FIELD_ICONS[field.fieldtype] || "lucide-type";
 const preview = (value) => {
 	if (value === null || value === undefined || value === "") return "Empty";
 	return new DOMParser().parseFromString(String(value), "text/html").body.textContent;

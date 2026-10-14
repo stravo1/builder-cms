@@ -2,7 +2,7 @@
 	<form class="flex flex-col gap-4 p-3" @submit.prevent="save">
 		<div>
 			<span class="cms-section-label">Page connection</span>
-			<p class="cms-hint mt-2">Choose the collection and how this page uses its content.</p>
+			<p class="cms-hint mt-1">Choose the collection and how this page uses its content.</p>
 		</div>
 		<FormControl
 			v-model="chosen"
@@ -17,24 +17,13 @@
 			<Button label="Go to collections" @click="emit('collections')" />
 		</div>
 		<template v-if="collection">
-			<div class="grid grid-cols-2 gap-2">
-				<button
-					v-for="option in roles"
-					:key="option.value"
-					type="button"
-					class="cms-card flex flex-col items-start gap-2 text-left hover:bg-surface-gray-1"
-					:class="{ 'ring-1 ring-outline-gray-4 bg-surface-gray-1': kind === option.value }"
-					:aria-pressed="kind === option.value"
-					:disabled="isRunning"
-					@click="kind = option.value"
-				>
-					<span :class="option.icon" class="text-ink-gray-6" />
-					<span class="text-sm font-medium">{{ option.label }}</span>
-					<span class="text-xs leading-relaxed text-ink-gray-5">{{ option.description }}</span>
-				</button>
-			</div>
-			<div class="rounded bg-surface-gray-1 px-3 py-2 text-xs text-ink-gray-6">
-				{{ collection.url }}{{ kind === "detail" ? "/:slug" : "" }}
+			<div class="flex flex-col gap-1.5">
+				<span class="text-xs text-ink-gray-5">Page type</span>
+				<TabButtons v-model="kind" :options="roles" />
+				<p class="cms-hint">
+					{{ roles.find((option) => option.value === kind).description }} at
+					<span class="whitespace-nowrap text-ink-gray-7">{{ collection.url }}{{ kind === "detail" ? "/:slug" : "" }}</span>
+				</p>
 			</div>
 			<p v-if="isChanged && previousPage" class="cms-hint">
 				The existing {{ kind }} page will be disconnected and moved to a new URL.
@@ -47,16 +36,16 @@
 				:loading="isRunning"
 			/>
 			<div v-else class="flex items-center justify-between">
-				<span class="text-xs text-ink-green-5">Connected</span>
+				<Badge theme="green" label="Connected" />
 				<Button label="Disconnect" variant="ghost" size="sm" :disabled="isRunning" @click="disconnect" />
 			</div>
 		</template>
-		<p v-if="error" role="alert" class="text-p-sm text-ink-red-5">{{ error }}</p>
+		<p v-if="error" role="alert" class="cms-error">{{ error }}</p>
 	</form>
 </template>
 
 <script setup>
-import { Button, FormControl } from "frappe-ui";
+import { Badge, Button, FormControl, TabButtons } from "frappe-ui";
 import { computed, ref, watch } from "vue";
 import { clearCollectionPage, clearIndexPage, useAsCollectionPage, useAsIndexPage } from "../../cms/pageActions.js";
 import { useTask } from "../useTask.js";
@@ -70,13 +59,8 @@ const emit = defineEmits(["changed", "collections"]);
 const chosen = ref("");
 const kind = ref("index");
 const roles = [
-	{
-		value: "index",
-		label: "Index page",
-		description: "A list of collection entries",
-		icon: "lucide-layout-grid size-4",
-	},
-	{ value: "detail", label: "Detail page", description: "One page for each entry", icon: "lucide-file-text size-4" },
+	{ value: "index", label: "Index", description: "A list of entries" },
+	{ value: "detail", label: "Detail", description: "One page for each entry" },
 ];
 const { isRunning, error, run } = useTask();
 watch(

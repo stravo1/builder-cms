@@ -10,7 +10,7 @@
 					@click="emit('back')"
 				/>
 				<div>
-					<h3 class="text-lg font-medium">{{ entryName ? "Edit entry" : "New entry" }}</h3>
+					<h3 class="text-lg font-semibold text-ink-gray-9">{{ entryName ? "Edit entry" : "New entry" }}</h3>
 					<p class="text-p-sm text-ink-gray-5">{{ collection.label }}</p>
 				</div>
 			</div>
@@ -29,7 +29,7 @@
 					Saved to {{ collection.doctype }}. Use Desk for child tables and advanced fields.
 				</p>
 				<EntryField v-for="field in fields" :key="field.fieldname" v-model="draft[field.fieldname]" :field="field" />
-				<p v-if="error" role="alert" class="text-p-sm text-ink-red-5">{{ error }}</p>
+				<p v-if="error" role="alert" class="cms-error">{{ error }}</p>
 				<Button
 					v-if="!collection.isOwned || entryName"
 					variant="ghost"

@@ -2,7 +2,7 @@
 	<div v-if="!context.page" class="cms-empty"><p>Open a page to connect a collection.</p></div>
 	<div v-else :key="context.page.name" class="flex flex-col">
 		<p v-if="context.readOnly" class="cms-hint p-3">This page is read-only.</p>
-		<p v-if="error" role="alert" class="p-3 text-p-sm text-ink-red-5">{{ error }}</p>
+		<p v-if="error" role="alert" class="cms-error p-3">{{ error }}</p>
 		<p v-if="isRunning && !isLoaded" class="cms-hint p-3">Loading page connection…</p>
 		<fieldset v-else :disabled="context.readOnly" class="min-w-0">
 			<PageRoleChooser

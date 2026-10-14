@@ -4,16 +4,14 @@
 		<p class="cms-hint">
 			Insert a list, or repeat the children of a container you designed. Select a block inside it to connect fields.
 		</p>
-		<div class="flex gap-2">
-			<FormControl
+		<div class="flex flex-col gap-1.5">
+			<span class="text-xs text-ink-gray-5">Layout</span>
+			<TabButtons
 				v-model="layout"
-				type="select"
-				label="Layout"
 				:options="[
 					{ label: 'Cards', value: 'cards' },
 					{ label: 'Table', value: 'table' },
 				]"
-				class="flex-1"
 			/>
 		</div>
 		<Button
@@ -30,12 +28,12 @@
 			:loading="isRunning"
 			@click="connect"
 		/>
-		<p v-if="error" role="alert" class="text-p-sm text-ink-red-5">{{ error }}</p>
+		<p v-if="error" role="alert" class="cms-error">{{ error }}</p>
 	</section>
 </template>
 <script setup>
 import { useBuilderContext } from "frappe-builder-extension-sdk/vue";
-import { Button, FormControl } from "frappe-ui";
+import { Button, TabButtons } from "frappe-ui";
 import { computed, ref } from "vue";
 import { addCollectionList, connectCollectionList } from "../../cms/pageActions.js";
 import { useTask } from "../useTask.js";

@@ -14,7 +14,7 @@
 			<span class="text-p-sm text-ink-gray-5">{{ rows.length }} entries</span>
 			<Button size="sm" icon-left="lucide-plus" label="New entry" @click="emit('create')" />
 		</header>
-		<p v-if="!collection.isOwned" class="px-3 pt-2 text-p-sm text-ink-gray-5">
+		<p v-if="!collection.isOwned" class="cms-hint px-3 pt-2">
 			Edit the simple fields here. Open a row in Desk for the rest.
 		</p>
 		<CollectionTable

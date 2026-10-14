@@ -2,7 +2,7 @@
 	<div class="flex min-h-0 flex-1 flex-col">
 		<div class="flex flex-col gap-2 p-3">
 			<div class="flex items-center justify-between">
-				<span class="cms-section-label">Content</span>
+				<span class="cms-section-label">Entries</span>
 				<Button icon-left="lucide-plus" label="New entry" size="sm" variant="solid" @click="openEditor()" />
 			</div>
 			<FormControl v-model="query" placeholder="Search entries…" aria-label="Search entries" />
@@ -17,23 +17,27 @@
 				/>
 			</div>
 		</div>
-		<p v-if="error" class="cms-hint px-3" role="alert">{{ error }}</p>
+		<p v-if="error" class="cms-error px-3" role="alert">{{ error }}</p>
 		<p v-else-if="isRunning && !entries.length" class="cms-hint p-3">Loading entries…</p>
 		<div v-else-if="!entries.length" class="cms-empty">
-			<span class="text-base font-medium text-ink-gray-8">Your collection is ready</span>
+			<span class="text-sm font-medium text-ink-gray-8">No entries yet</span>
 			<p>Add your first entry, then connect it to a page.</p>
 			<Button label="Create first entry" variant="subtle" @click="openEditor()" />
 		</div>
 		<div v-else class="min-h-0 overflow-y-auto px-2 pb-3">
-			<button v-for="entry in shown" :key="entry.name" class="cms-list-row w-full" @click="openEditor(entry)">
-				<div class="min-w-0 flex-1">
-					<div class="truncate text-base font-medium">{{ entry.title }}</div>
-					<div class="mt-1 truncate text-xs text-ink-gray-5">/{{ entry.slug || entry.name }}</div>
-				</div>
-				<span class="cms-status" :class="entry.published ? 'cms-status-published' : ''">{{
-					entry.published ? "Published" : "Draft"
-				}}</span>
-			</button>
+			<ItemListRow
+				v-for="entry in shown"
+				:key="entry.name"
+				as="button"
+				class="cms-list-row"
+				@click="openEditor(entry)"
+			>
+				<span class="block truncate text-sm text-ink-gray-8">{{ entry.title }}</span>
+				<span class="block truncate text-xs text-ink-gray-5">/{{ entry.slug || entry.name }}</span>
+				<template #suffix>
+					<Badge :theme="entry.published ? 'green' : 'gray'" :label="entry.published ? 'Published' : 'Draft'" />
+				</template>
+			</ItemListRow>
 			<p v-if="!shown.length" class="cms-hint p-2">No entries match your search.</p>
 			<Button
 				v-if="hasMore"
@@ -49,7 +53,7 @@
 
 <script setup>
 import builder from "frappe-builder-extension-sdk";
-import { Button, FormControl } from "frappe-ui";
+import { Badge, Button, FormControl, ItemListRow } from "frappe-ui";
 import { computed, onMounted, ref, shallowRef } from "vue";
 import { useTask } from "../useTask.js";
 

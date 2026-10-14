@@ -1,6 +1,6 @@
 <template>
 	<div class="min-h-0 flex-1 overflow-auto">
-		<div v-if="fields.length" class="grid w-max min-w-full text-base" :style="{ gridTemplateColumns: columns }">
+		<div v-if="fields.length" class="grid w-max min-w-full text-sm" :style="{ gridTemplateColumns: columns }">
 			<div class="row">
 				<div v-for="(field, index) in fields" :key="field.fieldname" class="cell head" :class="{ first: index === 0 }">
 					{{ field.label || field.fieldname }}
@@ -50,7 +50,7 @@
 				</div>
 			</div>
 		</div>
-		<p v-if="!rows.length && fields.length" class="p-3 text-p-sm text-ink-gray-5">No entries yet.</p>
+		<p v-if="!rows.length && fields.length" class="cms-hint p-3">No entries yet.</p>
 	</div>
 </template>
 
@@ -100,7 +100,7 @@ const remove = (row) => {
 	@apply bg-surface-gray-1;
 }
 .head {
-	@apply sticky top-0 z-20 bg-surface-gray-1 text-xs font-medium uppercase tracking-wide text-ink-gray-5;
+	@apply sticky top-0 z-20 bg-surface-gray-1 text-sm text-ink-gray-5;
 }
 /* the title stays in view while the table scrolls sideways */
 .first {
