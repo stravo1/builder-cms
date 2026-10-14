@@ -99,6 +99,8 @@ watch(
 );
 
 const getDefault = (field) => {
+	// a new entry starts published. The user unticks it to keep a draft
+	if (field.fieldname === props.collection.publishedField) return 1;
 	if (field.fieldtype === "Check") return Number(field.default || 0);
 	return field.default && !String(field.default).startsWith(":") ? field.default : "";
 };
