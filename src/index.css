@@ -25,3 +25,8 @@
 		@apply text-left hover:bg-surface-gray-2 focus-visible:focus-ring;
 	}
 }
+
+/* match Builder's dark base, which pins surface-base to gray-950 */
+[data-theme="dark"] .bg-surface-base {
+	background-color: var(--gray-950);
+}
