@@ -10,7 +10,7 @@ const builder = vi.hoisted(() => ({
 vi.mock("frappe-builder-extension-sdk", () => ({ default: builder }));
 
 import { Collection } from "../src/cms/collection.js";
-import { setCollectionPage, setIndexPage } from "../src/cms/pageActions.js";
+import { addCollectionList, addEntryContent, setCollectionPage, setIndexPage } from "../src/cms/pageActions.js";
 import { bindBlock, getSourcesForBlock } from "../src/blocks/blockActions.js";
 import { DataSource } from "../src/data/dataSource.js";
 import { writeSection } from "../src/data/scriptSections.js";
@@ -149,5 +149,37 @@ describe("collection content", () => {
 		const collection = new Collection("Article", { slug_field: "permalink" });
 		await collection.saveEntry({ headline: "Hello", permalink: "hello" });
 		expect(builder.data.insert).toHaveBeenCalledWith("Article", { headline: "Hello", permalink: "hello" });
+	});
+});
+
+describe("inserted blocks", () => {
+	const title = { fieldname: "title", label: "Title", fieldtype: "Data" };
+	const blockNames = (block) => [block.blockName, ...(block.children || []).flatMap(blockNames)];
+
+	beforeEach(() => {
+		builder.context.get.mockResolvedValue({ page, selection: { count: 0 } });
+		builder.page.getBlocks.mockResolvedValue([{ blockId: "root", children: [] }]);
+	});
+
+	it("inserts only the chosen fields in a collection list", async () => {
+		await addCollectionList(new Collection("CMS Posts", { ...settings[0] }), { layout: "table", fields: [title] });
+		const [, tree] = builder.block.insert.mock.calls[0];
+		expect(tree.styles.gridTemplateColumns).toBe("fit-content(280px)");
+		expect(blockNames(tree)).toContain("Title heading");
+	});
+
+	it("inserts the entry content on a detail page each time the user asks", async () => {
+		const collection = new Collection("CMS Posts", { ...settings[0] });
+		await setCollectionPage(collection, "page");
+		await addEntryContent(collection, [title]);
+		await addEntryContent(collection, [title]);
+		expect(builder.block.insert).toHaveBeenCalledTimes(2);
+		expect(builder.block.insert.mock.calls[1][1].children).toMatchObject([
+			{ blockName: "Title", dynamicValues: [{ key: "entry.title" }] },
+		]);
+	});
+
+	it("refuses entry content on a page with no entry source", async () => {
+		await expect(addEntryContent(new Collection("CMS Posts"), [title])).rejects.toThrow("detail page");
 	});
 });

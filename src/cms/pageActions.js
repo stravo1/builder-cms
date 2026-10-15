@@ -177,14 +177,17 @@ const assignPageRole = async (collection, pageName, field) => {
 	}
 };
 
-export const addCollectionList = async (collection, options = {}) => {
+export const addCollectionList = async (collection, { fields, ...options }) => {
 	const source = await getCollectionListSource(collection, options);
-	return insertBlocks(
-		source,
-		collection.getDisplayFields(await collection.getFields()),
-		collection.label,
-		options.layout,
-	);
+	return insertBlocks(source, fields, collection.label, options.layout);
+};
+
+/** Inserts blocks bound to the entry of the detail page. Each call adds a new set. */
+export const addEntryContent = async (collection, fields) => {
+	const page = await getWritablePage();
+	const source = (await new PageData(page.name).load()).find((each) => each.name === ENTRY_SOURCE);
+	if (!source) throw new Error("Connect this page as the detail page first.");
+	return insertBlocks(source, fields, collection.label);
 };
 
 export const connectCollectionList = async (collection, blockId, options = {}) => {

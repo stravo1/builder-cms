@@ -14,7 +14,13 @@
 					@collections="emit('collections')"
 				/>
 				<DetailPagePreview v-if="role?.kind === 'detail'" :collection="role.collection" />
-				<AddToPage v-if="role?.kind === 'index'" :collection="role.collection" @changed="changed" />
+				<AddToPage
+					v-if="role"
+					:key="`${role.kind}:${role.collection.doctype}`"
+					:kind="role.kind"
+					:collection="role.collection"
+					@changed="changed"
+				/>
 			</fieldset>
 			<section class="border-t border-outline-gray-1">
 				<div class="px-3 pt-4">
