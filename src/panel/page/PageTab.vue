@@ -3,17 +3,17 @@
 	<div v-else :key="context.page.name" class="flex flex-col">
 		<p v-if="context.readOnly" class="cms-hint p-3">This page is read-only.</p>
 		<p v-if="error" role="alert" class="cms-error p-3">{{ error }}</p>
-		<SectionLoader v-if="isRunning && !isLoaded" label="Loading page connection" />
+		<SectionLoader v-if="isRunning" label="Loading page connection" />
 		<fieldset v-else :disabled="context.readOnly" class="min-w-0">
 			<PageRoleChooser
 				:collections="collections"
 				:role="role"
 				:page-name="context.page.name"
-				@changed="reload"
+				@changed="changed"
 				@collections="emit('collections')"
 			/>
 			<DetailPagePreview v-if="role?.kind === 'detail'" :collection="role.collection" />
-			<AddToPage v-if="role?.kind === 'index'" :collection="role.collection" @changed="reload" />
+			<AddToPage v-if="role?.kind === 'index'" :collection="role.collection" @changed="changed" />
 		</fieldset>
 		<section class="border-t border-outline-gray-1">
 			<div class="px-3 pt-4">
@@ -43,20 +43,24 @@ const context = useBuilderContext(["page", "readOnly"]);
 const collections = shallowRef([]);
 const sources = shallowRef([]);
 const revision = ref(0);
-const isLoaded = ref(false);
-const { run, error, isRunning } = useTask();
+const { runCached, error, isRunning } = useTask();
 const role = computed(() => (context.page ? getPageRole(collections.value, context.page, sources.value) : null));
-let loadVersion = 0;
-const reload = () =>
-	run(async () => {
-		const version = ++loadVersion;
-		const name = context.page?.name;
-		if (!name) return;
-		const loaded = await Promise.all([Collection.all(), new PageData(name).load()]);
-		if (version !== loadVersion) return;
-		[collections.value, sources.value] = loaded;
-		isLoaded.value = true;
-		revision.value++;
-	});
+const reload = () => {
+	const name = context.page?.name;
+	if (!name) return;
+	return runCached(
+		`page:${name}`,
+		() => Promise.all([Collection.all(), new PageData(name).load()]),
+		(loaded) => {
+			// a read of the previous page can finish after the user opens another page
+			if (name === context.page?.name) [collections.value, sources.value] = loaded;
+		},
+	);
+};
+// BindFields loads on its own when the page changes. It only needs a nudge after a change made here.
+const changed = async () => {
+	await reload();
+	revision.value++;
+};
 watch(() => [context.page?.name, context.page?.route], reload, { immediate: true });
 </script>

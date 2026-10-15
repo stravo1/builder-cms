@@ -4,12 +4,14 @@ const { builder } = vi.hoisted(() => ({
 	builder: {
 		data: { getList: vi.fn(), update: vi.fn(), subscribe: vi.fn() },
 		schema: { listDoctypes: vi.fn(), getDoctype: vi.fn() },
+		ui: { toast: vi.fn() },
 	},
 }));
 vi.mock("frappe-builder-extension-sdk", () => ({ default: builder }));
 
 const { cached, forget, hasCopy, showThenRefresh } = await import("../src/data/cache.js");
 const { Collection } = await import("../src/cms/collection.js");
+const { useTask } = await import("../src/panel/useTask.js");
 
 describe("the read cache", () => {
 	beforeEach(() => {
@@ -75,5 +77,23 @@ describe("the read cache", () => {
 		await showThenRefresh("rows:Kept", async () => ["row"], () => {});
 		forget();
 		expect(hasCopy("rows:Kept")).toBe(true);
+	});
+
+	it("loads a view one time, then shows its copy with no loading state", async () => {
+		const first = useTask();
+		const load = first.runCached("page:home", async () => "first", () => {});
+		expect(first.isRunning.value).toBe(true);
+		await load;
+
+		// the tab mounts again, as when the user comes back to it
+		const again = useTask();
+		const shown = [];
+		let finish;
+		const refresh = again.runCached("page:home", () => new Promise((resolve) => (finish = resolve)), (value) => shown.push(value));
+		expect(again.isRunning.value).toBe(false);
+		expect(shown).toEqual(["first"]);
+		finish("second");
+		await refresh;
+		expect(shown).toEqual(["first", "second"]);
 	});
 });
