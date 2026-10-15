@@ -1,7 +1,7 @@
 <template>
 	<div class="flex flex-col gap-2">
 		<span class="cms-section-label">Access</span>
-		<p class="cms-hint">{{ hint }} System Manager and Website Manager always can.</p>
+		<p class="cms-hint">{{ hint }}</p>
 		<MultiSelect
 			v-model="roles"
 			class="w-full"

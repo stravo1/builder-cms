@@ -27,7 +27,10 @@
 			/>
 		</div>
 		<section v-if="collection.isOwned" class="border-t border-outline-gray-1 pt-4">
-			<RoleAccess :doctype="collection.doctype" hint="Roles that can read and change its entries." />
+			<RoleAccess
+				:doctype="collection.doctype"
+				hint="Roles that can read and change its entries. System Manager and Website Manager always can."
+			/>
 		</section>
 		<section class="flex flex-col gap-2 border-t border-outline-gray-1 pt-4">
 			<span class="cms-section-label">{{ collection.isOwned ? "Delete collection" : "Disconnect DocType" }}</span>

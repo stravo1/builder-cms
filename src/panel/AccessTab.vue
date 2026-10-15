@@ -4,7 +4,7 @@
 	<div v-else class="p-3">
 		<RoleAccess
 			:doctype="SETTINGS_DOCTYPE"
-			hint="Roles that can use the CMS: see its collections, connect pages, and create collections. Each collection's Access sets who can edit its entries."
+			hint="Roles that can use the CMS."
 		/>
 	</div>
 </template>
