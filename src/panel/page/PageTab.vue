@@ -4,24 +4,26 @@
 		<p v-if="context.readOnly" class="cms-hint p-3">This page is read-only.</p>
 		<p v-if="error" role="alert" class="cms-error p-3">{{ error }}</p>
 		<SectionLoader v-if="isRunning" label="Loading page connection" />
-		<fieldset v-else :disabled="context.readOnly" class="min-w-0">
-			<PageRoleChooser
-				:collections="collections"
-				:role="role"
-				:page-name="context.page.name"
-				@changed="changed"
-				@collections="emit('collections')"
-			/>
-			<DetailPagePreview v-if="role?.kind === 'detail'" :collection="role.collection" />
-			<AddToPage v-if="role?.kind === 'index'" :collection="role.collection" @changed="changed" />
-		</fieldset>
-		<section class="border-t border-outline-gray-1">
-			<div class="px-3 pt-4">
-				<span class="cms-section-label">Connect a field</span>
-				<p class="cms-hint mt-2">Select a block on the canvas, then choose its content.</p>
-			</div>
-			<BindFields :revision="revision" />
-		</section>
+		<template v-else>
+			<fieldset :disabled="context.readOnly" class="min-w-0">
+				<PageRoleChooser
+					:collections="collections"
+					:role="role"
+					:page-name="context.page.name"
+					@changed="changed"
+					@collections="emit('collections')"
+				/>
+				<DetailPagePreview v-if="role?.kind === 'detail'" :collection="role.collection" />
+				<AddToPage v-if="role?.kind === 'index'" :collection="role.collection" @changed="changed" />
+			</fieldset>
+			<section class="border-t border-outline-gray-1">
+				<div class="px-3 pt-4">
+					<span class="cms-section-label">Connect a field</span>
+					<p class="cms-hint mt-2">Select a block on the canvas, then choose its content.</p>
+				</div>
+				<BindFields :revision="revision" />
+			</section>
+		</template>
 	</div>
 </template>
 
