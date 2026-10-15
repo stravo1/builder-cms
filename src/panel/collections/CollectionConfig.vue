@@ -11,7 +11,7 @@
 		</section>
 		<form class="flex flex-col gap-2" @submit.prevent="saveUrl">
 			<FormControl v-model="url" label="URL" />
-			<p class="cms-hint">Entries live at {{ normalizeUrl(url || "/") }}/entry-slug.</p>
+			<p class="cms-hint">Entries live at {{ normalizeUrl(url || "/") }}/:slug.</p>
 			<Button type="submit" variant="subtle" label="Save URL" :loading="isRunning" />
 		</form>
 		<div v-if="!collection.isOwned" class="flex flex-col gap-1">
