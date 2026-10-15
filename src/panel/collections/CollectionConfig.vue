@@ -17,8 +17,12 @@
 		<div v-if="!collection.isOwned" class="flex flex-col gap-1">
 			<span class="cms-section-label">Mapping</span>
 			<p class="text-p-sm text-ink-gray-7">
-				{{ collection.doctype }} · slug from "{{ collection.slugField }}" ·
-				{{ collection.publishedField ? `published by "${collection.publishedField}"` : "every row is public" }}
+				Entries from {{ collection.doctype }} use <i><code>{{ collection.slugField }}</code></i> as slug.
+				{{
+					collection.publishedField
+						? `Only entries with "${collection.publishedField}" checked are public.`
+						: "All entries are public (No publish field selected)."
+				}}
 			</p>
 			<Button
 				variant="ghost"

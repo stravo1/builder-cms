@@ -13,8 +13,7 @@
 				v-if="!publishedField"
 				theme="amber"
 				:dismissible="false"
-				title="Every row is public"
-				:description="`Pages that list ${doctype} show all of its rows.`"
+				title="All entries are considered Published"
 			/>
 		</template>
 		<p v-if="error" role="alert" class="cms-error">{{ error }}</p>
