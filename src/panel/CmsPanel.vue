@@ -7,7 +7,8 @@
 			<TabPanel v-for="tab in TABS" :key="tab.value" :value="tab.value" class="min-h-0 flex-1 overflow-y-auto">
 				<div class="flex h-full flex-col">
 					<CollectionsTab v-if="tab.value === 0" @use-page="activeTab = 1" />
-					<PageTab v-else @collections="activeTab = 0" />
+					<PageTab v-else-if="tab.value === 1" @collections="activeTab = 0" />
+					<AccessTab v-else />
 				</div>
 			</TabPanel>
 		</Tabs>
@@ -18,6 +19,7 @@
 import builder from "frappe-builder-extension-sdk";
 import { setConfig, TabList, TabPanel, Tabs, TabTrigger } from "frappe-ui";
 import { ref } from "vue";
+import AccessTab from "./AccessTab.vue";
 import CollectionsTab from "./collections/CollectionsTab.vue";
 import PageTab from "./page/PageTab.vue";
 
@@ -27,6 +29,7 @@ setConfig("resourceFetcher", builder.data.fetcher);
 const TABS = [
 	{ value: 0, label: "Collections" },
 	{ value: 1, label: "This page" },
+	{ value: 2, label: "Access" },
 ];
 const activeTab = ref(0);
 </script>
