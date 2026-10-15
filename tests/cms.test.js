@@ -97,8 +97,14 @@ describe("getListBlock", () => {
 		expect(table.styles).toMatchObject({ width: "max-content", maxWidth: "100%", overflowX: "auto" });
 	});
 
-	it("highlights a row on hover with a Builder state style", () => {
-		expect(rows.children[0].styles["hover:backgroundColor"]).toBeTruthy();
+	// the user styles the table in Builder. It starts with no colors, borders, or hover
+	it("has no decorative styles", () => {
+		const styles = (block) => [block.styles || {}, ...(block.children || []).flatMap(styles)];
+		const names = styles(table).flatMap(Object.keys);
+		for (const name of ["color", "backgroundColor", "border", "borderBottom", "borderRadius", "boxShadow"]) {
+			expect(names).not.toContain(name);
+		}
+		expect(names.filter((name) => name.startsWith("hover:"))).toEqual([]);
 	});
 
 	it("repeats one row per entry", () => {

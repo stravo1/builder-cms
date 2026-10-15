@@ -34,21 +34,6 @@ const fieldBlocks = (fields, keyOf) =>
 	fields.map((field, index) => fieldBlock(field, keyOf(field.fieldname), index === 0));
 
 /**
- * One opinionated look: a white card with a soft border, a muted header band,
- * and roomy rows that light up on hover. Every value is a normal Builder style,
- * so a user restyles the table like any other block.
- */
-const COLORS = {
-	border: "#e5e7eb",
-	divider: "#f1f2f4",
-	header: "#f9fafb",
-	hover: "#f6f7f9",
-	text: "#1f2937",
-	muted: "#6b7280",
-	strong: "#111827",
-};
-
-/**
  * Each column is as wide as its widest cell, up to a cap. Past the cap, the
  * text wraps. An image column is as wide as the thumbnail or its heading.
  */
@@ -61,7 +46,7 @@ const columnWidth = (field) => {
 /**
  * The table is the one grid. The header, the row group, and each row take its
  * columns with `subgrid`. So a column fits the widest cell of every row, and
- * each row still has its own box for the hover color and the divider.
+ * each row still has its own box for the user to style.
  */
 const subgrid = { display: "grid", gridTemplateColumns: "subgrid", gridColumn: "1 / -1" };
 
@@ -70,20 +55,10 @@ const subgrid = { display: "grid", gridTemplateColumns: "subgrid", gridColumn: "
  * still breaks a word too long for the cap, but unlike `anywhere` it does not
  * let the grid squeeze a column to one letter.
  */
-const cell = { padding: "12px 16px", overflowWrap: "break-word" };
+const cell = { padding: "8px 12px", overflowWrap: "break-word" };
 
-const headerCell = {
-	...cell,
-	paddingTop: "10px",
-	paddingBottom: "10px",
-	fontSize: "12px",
-	fontWeight: "600",
-	letterSpacing: "0.04em",
-	textTransform: "uppercase",
-	color: COLORS.muted,
-	// one line, and the column is at least as wide as the label
-	whiteSpace: "nowrap",
-};
+// one line, and the column is at least as wide as the label
+const headerCell = { ...cell, fontWeight: "600", whiteSpace: "nowrap" };
 
 /** Text, an image thumbnail, or rich text kept to two lines. */
 const valueBlock = (field, key) => {
@@ -94,41 +69,29 @@ const valueBlock = (field, key) => {
 			...shared,
 			element: "img",
 			attributes: { alt: "" },
-			styles: { width: "40px", height: "40px", objectFit: "cover", borderRadius: "8px", display: "block" },
+			styles: { width: "40px", height: "40px", objectFit: "cover", display: "block" },
 		};
 	}
 	if (field.fieldtype === "Text Editor") {
 		return {
 			...shared,
 			element: richText.element,
-			styles: {
-				display: "-webkit-box",
-				WebkitLineClamp: "2",
-				WebkitBoxOrient: "vertical",
-				overflow: "hidden",
-				color: COLORS.muted,
-			},
+			styles: { display: "-webkit-box", WebkitLineClamp: "2", WebkitBoxOrient: "vertical", overflow: "hidden" },
 		};
 	}
 	return { ...shared, element: "span" };
 };
 
-/** The first cell holds the link to the row's page. It reads as the row's title. */
+/** The first cell holds the link to the row's page. */
 const linked = (source, block) =>
 	source.link
 		? {
 				element: "a",
 				blockName: "Link",
-				styles: {
-					color: COLORS.strong,
-					fontWeight: "500",
-					textDecoration: "none",
-					"hover:textDecoration": "underline",
-				},
 				dynamicValues: [{ key: "url", type: "attribute", property: "href" }],
 				children: [block],
 			}
-		: { ...block, styles: { ...block.styles, color: COLORS.strong, fontWeight: "500" } };
+		: block;
 
 /**
  * A grid of divs that reads as a table: a header row with the field labels,
@@ -146,20 +109,13 @@ export const getListBlock = (source, fields, label = source.name) => ({
 		width: "max-content",
 		maxWidth: "100%",
 		overflowX: "auto",
-		backgroundColor: "#ffffff",
-		border: `1px solid ${COLORS.border}`,
-		borderRadius: "12px",
-		boxShadow: "0 1px 2px rgba(16, 24, 40, 0.05)",
-		fontSize: "14px",
-		lineHeight: "1.5",
-		color: COLORS.text,
 	},
 	children: [
 		{
 			element: "div",
 			blockName: "Header",
 			attributes: { role: "row" },
-			styles: { ...subgrid, backgroundColor: COLORS.header, borderBottom: `1px solid ${COLORS.border}` },
+			styles: subgrid,
 			children: fields.map((field) => ({
 				element: "div",
 				attributes: { role: "columnheader" },
@@ -179,12 +135,7 @@ export const getListBlock = (source, fields, label = source.name) => ({
 					element: "div",
 					blockName: `${label} row`,
 					attributes: { role: "row" },
-					styles: {
-						...subgrid,
-						alignItems: "center",
-						borderBottom: `1px solid ${COLORS.divider}`,
-						"hover:backgroundColor": COLORS.hover,
-					},
+					styles: { ...subgrid, alignItems: "center" },
 					children: fields.map((field, index) => {
 						const value = valueBlock(field, field.fieldname);
 						return {
