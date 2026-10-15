@@ -29,7 +29,7 @@
 		<section v-if="collection.isOwned" class="border-t border-outline-gray-1 pt-4">
 			<RoleAccess
 				:doctype="collection.doctype"
-				hint="Roles that can read and change its entries. System Manager and Website Manager always can."
+				hint="Roles that can read and change its entries."
 			/>
 		</section>
 		<section class="flex flex-col gap-2 border-t border-outline-gray-1 pt-4">
@@ -37,7 +37,7 @@
 			<p class="cms-hint">
 				{{
 					collection.isOwned
-						? "Pages stop showing its entries. Builder asks before it deletes the DocType."
+						? "Pages stop showing its entries."
 						: `Pages stop showing its entries. ${collection.doctype} and its records stay.`
 				}}
 			</p>
