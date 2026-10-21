@@ -12,19 +12,28 @@ const column = { display: "flex", flexDirection: "column" };
  * the browser closes a `p` at the first heading, list, or paragraph in the
  * content, and the content falls out of the block. A `span` keeps it.
  */
-const richText = { element: "span", styles: { display: "block" } };
+const richText = { element: "span", baseStyles: { display: "block" } };
 
 /** How a field shows: an image sets `src`, every other field sets the text. */
 const getBinding = (field, key) =>
 	field.fieldtype === "Attach Image"
-		? { key, type: "attribute", property: "src" }
-		: { key, type: "key", property: "innerHTML" };
+		? { key, type: "attribute", property: "src", comesFrom: "dataScript" }
+		: { key, type: "key", property: "innerHTML", comesFrom: "dataScript" };
 
 const fieldBlock = (field, key, isFirst) => {
 	const binding = getBinding(field, key);
-	const shared = { blockName: field.label, dynamicValues: [binding], visibilityCondition: { key } };
+	const shared = {
+		blockName: field.label,
+		dynamicValues: [binding],
+		visibilityCondition: { key, comesFrom: "dataScript" },
+	};
 	if (binding.type === "attribute") {
-		return { ...shared, element: "img", attributes: { alt: "" }, styles: { width: "100%", objectFit: "cover" } };
+		return {
+			...shared,
+			element: "img",
+			attributes: { alt: "" },
+			baseStyles: { width: "100%", objectFit: "cover" },
+		};
 	}
 	if (field.fieldtype === "Text Editor") return { ...shared, ...richText };
 	return { ...shared, element: isFirst ? "h3" : "p" };
@@ -63,20 +72,29 @@ const headerCell = { ...cell, fontWeight: "600", whiteSpace: "nowrap" };
 /** Text, an image thumbnail, or rich text kept to two lines. */
 const valueBlock = (field, key) => {
 	const binding = getBinding(field, key);
-	const shared = { blockName: field.label, dynamicValues: [binding], visibilityCondition: { key } };
+	const shared = {
+		blockName: field.label,
+		dynamicValues: [binding],
+		visibilityCondition: { key, comesFrom: "dataScript" },
+	};
 	if (binding.type === "attribute") {
 		return {
 			...shared,
 			element: "img",
 			attributes: { alt: "" },
-			styles: { width: "40px", height: "40px", objectFit: "cover", display: "block" },
+			baseStyles: { width: "40px", height: "40px", objectFit: "cover", display: "block" },
 		};
 	}
 	if (field.fieldtype === "Text Editor") {
 		return {
 			...shared,
 			element: richText.element,
-			styles: { display: "-webkit-box", WebkitLineClamp: "2", WebkitBoxOrient: "vertical", overflow: "hidden" },
+			baseStyles: {
+				display: "-webkit-box",
+				WebkitLineClamp: "2",
+				WebkitBoxOrient: "vertical",
+				overflow: "hidden",
+			},
 		};
 	}
 	return { ...shared, element: "span" };
@@ -88,7 +106,7 @@ const linked = (source, block) =>
 		? {
 				element: "a",
 				blockName: "Link",
-				dynamicValues: [{ key: "url", type: "attribute", property: "href" }],
+				dynamicValues: [{ key: "url", type: "attribute", property: "href", comesFrom: "dataScript" }],
 				children: [block],
 			}
 		: block;
@@ -102,7 +120,7 @@ export const getListBlock = (source, fields, label = source.name) => ({
 	element: "div",
 	blockName: `${label} table`,
 	attributes: { role: "table" },
-	styles: {
+	baseStyles: {
 		display: "grid",
 		gridTemplateColumns: fields.map(columnWidth).join(" "),
 		// as wide as its columns. A table wider than the page scrolls inside itself
@@ -115,11 +133,11 @@ export const getListBlock = (source, fields, label = source.name) => ({
 			element: "div",
 			blockName: "Header",
 			attributes: { role: "row" },
-			styles: subgrid,
+			baseStyles: subgrid,
 			children: fields.map((field) => ({
 				element: "div",
 				attributes: { role: "columnheader" },
-				styles: headerCell,
+				baseStyles: headerCell,
 				children: [{ element: "span", blockName: `${field.label} heading`, innerHTML: field.label }],
 			})),
 		},
@@ -129,19 +147,19 @@ export const getListBlock = (source, fields, label = source.name) => ({
 			attributes: { role: "rowgroup" },
 			isRepeaterBlock: true,
 			dataKey: { key: source.name, comesFrom: "dataScript" },
-			styles: subgrid,
+			baseStyles: subgrid,
 			children: [
 				{
 					element: "div",
 					blockName: `${label} row`,
 					attributes: { role: "row" },
-					styles: { ...subgrid, alignItems: "center" },
+					baseStyles: { ...subgrid, alignItems: "center" },
 					children: fields.map((field, index) => {
 						const value = valueBlock(field, field.fieldname);
 						return {
 							element: "div",
 							attributes: { role: "cell" },
-							styles: cell,
+							baseStyles: cell,
 							children: [index === 0 ? linked(source, value) : value],
 						};
 					}),
@@ -154,7 +172,7 @@ export const getListBlock = (source, fields, label = source.name) => ({
 export const getDocumentBlock = (source, fields, label = source.name) => ({
 	element: "div",
 	blockName: label,
-	styles: { ...column, gap: "16px", width: "100%" },
+	baseStyles: { ...column, gap: "16px", width: "100%" },
 	children: fieldBlocks(fields, (fieldname) => `${source.name}.${fieldname}`),
 });
 
@@ -164,12 +182,23 @@ export const getCardListBlock = (source, fields, label = source.name) => ({
 	blockName: `${label} list`,
 	isRepeaterBlock: true,
 	dataKey: { key: source.name, comesFrom: "dataScript" },
-	styles: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "24px", width: "100%" },
+	baseStyles: {
+		display: "grid",
+		gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+		gap: "24px",
+		width: "100%",
+	},
 	children: [
 		{
 			element: "div",
 			blockName: `${label} item`,
-			styles: { ...column, gap: "12px", padding: "20px", border: "1px solid #e5e7eb", borderRadius: "12px" },
+			baseStyles: {
+				...column,
+				gap: "12px",
+				padding: "20px",
+				border: "1px solid #e5e7eb",
+				borderRadius: "12px",
+			},
 			children: [
 				...fieldBlocks(fields.filter((field) => field.fieldtype !== "Check").slice(0, 4), (name) => name),
 				...(source.link
@@ -177,7 +206,7 @@ export const getCardListBlock = (source, fields, label = source.name) => ({
 							{
 								element: "a",
 								innerHTML: "Read more →",
-								dynamicValues: [{ key: "url", type: "attribute", property: "href" }],
+								dynamicValues: [{ key: "url", type: "attribute", property: "href", comesFrom: "dataScript" }],
 								visibilityCondition: { key: "url" },
 							},
 						]

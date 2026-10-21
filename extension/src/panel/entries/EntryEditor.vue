@@ -20,8 +20,7 @@
 						:key="field.fieldname"
 						:ref="(control) => fieldControls.set(field.fieldname, control)"
 						v-model="draft[field.fieldname]"
-						:field="field"
-					/>
+						:field="field" />
 				</fieldset>
 				<Button
 					v-if="!collection.isOwned || entryName"
@@ -29,12 +28,13 @@
 					variant="ghost"
 					icon-left="lucide-external-link"
 					label="Open in Desk"
-					@click="builder.ui.openUrl(collection.getDeskUrl(entryName || 'new'))"
-				/>
+					@click="openUrl(collection.getDeskUrl(entryName || 'new'))" />
 			</div>
 			<p v-if="error" role="alert" class="cms-error mt-3">{{ error }}</p>
 		</div>
-		<footer class="flex shrink-0 justify-end gap-2 p-3" :class="{ 'border-t border-outline-gray-1': !isDrawer }">
+		<footer
+			class="flex shrink-0 justify-end gap-2 p-3"
+			:class="{ 'border-t border-outline-gray-1': !isDrawer }">
 			<Button label="Cancel" :disabled="isRunning" @click="emit('back')" />
 			<Button type="submit" variant="solid" label="Save" :loading="isRunning" :disabled="!isLoaded" />
 		</footer>
@@ -42,7 +42,8 @@
 </template>
 
 <script setup>
-import builder from "frappe-builder-extension-sdk";
+import { openUrl } from "../../editor/windows.js";
+
 import { Button } from "frappe-ui";
 import { computed, onMounted, ref, shallowRef, watch } from "vue";
 import { slugify } from "../../cms/collection.js";

@@ -1,4 +1,4 @@
-import builder from "frappe-builder-extension-sdk";
+import { toast } from "frappe-ui";
 import { ref } from "vue";
 import { hasCopy, showThenRefresh } from "../data/cache.js";
 
@@ -14,11 +14,11 @@ export const useTask = () => {
 		error.value = "";
 		try {
 			const result = await task();
-			if (success) builder.ui.toast(success, { type: "success" });
+			if (success) toast.success(success);
 			return result;
 		} catch (cause) {
 			error.value = cause.message || String(cause);
-			builder.ui.toast(error.value, { type: "error" });
+			toast.error(error.value);
 		} finally {
 			isRunning.value = --pending > 0;
 		}

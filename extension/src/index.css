@@ -1,6 +1,3 @@
-@import "frappe-ui/style.css";
-
-@tailwind base;
 @tailwind components;
 @tailwind utilities;
 
@@ -24,10 +21,4 @@
 	.cms-list-row {
 		@apply text-left hover:bg-surface-gray-2 focus-visible:focus-ring;
 	}
-}
-
-/* match Builder's dark base, which pins surface-base to gray-950. Not a checkbox:
-   this rule would beat its checked fill and hide its dark tick */
-[data-theme="dark"] .bg-surface-base:not([type="checkbox"]) {
-	background-color: var(--gray-950);
 }

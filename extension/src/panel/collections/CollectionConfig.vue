@@ -17,7 +17,11 @@
 		<div v-if="!collection.isOwned" class="flex flex-col gap-1">
 			<span class="cms-section-label">Mapping</span>
 			<p class="text-p-sm text-ink-gray-7">
-				Entries from {{ collection.doctype }} use <i><code>{{ collection.slugField }}</code></i> as slug.
+				Entries from {{ collection.doctype }} use
+				<i>
+					<code>{{ collection.slugField }}</code>
+				</i>
+				as slug.
 				{{
 					collection.publishedField
 						? `Only entries with "${collection.publishedField}" checked are public.`
@@ -27,18 +31,18 @@
 			<Button
 				variant="ghost"
 				label="Open in Desk"
-				@click="run(() => builder.ui.openUrl(`/app/${slugify(collection.doctype)}`))"
-			/>
+				@click="run(() => openUrl(`/app/${slugify(collection.doctype)}`))" />
 		</div>
 		<section v-if="collection.isOwned && access.is_manager" class="border-t border-outline-gray-1 pt-4">
 			<RoleAccess
 				:saved="collection.roles"
 				:on-save="saveRoles"
-				hint="Roles that can read and change its entries only. The CMS roles reach every collection."
-			/>
+				hint="Roles that can read and change its entries only. The CMS roles reach every collection." />
 		</section>
 		<section class="flex flex-col gap-2 border-t border-outline-gray-1 pt-4">
-			<span class="cms-section-label">{{ collection.isOwned ? "Delete collection" : "Disconnect DocType" }}</span>
+			<span class="cms-section-label">
+				{{ collection.isOwned ? "Delete collection" : "Disconnect DocType" }}
+			</span>
 			<p class="cms-hint">
 				{{
 					collection.isOwned
@@ -51,15 +55,15 @@
 				:variant="isArmed ? 'solid' : 'subtle'"
 				:label="isArmed ? 'Click again to confirm' : collection.isOwned ? 'Delete collection' : 'Disconnect'"
 				:loading="isRunning"
-				@click="remove"
-			/>
+				@click="remove" />
 		</section>
 		<p v-if="error" role="alert" class="cms-error">{{ error }}</p>
 	</div>
 </template>
 
 <script setup>
-import builder from "frappe-builder-extension-sdk";
+import { openUrl } from "../../editor/windows.js";
+
 import { Button, FormControl } from "frappe-ui";
 import { computed, onMounted, ref, shallowRef } from "vue";
 import { normalizeUrl, slugify } from "../../cms/collection.js";

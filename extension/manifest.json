@@ -5,6 +5,5 @@
   "description": "Manage content in Frappe and show it on your pages.",
   "version": "0.1.13",
   "entry": "main.js",
-  "icon": "icon.svg",
-  "permissions": ["page.edit", "data.access", "method.call"]
+  "icon": "icon.svg"
 }

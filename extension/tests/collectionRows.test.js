@@ -1,6 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
 
-vi.mock("frappe-builder-extension-sdk", () => ({ default: { ui: { toast: vi.fn() } } }));
 import { useCollectionRows } from "../src/panel/table/useCollectionRows.js";
 
 const createCollection = () => ({
@@ -13,7 +12,9 @@ const createCollection = () => ({
 describe("collection table rows", () => {
 	it("appends the next page without losing loaded entries", async () => {
 		const collection = createCollection();
-		collection.getRows.mockResolvedValueOnce(Array.from({ length: 200 }, (_, index) => ({ name: `post-${index}` })));
+		collection.getRows.mockResolvedValueOnce(
+			Array.from({ length: 200 }, (_, index) => ({ name: `post-${index}` })),
+		);
 		const table = useCollectionRows(collection);
 		await table.reload();
 		expect(table.hasMore.value).toBe(true);

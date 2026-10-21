@@ -17,10 +17,10 @@ Existing DocTypes support simple entry fields in the same editor. Use **Open in 
 
 Open a Builder page and select **CMS → This page**. Choose a collection, select a page type, then click **Connect page**.
 
-| Page type | Content | URL |
-|---|---|---|
-| Index | A repeating collection list | `/blog` |
-| Detail | One entry selected by its slug | `/blog/:slug` |
+| Page type | Content                        | URL           |
+| --------- | ------------------------------ | ------------- |
+| Index     | A repeating collection list    | `/blog`       |
+| Detail    | One entry selected by its slug | `/blog/:slug` |
 
 Each collection has one index page and one detail page. Assigning a replacement moves the previous page to a `previous-<page>` URL. Route conflicts with unrelated pages stop the change.
 
@@ -53,9 +53,22 @@ npm run build
 
 Load the dev server through Builder's **Extensions → Load dev extension**. The SDK origin in `vite.config.js` must match the editor origin. Restart the dev server after changing dependencies.
 
-The host needs the fetch bridge for `method.call`, `data.subscribe` with realtime updates, `data.getMeta`, the block binding APIs, `page.open`, `page.setRouteVariables`, `page.refreshData`, `data.uploadFile`, `ui.openUrl`, and dialog sizing. The SDK comes from `../../builder/frontend/extension-sdk`. After changing the host SDK, run `yarn build:sdk` from Builder's `frontend` directory.
+The extension uses the trusted SDK from `stravo1/frappe-builder-extension-sdk` on the `trusted-extensions-api` branch.
+Its entry exports a Vue plugin. The plugin registers the CMS panel, block menu, and overlay component.
+Builder supplies the extension's Vue, stores, and frappe-ui through shared imports.
 
-The extension uses `page.edit`, `data.access`, and `method.call`. It calls `cms.api.*` through frappe-ui's `call()` in `src/data/api.js`. The app checks each right. The panel hides what the user cannot use. Removing a field drops its column.
+`src/editor/` reads the editor state, changes canvas blocks, and opens dialogs and the binding popup.
+`src/data/documents.js` uses Frappe's document APIs and the editor's realtime connection.
+It keeps page data scripts in sync with the active page after a write.
+The rich text editor remains a lazy-loaded dependency of the entry form.
+
+The extension calls `cms.api.*` through frappe-ui's `call()` in `src/data/api.js`.
+Each request uses the current user's session. The CMS app checks permissions.
+The manifest has no bridge capabilities. Removing a field still drops its column.
+
+Component edits use Vite hot reload with a development Vue build of Builder.
+With a production Vue build, the SDK automatically reloads Builder and restores the dev extension.
+Registration changes can also trigger a full reload.
 
 ### Browser checks
 

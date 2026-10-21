@@ -1,24 +1,20 @@
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("../src/data/api.js", () => ({ api: {} }));
-vi.mock("frappe-builder-extension-sdk", () => ({
-	default: {
-		data: {
-			getMeta: async () => ({
-				fields: [
-					{ fieldname: "email", fieldtype: "Data" },
-					{ fieldname: "roles_html", fieldtype: "HTML" },
-					{ fieldname: "generate_keys", fieldtype: "Button" },
-					{ fieldname: "user_image", fieldtype: "Attach Image" },
-					{ fieldname: "new_password", fieldtype: "Password" },
-					{ fieldname: "reset_password_key", fieldtype: "Data" },
-					{ fieldname: "api_key", fieldtype: "Data" },
-					{ fieldname: "api_secret", fieldtype: "Password" },
-					{ fieldtype: "Section Break" },
-				],
-			}),
-		},
-	},
+vi.mock("../src/data/documents.js", () => ({
+	getMetadata: async () => ({
+		fields: [
+			{ fieldname: "email", fieldtype: "Data" },
+			{ fieldname: "roles_html", fieldtype: "HTML" },
+			{ fieldname: "generate_keys", fieldtype: "Button" },
+			{ fieldname: "user_image", fieldtype: "Attach Image" },
+			{ fieldname: "new_password", fieldtype: "Password" },
+			{ fieldname: "reset_password_key", fieldtype: "Data" },
+			{ fieldname: "api_key", fieldtype: "Data" },
+			{ fieldname: "api_secret", fieldtype: "Password" },
+			{ fieldtype: "Section Break" },
+		],
+	}),
 }));
 
 const { Collection, markSameLabels, normalizeUrl } = await import("../src/cms/collection.js");
@@ -69,14 +65,18 @@ describe("getListBlock", () => {
 		["table", getListBlock],
 		["cards", getCardListBlock],
 		["detail page", getDocumentBlock],
-	])("shows rich text in a block span in the %s, a text block that can hold a heading or a list", (_, getBlock) => {
-		const body = { fieldname: "body", label: "Body", fieldtype: "Text Editor" };
-		const find = (block) => (block.blockName === "Body" ? block : (block.children || []).map(find).find(Boolean));
-		const richText = find(getBlock(new DataSource({ name: "posts" }), [{ ...fields[0] }, body]));
+	])(
+		"shows rich text in a block span in the %s, a text block that can hold a heading or a list",
+		(_, getBlock) => {
+			const body = { fieldname: "body", label: "Body", fieldtype: "Text Editor" };
+			const find = (block) =>
+				block.blockName === "Body" ? block : (block.children || []).map(find).find(Boolean);
+			const richText = find(getBlock(new DataSource({ name: "posts" }), [{ ...fields[0] }, body]));
 
-		expect(richText.element).toBe("span");
-		expect(richText.styles.display).toMatch(/block|box/);
-	});
+			expect(richText.element).toBe("span");
+			expect(richText.baseStyles.display).toMatch(/block|box/);
+		},
+	);
 
 	it("reads as a table, with a heading for each field", () => {
 		expect(table.attributes.role).toBe("table");
@@ -88,19 +88,26 @@ describe("getListBlock", () => {
 
 	// one grid, so each column fits the widest cell of every row
 	it("sizes each column to its content, on one grid shared by every row", () => {
-		expect(table.styles).toMatchObject({ display: "grid", gridTemplateColumns: "fit-content(280px) max-content" });
+		expect(table.baseStyles).toMatchObject({
+			display: "grid",
+			gridTemplateColumns: "fit-content(280px) max-content",
+		});
 		for (const part of [header, rows, rows.children[0]]) {
-			expect(part.styles).toMatchObject({ display: "grid", gridTemplateColumns: "subgrid", gridColumn: "1 / -1" });
+			expect(part.baseStyles).toMatchObject({
+				display: "grid",
+				gridTemplateColumns: "subgrid",
+				gridColumn: "1 / -1",
+			});
 		}
 	});
 
 	it("hugs its columns, and scrolls when wider than the page", () => {
-		expect(table.styles).toMatchObject({ width: "max-content", maxWidth: "100%", overflowX: "auto" });
+		expect(table.baseStyles).toMatchObject({ width: "max-content", maxWidth: "100%", overflowX: "auto" });
 	});
 
 	// the user styles the table in Builder. It starts with no colors, borders, or hover
 	it("has no decorative styles", () => {
-		const styles = (block) => [block.styles || {}, ...(block.children || []).flatMap(styles)];
+		const styles = (block) => [block.baseStyles || {}, ...(block.children || []).flatMap(styles)];
 		const names = styles(table).flatMap(Object.keys);
 		for (const name of ["color", "backgroundColor", "border", "borderBottom", "borderRadius", "boxShadow"]) {
 			expect(names).not.toContain(name);
@@ -115,14 +122,22 @@ describe("getListBlock", () => {
 
 	it("puts the link in the first cell", () => {
 		const [first, second] = rows.children[0].children;
-		expect(first.children[0]).toMatchObject({ element: "a", dynamicValues: [{ key: "url", property: "href" }] });
-		expect(second.children[0]).toMatchObject({ element: "img", dynamicValues: [{ key: "cover", property: "src" }] });
+		expect(first.children[0]).toMatchObject({
+			element: "a",
+			dynamicValues: [{ key: "url", property: "href" }],
+		});
+		expect(second.children[0]).toMatchObject({
+			element: "img",
+			dynamicValues: [{ key: "cover", property: "src" }],
+		});
 	});
 });
 
 describe("toPython", () => {
 	it("writes Python literals, not JSON", () => {
-		expect(toPython({ a: true, b: null, c: [1, "x", false] })).toBe('{"a": True, "b": None, "c": [1, "x", False]}');
+		expect(toPython({ a: true, b: null, c: [1, "x", false] })).toBe(
+			'{"a": True, "b": None, "c": [1, "x", False]}',
+		);
 	});
 
 	it.each([
@@ -207,7 +222,9 @@ describe("DataSource", () => {
 		expect(python).toContain(
 			'cms_posts_route = (frappe.db.get_all("Builder Page", filters={"name": "page-1"}, fields=["route"]) or [{}])[0].get("route") or ""',
 		);
-		expect(python).toContain('url=("/" + cms_posts_route.lstrip("/").replace(":slug", str(row.get("slug") or ""))');
+		expect(python).toContain(
+			'url=("/" + cms_posts_route.lstrip("/").replace(":slug", str(row.get("slug") or ""))',
+		);
 		expect(python).toContain(') if ":slug" in cms_posts_route or "<slug>" in cms_posts_route else "")');
 		expect(python).toContain('.replace("<slug>", str(row.get("slug") or ""))');
 		expect(python).toContain("    for row in frappe.db.get_all(");
@@ -218,13 +235,19 @@ describe("DataSource", () => {
 	});
 
 	it("fills the route variable it names, from the field it names", () => {
-		const linked = new DataSource({ ...posts.toJSON(), link: { page: "page-1", field: "route", variable: "slug" } });
+		const linked = new DataSource({
+			...posts.toJSON(),
+			link: { page: "page-1", field: "route", variable: "slug" },
+		});
 
 		expect(linked.toPython()).toContain('.replace(":slug", str(row.get("route") or ""))');
 	});
 
 	it("finds a collection's collection page on each request", () => {
-		const linked = new DataSource({ ...posts.toJSON(), link: { collection: "CMS Blog Post", field: "slug" } });
+		const linked = new DataSource({
+			...posts.toJSON(),
+			link: { collection: "CMS Blog Post", field: "slug" },
+		});
 
 		expect(linked.toPython()).toContain(
 			'cms_posts_collection = (frappe.db.get_all("CMS Collection", filters={"collection": "CMS Blog Post"}, fields=["entry_page", "url"]) or [{}])[0]',
@@ -234,7 +257,10 @@ describe("DataSource", () => {
 	});
 
 	it("links under the collection URL while the collection has no detail page", () => {
-		const linked = new DataSource({ ...posts.toJSON(), link: { collection: "User", field: "name", variable: "slug" } });
+		const linked = new DataSource({
+			...posts.toJSON(),
+			link: { collection: "User", field: "name", variable: "slug" },
+		});
 
 		expect(linked.toPython()).toContain(
 			'.get("route") or ((cms_posts_collection.get("url") or "").rstrip("/") + "/:slug" if cms_posts_collection.get("url") else "")',
@@ -286,7 +312,13 @@ describe("script sections", () => {
 
 /** A collection the app made, as the app answers it. */
 const owned = (label, settings = {}) =>
-	new Collection({ collection: `CMS ${label}`, label, slug_field: "slug", published_field: "published", ...settings });
+	new Collection({
+		collection: `CMS ${label}`,
+		label,
+		slug_field: "slug",
+		published_field: "published",
+		...settings,
+	});
 
 /** An existing doctype, mapped. */
 const mapped = (doctype, settings = {}) =>
@@ -358,7 +390,11 @@ describe("collections", () => {
 		});
 
 		it("links each row by filling :slug from the mapped field", () => {
-			expect(posts.getSourceDefaults([]).link).toEqual({ collection: "Blog Post", field: "route", variable: "slug" });
+			expect(posts.getSourceDefaults([]).link).toEqual({
+				collection: "Blog Post",
+				field: "route",
+				variable: "slug",
+			});
 		});
 
 		it("leaves the mapped steering fields out of the content", () => {

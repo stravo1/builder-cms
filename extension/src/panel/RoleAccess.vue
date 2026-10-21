@@ -7,21 +7,20 @@
 			class="w-full"
 			:options="options"
 			placeholder="Choose roles…"
-			:disabled="isRunning"
-		/>
+			:disabled="isRunning" />
 		<Button v-if="isChanged" variant="solid" label="Save" :loading="isRunning" @click="save" />
 		<Button
 			variant="ghost"
 			icon-left="lucide-external-link"
 			label="Manage roles in Desk"
-			@click="builder.ui.openUrl('/app/role')"
-		/>
+			@click="openUrl('/app/role')" />
 		<p v-if="error" role="alert" class="cms-error">{{ error }}</p>
 	</div>
 </template>
 
 <script setup>
-import builder from "frappe-builder-extension-sdk";
+import { openUrl } from "../editor/windows.js";
+
 import { Button, MultiSelect } from "frappe-ui";
 import { computed, onMounted, onUnmounted, ref, shallowRef } from "vue";
 import { forgetAccess, getAccess } from "../cms/access.js";

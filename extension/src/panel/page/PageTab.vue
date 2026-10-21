@@ -12,16 +12,14 @@
 					:role="role"
 					:page-name="context.page.name"
 					@changed="changed"
-					@collections="emit('collections')"
-				/>
+					@collections="emit('collections')" />
 				<DetailPagePreview v-if="role?.kind === 'detail'" :collection="role.collection" />
 				<AddToPage
 					v-if="role"
 					:key="`${role.kind}:${role.collection.doctype}`"
 					:kind="role.kind"
 					:collection="role.collection"
-					@changed="changed"
-				/>
+					@changed="changed" />
 			</fieldset>
 			<section class="border-t border-outline-gray-1">
 				<div class="px-3 pt-4">
@@ -35,7 +33,8 @@
 </template>
 
 <script setup>
-import { useBuilderContext } from "frappe-builder-extension-sdk/vue";
+import { useEditorContext } from "../../editor/context.js";
+
 import { computed, ref, shallowRef, watch } from "vue";
 import { Collection } from "../../cms/collection.js";
 import { getPageRole } from "../../cms/pageActions.js";
@@ -51,12 +50,14 @@ import SectionLoader from "../SectionLoader.vue";
 const emit = defineEmits(["collections"]);
 // a page connection writes the collection settings, which the CMS-wide roles own
 const access = useAccess();
-const context = useBuilderContext(["page", "readOnly"]);
+const context = useEditorContext();
 const collections = shallowRef([]);
 const sources = shallowRef([]);
 const revision = ref(0);
 const { runCached, error, isRunning } = useTask();
-const role = computed(() => (context.page ? getPageRole(collections.value, context.page, sources.value) : null));
+const role = computed(() =>
+	context.page ? getPageRole(collections.value, context.page, sources.value) : null,
+);
 const reload = () => {
 	const name = context.page?.name;
 	if (!name) return;

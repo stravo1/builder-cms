@@ -1,6 +1,7 @@
-import frappeUIPreset, { content as frappeUIContent } from "frappe-ui/tailwind";
+import frappeUIPreset from "frappe-ui/tailwind";
 
 export default {
 	presets: [frappeUIPreset],
-	content: ["./src/**/*.{vue,js}", ...frappeUIContent],
+	corePlugins: { preflight: false },
+	content: ["./src/**/*.{vue,js}", "./node_modules/frappe-ui/src/molecules/editor/**/*.{vue,ts}"],
 };

@@ -5,6 +5,6 @@
 import { forget } from "../../data/cache.js";
 import BindFields from "./BindFields.vue";
 
-// the panel can change a schema while this frame is hidden, and a schema write sends no event
+// Reload field metadata when this view opens after a schema change.
 forget();
 </script>

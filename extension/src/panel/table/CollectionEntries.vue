@@ -5,25 +5,30 @@
 		:entry-name="panelEntry.name"
 		:field-name="panelEntry.fieldName || ''"
 		@back="panelEntry = null"
-		@saved="finishPanelEntry"
-	/>
+		@saved="finishPanelEntry" />
 	<div v-else class="flex min-h-0 flex-1 flex-col">
-		<header class="flex shrink-0 flex-col gap-2 border-b border-outline-gray-1" :class="isPanel ? 'p-3' : 'pb-3'">
+		<header
+			class="flex shrink-0 flex-col gap-2 border-b border-outline-gray-1"
+			:class="isPanel ? 'p-3' : 'pb-3'">
 			<div class="flex items-center justify-between gap-2">
 				<!-- invisible, not removed, so the buttons keep their place while the rows load -->
-				<span class="text-p-sm text-ink-gray-5" :class="{ invisible: !fields.length }"
-					>{{ query ? `${shownRows.length} of ${rows.length}` : rows.length }} entries</span
-				>
+				<span class="text-p-sm text-ink-gray-5" :class="{ invisible: !fields.length }">
+					{{ query ? `${shownRows.length} of ${rows.length}` : rows.length }} entries
+				</span>
 				<div class="flex items-center gap-1">
-					<Button size="sm" icon-left="lucide-plus" label="New entry" :disabled="isRunning" @click="createEntry" />
+					<Button
+						size="sm"
+						icon-left="lucide-plus"
+						label="New entry"
+						:disabled="isRunning"
+						@click="createEntry" />
 					<Button
 						v-if="isPanel"
 						size="sm"
 						variant="ghost"
 						icon="lucide-maximize-2"
 						label="View in dialog"
-						@click="openDialog()"
-					/>
+						@click="openDialog()" />
 				</div>
 			</div>
 			<FormControl v-model="query" placeholder="Search entries…" aria-label="Search entries" />
@@ -44,22 +49,22 @@
 				@open-field="openField"
 				@edit="editEntry"
 				@preview="preview"
-				@delete="deleteRow"
-			/>
+				@delete="deleteRow" />
 			<Button
 				v-if="hasMore"
 				class="m-2 shrink-0"
 				variant="ghost"
 				label="Load more"
 				:loading="isRunning"
-				@click="loadMore"
-			/>
+				@click="loadMore" />
 		</template>
 	</div>
 </template>
 
 <script setup>
-import builder from "frappe-builder-extension-sdk";
+import { subscribeDocuments } from "../../data/documents.js";
+import { closeCollectionDialog, openCollectionDialog } from "../../editor/windows.js";
+
 import { Button, FormControl } from "frappe-ui";
 import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, ref, shallowRef } from "vue";
 import CollectionTable from "./CollectionTable.vue";
@@ -73,9 +78,8 @@ const props = defineProps({
 	selectedEntryName: { type: String, default: "" },
 });
 const emit = defineEmits(["create", "edit"]);
-const { fields, rows, hasMore, isRunning, error, run, reload, loadMore, saveCell, deleteRow } = useCollectionRows(
-	props.collection,
-);
+const { fields, rows, hasMore, isRunning, error, run, reload, loadMore, saveCell, deleteRow } =
+	useCollectionRows(props.collection);
 const panelEntry = shallowRef(null);
 const emptyMessage = computed(() => (query.value ? "No entries match your search." : "No entries yet."));
 defineExpose({ reload });
@@ -92,7 +96,7 @@ const shownRows = computed(() => {
 });
 const openDialog = () =>
 	run(async () => {
-		await builder.ui.openDialog({
+		await openCollectionDialog({
 			title: props.collection.label,
 			size: "5xl",
 			height: 600,
@@ -113,11 +117,11 @@ const finishPanelEntry = async () => {
 const preview = (row) =>
 	run(async () => {
 		await props.collection.openEntry(row[props.collection.slugField]);
-		if (!props.isPanel) await builder.ui.closeDialog();
+		if (!props.isPanel) await closeCollectionDialog();
 	});
 let unsubscribe;
 onMounted(() => {
-	unsubscribe = builder.data.subscribe(props.collection.doctype, reload);
+	unsubscribe = subscribeDocuments(props.collection.doctype, reload);
 	reload();
 });
 onBeforeUnmount(() => unsubscribe?.());

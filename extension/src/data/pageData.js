@@ -1,3 +1,4 @@
+import { getDocument, updateDocument } from "./documents.js";
 /**
  * The data sources of one page, read from and written to its data script.
  *
@@ -5,7 +6,6 @@
  * Page Script editor since the last load is kept, not overwritten.
  */
 
-import builder from "frappe-builder-extension-sdk";
 import { DataSource } from "./dataSource.js";
 import { readSections, removeSection, writeSection } from "./scriptSections.js";
 
@@ -18,7 +18,7 @@ export class PageData {
 	}
 
 	async getScript() {
-		const page = await builder.data.getDoc(PAGE, this.pageName);
+		const page = await getDocument(PAGE, this.pageName);
 		return page.page_data_script || "";
 	}
 
@@ -29,7 +29,7 @@ export class PageData {
 
 	async writeScript(change) {
 		const script = change(await this.getScript());
-		await builder.data.update(PAGE, this.pageName, { page_data_script: script });
+		await updateDocument(PAGE, this.pageName, { page_data_script: script });
 		return this.load();
 	}
 

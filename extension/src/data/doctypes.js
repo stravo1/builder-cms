@@ -1,6 +1,6 @@
+import { getMetadata } from "./documents.js";
 /** The doctypes and fields a data source can read. */
 
-import builder from "frappe-builder-extension-sdk";
 import { api } from "./api.js";
 import { cached } from "./cache.js";
 
@@ -23,7 +23,7 @@ const NO_VALUE_TYPES = new Set([
 ]);
 
 /** A doctype's meta, with its fields. */
-export const getDoctype = (doctype) => cached(`doctype:${doctype}`, () => builder.data.getMeta(doctype));
+export const getDoctype = (doctype) => cached(`doctype:${doctype}`, () => getMetadata(doctype));
 
 /** The doctypes a manager can map. Child tables and Singles are left out. */
 export const getDoctypeNames = () => cached("doctype-names", api.getDoctypeNames);
@@ -40,10 +40,19 @@ export const isSecretField = (field) => field.fieldtype === "Password" || SECRET
 /** The fields that hold a value, so a read can name them, and that are safe to publish. */
 export const getDoctypeFields = async (doctype) => {
 	const { fields } = await getDoctype(doctype);
-	return fields.filter((field) => field.fieldname && !NO_VALUE_TYPES.has(field.fieldtype) && !isSecretField(field));
+	return fields.filter(
+		(field) => field.fieldname && !NO_VALUE_TYPES.has(field.fieldtype) && !isSecretField(field),
+	);
 };
 
-const MULTILINE_TYPES = new Set(["Small Text", "Text", "Long Text", "Text Editor", "Markdown Editor", "Code"]);
+const MULTILINE_TYPES = new Set([
+	"Small Text",
+	"Text",
+	"Long Text",
+	"Text Editor",
+	"Markdown Editor",
+	"Code",
+]);
 
 export const isMultilineField = (field) => MULTILINE_TYPES.has(field.fieldtype);
 

@@ -1,6 +1,8 @@
 <template>
 	<div class="flex min-h-0 flex-col gap-3 p-3">
-		<p v-if="context.selection.count !== 1" class="cms-hint">Select one text, image, link, or container block.</p>
+		<p v-if="context.selection.count !== 1" class="cms-hint">
+			Select one text, image, link, or container block.
+		</p>
 		<p v-else-if="context.readOnly" class="cms-hint">This page is read-only.</p>
 		<SectionLoader v-else-if="isRunning && !source" label="Loading fields" />
 		<p v-else-if="!fitting.length" class="cms-hint">
@@ -17,8 +19,7 @@
 				v-model="sourceName"
 				type="combobox"
 				label="Content from"
-				:options="sourceOptions"
-			/>
+				:options="sourceOptions" />
 			<div v-else class="rounded-1 bg-surface-gray-2 px-2 py-1.5 text-sm text-ink-gray-7">
 				{{ sourceOptions[0]?.label }}
 			</div>
@@ -27,13 +28,12 @@
 				<ItemListRow
 					v-for="field in shownFields.slice(0, visibleCount)"
 					:key="field.fieldname"
-					as="button"
+					:as="NativeButton"
 					class="cms-list-row"
 					:selected="keyOf(field) === boundKey"
 					:disabled="isRunning"
 					:aria-pressed="keyOf(field) === boundKey"
-					@click="bind(field)"
-				>
+					@click="bind(field)">
 					<template #prefix>
 						<span :class="fieldIcon(field)" class="size-4 text-ink-gray-5" aria-hidden="true" />
 					</template>
@@ -49,17 +49,23 @@
 				v-if="shownFields.length > visibleCount"
 				variant="ghost"
 				label="Load more fields"
-				@click="visibleCount += 10"
-			/>
-			<Button v-if="boundKey" variant="ghost" label="Disconnect field" :disabled="isRunning" @click="bind(null)" />
+				@click="visibleCount += 10" />
+			<Button
+				v-if="boundKey"
+				variant="ghost"
+				label="Disconnect field"
+				:disabled="isRunning"
+				@click="bind(null)" />
 		</template>
 		<p v-if="error" role="alert" class="cms-error">{{ error }}</p>
 	</div>
 </template>
 
 <script setup>
-import builder from "frappe-builder-extension-sdk";
-import { useBuilderContext } from "frappe-builder-extension-sdk/vue";
+import NativeButton from "../NativeButton.js";
+import { useEditorContext } from "../../editor/context.js";
+import { getDocuments } from "../../data/documents.js";
+
 import { Button, FormControl, ItemListRow } from "frappe-ui";
 import { computed, ref, shallowRef, watch } from "vue";
 import {
@@ -76,7 +82,7 @@ import { useTask } from "../useTask.js";
 import SectionLoader from "../SectionLoader.vue";
 
 const props = defineProps({ revision: { type: Number, default: 0 } });
-const context = useBuilderContext(["selection", "page", "routeVariables", "readOnly"]);
+const context = useEditorContext();
 const sources = shallowRef([]);
 const collections = shallowRef([]);
 const fitting = shallowRef([]);
@@ -94,7 +100,9 @@ const { run, isRunning, error } = useTask();
 let loadVersion = 0;
 let fieldVersion = 0;
 const source = computed(() => fitting.value.find((each) => each.source.name === sourceName.value)?.source);
-const prefix = computed(() => fitting.value.find((each) => each.source.name === sourceName.value)?.prefix || "");
+const prefix = computed(
+	() => fitting.value.find((each) => each.source.name === sourceName.value)?.prefix || "",
+);
 const targets = computed(() => getBindingTargets(context.selection));
 const sourceOptions = computed(() =>
 	fitting.value.map(({ source }) => ({
@@ -110,7 +118,11 @@ const shownFields = computed(() =>
 			(field.label || field.fieldname).toLowerCase().includes(query.value.toLowerCase()),
 	),
 );
-const FIELD_ICONS = { "Attach Image": "lucide-image", Check: "lucide-square-check", "Text Editor": "lucide-text" };
+const FIELD_ICONS = {
+	"Attach Image": "lucide-image",
+	Check: "lucide-square-check",
+	"Text Editor": "lucide-text",
+};
 const fieldIcon = (field) => FIELD_ICONS[field.fieldtype] || "lucide-type";
 const preview = (value) => {
 	if (value === null || value === undefined || value === "") return "Empty";
@@ -159,7 +171,7 @@ const loadFields = () =>
 			);
 			if (routeFilter) options.filters[routeFilter[0]] = context.routeVariables.slug;
 		}
-		const [sample] = await builder.data.getList(current.doctype, options);
+		const [sample] = await getDocuments(current.doctype, options);
 		if (version !== fieldVersion) return;
 		fields.value = [{ fieldname: "name", label: "Name", fieldtype: "Data" }, ...all].filter((field) =>
 			current.readFields.includes(field.fieldname),
@@ -168,7 +180,8 @@ const loadFields = () =>
 		const collection = collections.value.find((each) => each.doctype === current.doctype);
 		row.value = sample && {
 			...sample,
-			...(current.link && collection?.collectionPage && { url: `${collection.url}/${sample[current.link.field]}` }),
+			...(current.link &&
+				collection?.collectionPage && { url: `${collection.url}/${sample[current.link.field]}` }),
 		};
 	});
 const bind = (field) =>

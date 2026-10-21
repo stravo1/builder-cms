@@ -1,9 +1,10 @@
+import { getBlock, getRootBlock, insertBlock, updateBlock } from "../editor/canvas.js";
+import { getEditorContext } from "../editor/context.js";
 /**
  * What a data source does to blocks: insert blocks that are bound already, and
  * bind one more block to a field.
  */
 
-import builder from "frappe-builder-extension-sdk";
 import { getDocumentBlock, getListBlock, getCardListBlock } from "./pageBlocks.js";
 
 /** The blocks from a root down to `blockId`, or null when the tree does not hold it. */
@@ -23,12 +24,14 @@ const findPath = (block, blockId, path = []) => {
  * names. A document source, such as `entry`, fits anywhere: `entry.title`.
  */
 export const getSourcesForBlock = async (sources, blockId) => {
-	const [root] = await builder.page.getBlocks();
+	const root = await getRootBlock();
 	const ancestors = (findPath(root, blockId) || []).slice(0, -1);
 	const nearestList = ancestors.filter((block) => block.isRepeaterBlock).at(-1)?.dataKey?.key;
 	const row = sources.find((source) => source.isList && source.name === nearestList);
 	if (nearestList) return row ? [{ source: row, prefix: "" }] : [];
-	return [...sources.filter((source) => !source.isList).map((source) => ({ source, prefix: `${source.name}.` }))];
+	return [
+		...sources.filter((source) => !source.isList).map((source) => ({ source, prefix: `${source.name}.` })),
+	];
 };
 
 export const getBindingTargets = (selection) => [
@@ -55,7 +58,7 @@ export const fitsBlock = (field, selection, target = selection.isImage ? "image"
 };
 
 export const getBoundKey = async (selection, target = selection.isImage ? "image" : "text") => {
-	const block = await builder.block.get(selection.blockId);
+	const block = await getBlock(selection.blockId);
 	if (target === "visibility") return block.visibilityCondition?.key || "";
 	const property = getBoundProperty(target);
 	const bound = (block.dynamicValues || []).find(
@@ -67,17 +70,17 @@ export const getBoundKey = async (selection, target = selection.isImage ? "image
 
 export const bindBlock = async (blockId, key, target) => {
 	if (target === "visibility") {
-		return builder.block.update(blockId, { visibilityCondition: key ? { key, comesFrom: "dataScript" } : null });
+		return updateBlock(blockId, { visibilityCondition: key ? { key, comesFrom: "dataScript" } : null });
 	}
 	const property = getBoundProperty(target);
-	const block = await builder.block.get(blockId);
+	const block = await getBlock(blockId);
 	const others = (block.dynamicValues || []).filter(
 		(value) => !(value.property === property.property && value.type === property.type),
 	);
 	const dynamicValues = key ? [...others, { key, ...property, comesFrom: "dataScript" }] : others;
 	const legacy = block.dataKey;
 	const clearLegacy = legacy?.property === property.property && (legacy.type || "key") === property.type;
-	await builder.block.update(blockId, {
+	await updateBlock(blockId, {
 		...(target === "link" && key && block.element !== "a" && { element: "a" }),
 		dynamicValues,
 		...(clearLegacy && { dataKey: null }),
@@ -86,9 +89,9 @@ export const bindBlock = async (blockId, key, target) => {
 
 /** Into the selected container, or at the end of the page. */
 const getParentId = async () => {
-	const { selection } = await builder.context.get();
+	const { selection } = await getEditorContext();
 	if (selection.count === 1 && selection.isContainer) return selection.blockId;
-	const [root] = await builder.page.getBlocks();
+	const root = await getRootBlock();
 	return root.blockId;
 };
 
@@ -96,5 +99,5 @@ export const insertBlocks = async (source, fields, label, layout = "cards") => {
 	const chosen = fields.filter((field) => source.fields.includes(field.fieldname));
 	const listBlock = layout === "table" ? getListBlock : getCardListBlock;
 	const tree = source.isList ? listBlock(source, chosen, label) : getDocumentBlock(source, chosen, label);
-	return builder.block.insert(await getParentId(), tree);
+	return insertBlock(await getParentId(), tree);
 };

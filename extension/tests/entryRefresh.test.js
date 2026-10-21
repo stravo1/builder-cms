@@ -4,7 +4,24 @@ const { builder, api } = vi.hoisted(() => ({
 	builder: { page: { refreshData: vi.fn() }, ui: { toast: vi.fn() } },
 	api: { saveEntry: vi.fn(), deleteEntry: vi.fn() },
 }));
-vi.mock("frappe-builder-extension-sdk", () => ({ default: builder }));
+vi.mock("../src/data/documents.js", () => ({
+	getDocuments: builder.data?.getList,
+	getDocument: builder.data?.getDoc,
+	updateDocument: builder.data?.update,
+	subscribeDocuments: builder.data?.subscribe,
+}));
+vi.mock("../src/editor/context.js", () => ({ getEditorContext: builder.context?.get }));
+vi.mock("../src/editor/page.js", () => ({
+	refreshPageData: builder.page?.refreshData,
+	setRouteVariables: builder.page?.setRouteVariables,
+}));
+vi.mock("../src/editor/canvas.js", () => ({
+	getRootBlock: async () => (await builder.page.getBlocks())[0],
+	getBlock: builder.block?.get,
+	updateBlock: builder.block?.update,
+	insertBlock: builder.block?.insert,
+}));
+vi.mock("frappe-ui", () => ({ toast: { error: builder.ui?.toast, success: builder.ui?.toast } }));
 vi.mock("../src/data/api.js", () => ({ api }));
 
 import { Collection } from "../src/cms/collection.js";
@@ -64,8 +81,6 @@ describe("entry changes on the canvas", () => {
 
 		await expect(collection.updateEntry("post", { title: "Updated" })).resolves.toEqual(saved);
 		expect(api.saveEntry).toHaveBeenCalledOnce();
-		expect(builder.ui.toast).toHaveBeenCalledWith(expect.stringContaining("No page is open"), {
-			type: "error",
-		});
+		expect(builder.ui.toast).toHaveBeenCalledWith(expect.stringContaining("No page is open"));
 	});
 });

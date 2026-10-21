@@ -1,7 +1,24 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const builder = vi.hoisted(() => ({ block: { get: vi.fn(), update: vi.fn() } }));
-vi.mock("frappe-builder-extension-sdk", () => ({ default: builder }));
+vi.mock("../src/data/documents.js", () => ({
+	getDocuments: builder.data?.getList,
+	getDocument: builder.data?.getDoc,
+	updateDocument: builder.data?.update,
+	subscribeDocuments: builder.data?.subscribe,
+}));
+vi.mock("../src/editor/context.js", () => ({ getEditorContext: builder.context?.get }));
+vi.mock("../src/editor/page.js", () => ({
+	refreshPageData: builder.page?.refreshData,
+	setRouteVariables: builder.page?.setRouteVariables,
+}));
+vi.mock("../src/editor/canvas.js", () => ({
+	getRootBlock: async () => (await builder.page.getBlocks())[0],
+	getBlock: builder.block?.get,
+	updateBlock: builder.block?.update,
+	insertBlock: builder.block?.insert,
+}));
+vi.mock("frappe-ui", () => ({ toast: { error: builder.ui?.toast, success: builder.ui?.toast } }));
 
 import { bindBlock, getBindingTargets } from "../src/blocks/blockActions.js";
 

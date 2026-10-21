@@ -1,6 +1,5 @@
 /**
- * The `cms` app's methods. The SDK sends each call through Builder, and each
- * one needs the `method.call` permission. A collection is named by its doctype.
+ * The CMS app checks permissions for each method. A collection is named by its DocType.
  */
 
 import { call } from "frappe-ui";
@@ -36,5 +35,6 @@ export const api = {
 
 	getAccess: () => call(`${ACCESS}.get_access`),
 	updateCmsRoles: (roles) => call(`${ACCESS}.update_cms_roles`, { roles }),
-	updateCollectionRoles: (collection, roles) => call(`${ACCESS}.update_collection_roles`, { collection, roles }),
+	updateCollectionRoles: (collection, roles) =>
+		call(`${ACCESS}.update_collection_roles`, { collection, roles }),
 };

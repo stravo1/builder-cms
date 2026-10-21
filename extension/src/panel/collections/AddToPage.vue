@@ -9,8 +9,7 @@
 				:options="[
 					{ label: 'Cards', value: 'cards' },
 					{ label: 'Table', value: 'table' },
-				]"
-			/>
+				]" />
 		</div>
 		<div class="flex flex-col gap-1.5">
 			<FormLabel label="Fields" />
@@ -22,20 +21,19 @@
 			:label="copy.insert"
 			:loading="isRunning"
 			:disabled="!chosen.length"
-			@click="insert"
-		/>
+			@click="insert" />
 		<Button
 			v-if="kind === 'index' && canConnect"
 			variant="ghost"
 			label="Use selected container as list"
 			:loading="isRunning"
-			@click="connect"
-		/>
+			@click="connect" />
 		<p v-if="error" role="alert" class="cms-error">{{ error }}</p>
 	</section>
 </template>
 <script setup>
-import { useBuilderContext } from "frappe-builder-extension-sdk/vue";
+import { useEditorContext } from "../../editor/context.js";
+
 import { Button, FormLabel, MultiSelect, TabButtons } from "frappe-ui";
 import { computed, onMounted, ref, shallowRef } from "vue";
 import { addCollectionList, addEntryContent, connectCollectionList } from "../../cms/pageActions.js";
@@ -59,13 +57,15 @@ const props = defineProps({
 	kind: { type: String, required: true },
 });
 const emit = defineEmits(["changed"]);
-const context = useBuilderContext(["page", "selection"]);
+const context = useEditorContext();
 const layout = ref("cards");
 const fields = shallowRef([]);
 const chosen = ref([]);
 const { isRunning, run, error } = useTask();
 const copy = computed(() => COPY[props.kind]);
-const fieldOptions = computed(() => fields.value.map((field) => ({ label: field.label || field.fieldname, value: field.fieldname })));
+const fieldOptions = computed(() =>
+	fields.value.map((field) => ({ label: field.label || field.fieldname, value: field.fieldname })),
+);
 const canConnect = computed(
 	() => context.selection.count === 1 && context.selection.isContainer && !context.selection.isRoot,
 );

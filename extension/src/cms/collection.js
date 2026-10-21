@@ -1,10 +1,13 @@
+import { getDocument, getDocuments, subscribeDocuments } from "../data/documents.js";
+import { openPage, refreshPageData, setRouteVariables } from "../editor/page.js";
+import { openUrl } from "../editor/windows.js";
+import { toast } from "frappe-ui";
 /**
  * A collection is one content type, such as "Blog Post". The `cms` app owns it:
  * a `CMS Collection` row and a doctype, so Frappe stores, permits, and versions
  * its entries. A mapped collection shows a doctype that exists already.
  */
 
-import builder from "frappe-builder-extension-sdk";
 import { api } from "../data/api.js";
 import { cached, forget } from "../data/cache.js";
 import { PageData } from "../data/pageData.js";
@@ -15,11 +18,11 @@ export const SETTINGS_DOCTYPE = "CMS Collection";
 
 let isListening = false;
 
-/** A settings write in another frame, or by another user, reaches this frame here. */
+/** A settings write in another view or by another user invalidates the shared cache. */
 const listenForSettings = () => {
 	if (isListening) return;
 	isListening = true;
-	builder.data.subscribe(SETTINGS_DOCTYPE, () => forget("collections"));
+	subscribeDocuments(SETTINGS_DOCTYPE, () => forget("collections"));
 };
 
 export const FIELD_TYPES = [
@@ -51,7 +54,9 @@ export const normalizeUrl = (url) => `/${url.split("/").map(slugify).filter(Bool
 /** Marks the collections whose label another one has too, such as two "Blog Post"s. */
 export const markSameLabels = (collections) => {
 	for (const collection of collections) {
-		collection.isLabelShared = collections.some((other) => other !== collection && other.label === collection.label);
+		collection.isLabelShared = collections.some(
+			(other) => other !== collection && other.label === collection.label,
+		);
 	}
 	return collections;
 };
@@ -60,11 +65,9 @@ export const markSameLabels = (collections) => {
 const refreshAfterEntryWrite = async (write) => {
 	const entry = await write;
 	try {
-		await builder.page.refreshData();
+		await refreshPageData();
 	} catch (error) {
-		builder.ui.toast(`The entry changed, but page data could not refresh: ${error.message || String(error)}`, {
-			type: "error",
-		});
+		toast.error(`The entry changed, but page data could not refresh: ${error.message || String(error)}`);
 	}
 	return entry;
 };
@@ -195,7 +198,8 @@ export class Collection {
 		this.settings = { ...previous, url: normalizeUrl(url) };
 		try {
 			if (this.indexPage) await claimRoute(this.indexRoute, this.indexPage, this.indexPage);
-			if (this.collectionPage) await claimRoute(this.collectionPageRoute, this.collectionPage, this.collectionPage);
+			if (this.collectionPage)
+				await claimRoute(this.collectionPageRoute, this.collectionPage, this.collectionPage);
 		} catch (error) {
 			// the route was not taken, so the URL stays as it was
 			this.settings = previous;
@@ -208,12 +212,12 @@ export class Collection {
 	async openEntry(slug, live = false) {
 		if (!this.collectionPage) throw new Error("Set up a detail page first.");
 		if (!live) {
-			await builder.page.open(this.collectionPage);
-			return builder.page.setRouteVariables({ slug });
+			await openPage(this.collectionPage);
+			return setRouteVariables({ slug });
 		}
-		const page = await builder.data.getDoc("Builder Page", this.collectionPage);
+		const page = await getDocument("Builder Page", this.collectionPage);
 		const path = page.route.replace(/:slug\b|<slug>/, encodeURIComponent(slug));
-		return builder.ui.openUrl(`/${path.replace(/^\//, "")}`);
+		return openUrl(`/${path.replace(/^\//, "")}`);
 	}
 
 	async addFields(fields) {
@@ -234,7 +238,7 @@ export class Collection {
 	static async getCmsPageNames() {
 		const names = [];
 		while (true) {
-			const pages = await builder.data.getList("Builder Page", {
+			const pages = await getDocuments("Builder Page", {
 				fields: ["name"],
 				filters: [["page_data_script", "like", "%builder-cms:start%"]],
 				pageLength: 100,
@@ -262,7 +266,8 @@ export class Collection {
 	async removePageSources(pageName) {
 		const page = new PageData(pageName);
 		const sources = await page.load();
-		for (const source of sources.filter((each) => each.doctype === this.doctype)) await page.remove(source.name);
+		for (const source of sources.filter((each) => each.doctype === this.doctype))
+			await page.remove(source.name);
 	}
 
 	async removePageField(pageName, fieldname) {
@@ -300,7 +305,9 @@ export class Collection {
 	/** The fields a visitor reads. The slug and the flags only steer the page. */
 	getDisplayFields(fields) {
 		const steering = [this.slugField, this.publishedField];
-		const display = fields.filter((field) => !steering.includes(field.fieldname) && field.fieldtype !== "Check");
+		const display = fields.filter(
+			(field) => !steering.includes(field.fieldname) && field.fieldtype !== "Check",
+		);
 		return display.length ? display : [{ fieldname: "name", label: "Name", fieldtype: "Data" }];
 	}
 
@@ -320,7 +327,11 @@ export class Collection {
 	async getTableFields() {
 		const fields = await this.getFields();
 		const rank = (field) =>
-			field.fieldname === "title" ? 0 : [this.slugField, this.publishedField].includes(field.fieldname) ? 2 : 1;
+			field.fieldname === "title"
+				? 0
+				: [this.slugField, this.publishedField].includes(field.fieldname)
+					? 2
+					: 1;
 		return [...fields].sort((first, second) => rank(first) - rank(second));
 	}
 

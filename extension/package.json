@@ -18,7 +18,7 @@
   "devDependencies": {
     "@iconify-json/lucide": "^1.2.124",
     "@vitejs/plugin-vue": "5.2.4",
-    "frappe-builder-extension-sdk": "file:../../builder/frontend/extension-sdk",
+    "frappe-builder-extension-sdk": "github:stravo1/frappe-builder-extension-sdk#trusted-extensions-api",
     "playwright": "^1.64.1",
     "tailwindcss": "^3.4.19",
     "unplugin-icons": "^23.0.1",

@@ -1,9 +1,11 @@
+import { getRootBlock, updateBlock } from "../editor/canvas.js";
+import { setRouteVariables } from "../editor/page.js";
+import { getEditorContext } from "../editor/context.js";
 /**
  * What the CMS does to the open page. The user makes the page; these do
  * everything after that: the route, the data source, the blocks, the preview.
  */
 
-import builder from "frappe-builder-extension-sdk";
 import { insertBlocks } from "../blocks/blockActions.js";
 import { DataSource } from "../data/dataSource.js";
 import { PageData } from "../data/pageData.js";
@@ -20,7 +22,7 @@ export const SORT_OPTIONS = [
 export const ENTRY_SOURCE = "entry";
 
 const getWritablePage = async () => {
-	const context = await builder.context.get();
+	const context = await getEditorContext();
 	if (!context.page) throw new Error("Open a page first.");
 	if (context.readOnly) throw new Error("This page is read-only.");
 	if (context.editingMode && context.editingMode !== "page")
@@ -29,7 +31,7 @@ const getWritablePage = async () => {
 };
 
 export const isPageEmpty = async () => {
-	const [root] = await builder.page.getBlocks();
+	const root = getRootBlock();
 	return !root.children?.length;
 };
 
@@ -77,7 +79,7 @@ export const useAsCollectionPage = async (collection) => {
 	// a designed page keeps its blocks. "Bind to data" binds any block to a field
 	if (await isPageEmpty()) await insertBlocks(source, collection.getDisplayFields(fields), collection.label);
 	const newest = await collection.getNewestPublished();
-	if (newest) await builder.page.setRouteVariables({ slug: newest.slug });
+	if (newest) await setRouteVariables({ slug: newest.slug });
 };
 
 /**
@@ -134,7 +136,10 @@ const getFreeName = (base, sources) => {
  * Adds a list of a collection to the open page. The data source behind it
  * takes the collection's defaults: published entries, links to the collection page.
  */
-export const getCollectionListSource = async (collection, { orderBy = SORT_OPTIONS[0].value, limit = 20 } = {}) => {
+export const getCollectionListSource = async (
+	collection,
+	{ orderBy = SORT_OPTIONS[0].value, limit = 20 } = {},
+) => {
 	const page = await getWritablePage();
 	const fields = await collection.getFields();
 	const pageData = new PageData(page.name);
@@ -192,7 +197,7 @@ export const addEntryContent = async (collection, fields) => {
 
 export const connectCollectionList = async (collection, blockId, options = {}) => {
 	const source = await getCollectionListSource(collection, options);
-	await builder.block.update(blockId, {
+	await updateBlock(blockId, {
 		isRepeaterBlock: true,
 		dataKey: { key: source.name, comesFrom: "dataScript" },
 	});

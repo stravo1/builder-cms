@@ -20,7 +20,9 @@ const errors = [];
 
 try {
 	await page.goto(`${origin}/builder`);
-	await page.getByRole("textbox", { name: "Email", exact: true }).fill(process.env.CMS_TEST_USER || "Administrator");
+	await page
+		.getByRole("textbox", { name: "Email", exact: true })
+		.fill(process.env.CMS_TEST_USER || "Administrator");
 	await page.getByLabel("Password", { exact: true }).fill(password);
 	await page.getByRole("button", { name: "Continue", exact: true }).click();
 	await page.waitForURL(`${origin}/builder/`);
@@ -39,11 +41,12 @@ try {
 	await page.getByRole("button", { name: "Load", exact: true }).click();
 	await page.waitForFunction(
 		(count) =>
-			document.querySelector("div.flex.min-h-full.flex-col.items-center").querySelectorAll("button").length > count,
+			document.querySelector("div.flex.min-h-full.flex-col.items-center").querySelectorAll("button").length >
+			count,
 		tabCount,
 	);
 	await sidebar.getByRole("button").last().click();
-	const panel = page.locator("iframe:visible").first().contentFrame();
+	const panel = page.locator("[data-cms-panel]");
 	await panel.getByRole("button", { name: "New", exact: true }).waitFor();
 
 	const mapped = process.env.CMS_TEST_MAPPED_COLLECTION;
@@ -54,7 +57,10 @@ try {
 		assert.equal(await panel.getByRole("button", { name: "Delete", exact: true }).count(), 0);
 		const input = panel.locator('input[data-variant="ghost"]:not([disabled])').first();
 		await input.waitFor();
-		assert.equal(await input.evaluate((element) => getComputedStyle(element).backgroundColor), "rgba(0, 0, 0, 0)");
+		assert.equal(
+			await input.evaluate((element) => getComputedStyle(element).backgroundColor),
+			"rgba(0, 0, 0, 0)",
+		);
 		await input.focus();
 		if (process.env.CMS_TEST_COLOR_SCHEME === "dark") {
 			assert.equal(await panel.locator("html").getAttribute("data-theme"), "dark");
@@ -62,8 +68,11 @@ try {
 			assert.notEqual(background, "rgb(255, 255, 255)");
 		}
 		await panel.getByRole("textbox", { name: "Search entries", exact: true }).focus();
-		if (process.env.CMS_TEST_PANEL_SCREENSHOT) await page.screenshot({ path: process.env.CMS_TEST_PANEL_SCREENSHOT });
-		const complexFields = (process.env.CMS_TEST_COMPLEX_FIELDS ?? (mapped === "User" ? "Bio,Email Signature" : ""))
+		if (process.env.CMS_TEST_PANEL_SCREENSHOT)
+			await page.screenshot({ path: process.env.CMS_TEST_PANEL_SCREENSHOT });
+		const complexFields = (
+			process.env.CMS_TEST_COMPLEX_FIELDS ?? (mapped === "User" ? "Bio,Email Signature" : "")
+		)
 			.split(",")
 			.map((field) => field.trim())
 			.filter(Boolean);
@@ -75,7 +84,7 @@ try {
 			await panelForm.getByRole("button", { name: "Cancel", exact: true }).click();
 			await panel.getByRole("button", { name: "View in dialog", exact: true }).click();
 			const hostDialog = page.getByRole("dialog");
-			const fieldDialog = hostDialog.locator("iframe").contentFrame();
+			const fieldDialog = hostDialog;
 			const drawer = fieldDialog.getByRole("complementary", { name: "Entry details", exact: true });
 			await expect(fieldDialog.getByRole("table")).toBeVisible();
 			await fieldDialog.getByRole("button", { name: fieldName, exact: true }).first().click();
@@ -88,8 +97,10 @@ try {
 		}
 
 		await panel.getByRole("button", { name: "View in dialog", exact: true }).click();
-		const dialog = page.getByRole("dialog").locator("iframe").contentFrame();
-		await dialog.getByText("Edit the simple fields here. Open a row in Desk for the rest.", { exact: true }).waitFor();
+		const dialog = page.getByRole("dialog");
+		await dialog
+			.getByText("Edit the simple fields here. Open a row in Desk for the rest.", { exact: true })
+			.waitFor();
 		assert.equal(await dialog.getByRole("button", { name: "Delete", exact: true }).count(), 0);
 		await page.getByRole("button", { name: "Close", exact: true }).click();
 		await panel.getByRole("radio", { name: "Settings", exact: true }).click();
@@ -114,18 +125,18 @@ try {
 			const edited = `${original} panel check`;
 			await title.fill(edited);
 			const panelSave = page.waitForResponse(
-				(response) => response.url().endsWith("/builder.extensions.data.update_doc") && response.status() === 200,
+				(response) => response.url().endsWith("/cms.api.entries.save_entry") && response.status() === 200,
 			);
 			await title.press("Enter");
 			await panelSave;
 			await panel.getByRole("button", { name: "View in dialog", exact: true }).click();
-			const tableDialog = page.getByRole("dialog").locator("iframe").contentFrame();
+			const tableDialog = page.getByRole("dialog");
 			const dialogTitle = tableDialog.getByRole("textbox", { name: "Title", exact: true }).first();
 			await dialogTitle.waitFor();
 			assert.equal(await dialogTitle.inputValue(), edited);
 			await dialogTitle.fill(original);
 			const dialogSave = page.waitForResponse(
-				(response) => response.url().endsWith("/builder.extensions.data.update_doc") && response.status() === 200,
+				(response) => response.url().endsWith("/cms.api.entries.save_entry") && response.status() === 200,
 			);
 			await dialogTitle.press("Enter");
 			await dialogSave;
@@ -161,7 +172,7 @@ try {
 		}
 		await panel.getByRole("button", { name: "View in dialog", exact: true }).click();
 		const hostDialog = page.getByRole("dialog");
-		const dialog = hostDialog.locator("iframe").contentFrame();
+		const dialog = hostDialog;
 		await dialog.getByRole("table").waitFor();
 		const tableBounds = await dialog.getByRole("table").boundingBox();
 		const headerBounds = await dialog.getByRole("columnheader").last().boundingBox();
@@ -169,7 +180,8 @@ try {
 			Math.abs(tableBounds.x + tableBounds.width - headerBounds.x - headerBounds.width) <= 1,
 			"Table columns must fill the available width",
 		);
-		if (process.env.CMS_TEST_TABLE_SCREENSHOT) await page.screenshot({ path: process.env.CMS_TEST_TABLE_SCREENSHOT });
+		if (process.env.CMS_TEST_TABLE_SCREENSHOT)
+			await page.screenshot({ path: process.env.CMS_TEST_TABLE_SCREENSHOT });
 		const background = (element) => {
 			const context = document.createElement("canvas").getContext("2d");
 			context.fillStyle = getComputedStyle(element).backgroundColor;
@@ -200,7 +212,12 @@ try {
 		const drawerStyle = await details.evaluate((element) => {
 			const style = getComputedStyle(element);
 			return {
-				borders: [style.borderTopWidth, style.borderRightWidth, style.borderBottomWidth, style.borderLeftWidth],
+				borders: [
+					style.borderTopWidth,
+					style.borderRightWidth,
+					style.borderBottomWidth,
+					style.borderLeftWidth,
+				],
 				shadow: style.boxShadow,
 				transition: style.transitionDuration,
 				animation: style.animationName,
@@ -220,9 +237,15 @@ try {
 		}
 		const drawerBounds = await details.boundingBox();
 		const unchangedTable = await table.boundingBox();
-		assert.ok(Math.abs(unchangedTable.width - tableBounds.width) <= 1, "Opening the drawer must not resize the table");
+		assert.ok(
+			Math.abs(unchangedTable.width - tableBounds.width) <= 1,
+			"Opening the drawer must not resize the table",
+		);
 		assert.ok(Math.abs(unchangedTable.x - tableBounds.x) <= 1, "Opening the drawer must not move the table");
-		assert.ok(drawerBounds.x > tableBounds.x + 200, "The table must remain visible to the left of the drawer");
+		assert.ok(
+			drawerBounds.x > tableBounds.x + 200,
+			"The table must remain visible to the left of the drawer",
+		);
 		assert.ok(drawerBounds.x < unchangedTable.x + unchangedTable.width, "The drawer must overlay the table");
 		await expect(details.getByRole("textbox", { name: /^Title/ })).toHaveValue(original);
 		await details.getByRole("textbox", { name: /^Title/ }).fill(`${original} edited`);

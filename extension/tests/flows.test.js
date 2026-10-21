@@ -7,13 +7,40 @@ const { builder, api } = vi.hoisted(() => ({
 		block: { get: vi.fn(), update: vi.fn(), insert: vi.fn() },
 		data: { getList: vi.fn(), getDoc: vi.fn(), update: vi.fn(), subscribe: vi.fn() },
 	},
-	api: { getCollections: vi.fn(), updateCollection: vi.fn(), getFields: vi.fn(), getNewestPublished: vi.fn() },
+	api: {
+		getCollections: vi.fn(),
+		updateCollection: vi.fn(),
+		getFields: vi.fn(),
+		getNewestPublished: vi.fn(),
+	},
 }));
-vi.mock("frappe-builder-extension-sdk", () => ({ default: builder }));
+vi.mock("../src/data/documents.js", () => ({
+	getDocuments: builder.data?.getList,
+	getDocument: builder.data?.getDoc,
+	updateDocument: builder.data?.update,
+	subscribeDocuments: builder.data?.subscribe,
+}));
+vi.mock("../src/editor/context.js", () => ({ getEditorContext: builder.context?.get }));
+vi.mock("../src/editor/page.js", () => ({
+	refreshPageData: builder.page?.refreshData,
+	setRouteVariables: builder.page?.setRouteVariables,
+}));
+vi.mock("../src/editor/canvas.js", () => ({
+	getRootBlock: async () => (await builder.page.getBlocks())[0],
+	getBlock: builder.block?.get,
+	updateBlock: builder.block?.update,
+	insertBlock: builder.block?.insert,
+}));
+vi.mock("frappe-ui", () => ({ toast: { error: builder.ui?.toast, success: builder.ui?.toast } }));
 vi.mock("../src/data/api.js", () => ({ api }));
 
 import { Collection } from "../src/cms/collection.js";
-import { addCollectionList, addEntryContent, setCollectionPage, setIndexPage } from "../src/cms/pageActions.js";
+import {
+	addCollectionList,
+	addEntryContent,
+	setCollectionPage,
+	setIndexPage,
+} from "../src/cms/pageActions.js";
 import { bindBlock, getSourcesForBlock } from "../src/blocks/blockActions.js";
 import { DataSource } from "../src/data/dataSource.js";
 import { writeSection } from "../src/data/scriptSections.js";
@@ -65,7 +92,12 @@ describe("page transitions", () => {
 
 	it("changes detail to index and removes the route-dependent entry source", async () => {
 		settings[0] = { ...settings[0], index_page: "", entry_page: "page" };
-		const source = new DataSource({ name: "entry", type: "Document", doctype: "CMS Posts", fields: ["title"] });
+		const source = new DataSource({
+			name: "entry",
+			type: "Document",
+			doctype: "CMS Posts",
+			fields: ["title"],
+		});
 		page.page_data_script = writeSection(page.page_data_script, "entry", source.toJSON(), source.toPython());
 		await setIndexPage(collectionOf(settings[0]), "page");
 		expect(settings[0]).toMatchObject({ index_page: "page", entry_page: "" });
@@ -125,7 +157,9 @@ describe("field connections", () => {
 
 describe("collection content", () => {
 	it("refuses entry deletion for a mapped DocType", () => {
-		expect(() => new Collection({ collection: "Blog Post", is_mapped: 1 }).deleteEntry("post")).toThrow("Desk");
+		expect(() => new Collection({ collection: "Blog Post", is_mapped: 1 }).deleteEntry("post")).toThrow(
+			"Desk",
+		);
 	});
 });
 
@@ -141,7 +175,7 @@ describe("inserted blocks", () => {
 	it("inserts only the chosen fields in a collection list", async () => {
 		await addCollectionList(collectionOf(settings[0]), { layout: "table", fields: [title] });
 		const [, tree] = builder.block.insert.mock.calls[0];
-		expect(tree.styles.gridTemplateColumns).toBe("fit-content(280px)");
+		expect(tree.baseStyles.gridTemplateColumns).toBe("fit-content(280px)");
 		expect(blockNames(tree)).toContain("Title heading");
 	});
 

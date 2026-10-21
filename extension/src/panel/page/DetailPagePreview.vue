@@ -7,21 +7,27 @@
 			type="combobox"
 			label="Entry"
 			placeholder="Choose an entry…"
-			:options="entries.map((entry) => ({ label: entry.published ? entry.title : `${entry.title} · Draft`, value: entry.slug }))"
-			@update:model-value="preview"
-		/>
+			:options="
+				entries.map((entry) => ({
+					label: entry.published ? entry.title : `${entry.title} · Draft`,
+					value: entry.slug,
+				}))
+			"
+			@update:model-value="preview" />
 		<p v-else class="cms-hint">Add an entry to preview this template with its content.</p>
 		<Button label="Manage entries" icon-left="lucide-database" variant="subtle" @click="manage" />
 	</section>
 </template>
 <script setup>
-import builder from "frappe-builder-extension-sdk";
-import { useBuilderContext } from "frappe-builder-extension-sdk/vue";
+import { useEditorContext } from "../../editor/context.js";
+import { setRouteVariables } from "../../editor/page.js";
+import { openCollectionDialog } from "../../editor/windows.js";
+
 import { Button, FormControl } from "frappe-ui";
 import { shallowRef, watch } from "vue";
 import { useTask } from "../useTask.js";
 const props = defineProps({ collection: { type: Object, required: true } });
-const context = useBuilderContext(["routeVariables"]);
+const context = useEditorContext();
 const entries = shallowRef([]);
 const { run, runCached } = useTask();
 const load = () =>
@@ -31,9 +37,9 @@ const load = () =>
 		(list) => (entries.value = list),
 	);
 watch(() => props.collection.doctype, load, { immediate: true });
-const preview = (slug) => slug && run(() => builder.page.setRouteVariables({ slug }));
+const preview = (slug) => slug && run(() => setRouteVariables({ slug }));
 const manage = async () => {
-	await builder.ui.openDialog({
+	await openCollectionDialog({
 		title: props.collection.label,
 		size: "5xl",
 		height: 600,

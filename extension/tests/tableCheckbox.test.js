@@ -6,7 +6,6 @@ vi.mock("frappe-ui", async () => ({
 	FormControl: { render: () => null },
 	TextInput: { render: () => null },
 }));
-vi.mock("frappe-builder-extension-sdk", () => ({ default: {} }));
 
 import TableCell from "../src/panel/table/TableCell.vue";
 

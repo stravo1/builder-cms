@@ -8,7 +8,7 @@ vi.mock("frappe-ui", async () => ({
 	TabPanel: (await import("../node_modules/frappe-ui/src/components/Tabs/TabPanel.vue")).default,
 	TabTrigger: (await import("../node_modules/frappe-ui/src/components/Tabs/TabTrigger.vue")).default,
 }));
-vi.mock("frappe-builder-extension-sdk", () => ({ default: {} }));
+
 vi.mock("../src/cms/access.js", () => ({ getAccess: async () => ({ is_manager: false }) }));
 vi.mock("../src/panel/collections/CollectionsTab.vue", () => ({
 	default: { render: () => h("div", { "data-cms-view": "collections" }, "Collection content") },

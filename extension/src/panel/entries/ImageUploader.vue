@@ -5,13 +5,13 @@
 		:loading="isRunning"
 		label="Upload image"
 		:disabled="disabled"
-		@click="input.click()"
-	/>
-	<input ref="input" type="file" accept="image/*" class="hidden" @change="upload" />
+		@click="input.click()" />
+	<input ref="input" type="file" accept="image/*" class="hidden" @change="handleUpload" />
 </template>
 
 <script setup>
-import builder from "frappe-builder-extension-sdk";
+import { upload } from "frappe-ui";
+
 import { Button } from "frappe-ui";
 import { ref } from "vue";
 import { useTask } from "../useTask.js";
@@ -21,11 +21,11 @@ const emit = defineEmits(["upload"]);
 const input = ref(null);
 const { isRunning, run } = useTask();
 
-const upload = async (event) => {
+const handleUpload = async (event) => {
 	const [file] = event.target.files;
 	event.target.value = "";
 	if (!file) return;
-	const uploaded = await run(() => builder.data.uploadFile(file));
-	if (uploaded) emit("upload", uploaded.fileUrl);
+	const uploaded = await run(() => upload(file, { private: false }));
+	if (uploaded) emit("upload", uploaded.file_url);
 };
 </script>

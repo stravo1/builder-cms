@@ -5,16 +5,14 @@
 			role="table"
 			:aria-label="`${collection.label} entries`"
 			class="grid w-max min-w-full text-sm"
-			:style="{ gridTemplateColumns: columns }"
-		>
+			:style="{ gridTemplateColumns: columns }">
 			<div class="row" role="row">
 				<div
 					v-for="(field, index) in fields"
 					:key="field.fieldname"
 					class="cell head"
 					role="columnheader"
-					:class="{ first: index === 0 }"
-				>
+					:class="{ first: index === 0 }">
 					{{ field.label || field.fieldname }}
 				</div>
 				<div class="cell head" role="columnheader"><span class="sr-only">Actions</span></div>
@@ -25,31 +23,27 @@
 				class="row group"
 				:class="{ selected: row.name === selectedEntryName }"
 				role="row"
-				:aria-selected="row.name === selectedEntryName"
-			>
+				:aria-selected="row.name === selectedEntryName">
 				<div
 					v-for="(field, index) in fields"
 					:key="`${field.fieldname}-${row.revision ?? 0}`"
 					class="cell"
 					role="cell"
-					:class="{ first: index === 0 }"
-				>
+					:class="{ first: index === 0 }">
 					<Button
 						v-if="index === 0"
 						size="sm"
 						variant="ghost"
 						icon="lucide-square-pen"
 						label="Edit entry"
-						@click="emit('edit', row)"
-					/>
+						@click="emit('edit', row)" />
 					<div class="min-w-0 flex-1">
 						<TableCell
 							:field="field"
 							:read-only="Boolean(field.read_only) || row.name === selectedEntryName"
 							:value="row[field.fieldname]"
 							@save="(value) => emit('save', row, field, value)"
-							@open="emit('openField', row, field)"
-						/>
+							@open="emit('openField', row, field)" />
 					</div>
 				</div>
 				<div class="cell flex items-center gap-0.5" role="cell">
@@ -59,15 +53,13 @@
 						variant="ghost"
 						icon="lucide-eye"
 						label="Preview on the detail page"
-						@click="emit('preview', row)"
-					/>
+						@click="emit('preview', row)" />
 					<Button
 						size="sm"
 						variant="ghost"
 						icon="lucide-external-link"
 						label="Open in Desk"
-						@click="builder.ui.openUrl(collection.getDeskUrl(row.name))"
-					/>
+						@click="openUrl(collection.getDeskUrl(row.name))" />
 					<Button
 						size="sm"
 						variant="ghost"
@@ -76,8 +68,7 @@
 						:theme="armed === row.name ? 'red' : 'gray'"
 						icon="lucide-trash-2"
 						:label="armed === row.name ? 'Click again to delete' : 'Delete'"
-						@click="remove(row)"
-					/>
+						@click="remove(row)" />
 				</div>
 			</div>
 		</div>
@@ -86,7 +77,8 @@
 </template>
 
 <script setup>
-import builder from "frappe-builder-extension-sdk";
+import { openUrl } from "../../editor/windows.js";
+
 import { Button } from "frappe-ui";
 import { computed, ref } from "vue";
 import { isMultilineField } from "../../data/doctypes.js";

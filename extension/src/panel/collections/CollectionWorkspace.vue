@@ -18,8 +18,7 @@
 				label="Open index page"
 				variant="subtle"
 				class="mt-3"
-				@click="open(collection.indexPage)"
-			/>
+				@click="open(collection.indexPage)" />
 			<p v-else class="cms-hint mt-3">No index page connected yet.</p>
 		</div>
 		<div class="cms-card">
@@ -31,8 +30,7 @@
 				label="Open detail page"
 				variant="subtle"
 				class="mt-3"
-				@click="open(collection.collectionPage)"
-			/>
+				@click="open(collection.collectionPage)" />
 			<p v-else class="cms-hint mt-3">No detail page connected yet.</p>
 		</div>
 		<Button
@@ -40,14 +38,16 @@
 			label="Set up the current page"
 			icon-left="lucide-file-plus"
 			variant="solid"
-			@click="emit('usePage')"
-		/>
+			@click="emit('usePage')" />
 	</div>
-	<div v-else-if="tab === 'settings'" class="overflow-y-auto"><CollectionConfig :collection="collection" @deleted="emit('back')" /></div>
+	<div v-else-if="tab === 'settings'" class="overflow-y-auto">
+		<CollectionConfig :collection="collection" @deleted="emit('back')" />
+	</div>
 </template>
 
 <script setup>
-import builder from "frappe-builder-extension-sdk";
+import { openPage } from "../../editor/page.js";
+
 import { Button, TabButtons } from "frappe-ui";
 import { computed, ref } from "vue";
 import PanelHeader from "../PanelHeader.vue";
@@ -70,7 +70,7 @@ const tabs = computed(() => (access.value.can_manage ? TABS : TABS.slice(0, 2)))
 const { run } = useTask();
 const open = (name) =>
 	run(async () => {
-		await builder.page.open(name);
+		await openPage(name);
 		emit("usePage");
 	});
 </script>

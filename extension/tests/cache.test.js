@@ -4,7 +4,24 @@ const { builder, api } = vi.hoisted(() => ({
 	builder: { data: { subscribe: vi.fn() }, ui: { toast: vi.fn() } },
 	api: { getCollections: vi.fn(), updateCollection: vi.fn() },
 }));
-vi.mock("frappe-builder-extension-sdk", () => ({ default: builder }));
+vi.mock("../src/data/documents.js", () => ({
+	getDocuments: builder.data?.getList,
+	getDocument: builder.data?.getDoc,
+	updateDocument: builder.data?.update,
+	subscribeDocuments: builder.data?.subscribe,
+}));
+vi.mock("../src/editor/context.js", () => ({ getEditorContext: builder.context?.get }));
+vi.mock("../src/editor/page.js", () => ({
+	refreshPageData: builder.page?.refreshData,
+	setRouteVariables: builder.page?.setRouteVariables,
+}));
+vi.mock("../src/editor/canvas.js", () => ({
+	getRootBlock: async () => (await builder.page.getBlocks())[0],
+	getBlock: builder.block?.get,
+	updateBlock: builder.block?.update,
+	insertBlock: builder.block?.insert,
+}));
+vi.mock("frappe-ui", () => ({ toast: { error: builder.ui?.toast, success: builder.ui?.toast } }));
 vi.mock("../src/data/api.js", () => ({ api }));
 
 const { cached, forget, hasCopy, showThenRefresh } = await import("../src/data/cache.js");
@@ -58,11 +75,19 @@ describe("the read cache", () => {
 
 	it("shows the last copy at once, then the fresh value", async () => {
 		const shown = [];
-		await showThenRefresh("rows:Blog", async () => ["first"], (rows) => shown.push(rows));
+		await showThenRefresh(
+			"rows:Blog",
+			async () => ["first"],
+			(rows) => shown.push(rows),
+		);
 		expect(hasCopy("rows:Blog")).toBe(true);
 
 		let finish;
-		const refresh = showThenRefresh("rows:Blog", () => new Promise((resolve) => (finish = resolve)), (rows) => shown.push(rows));
+		const refresh = showThenRefresh(
+			"rows:Blog",
+			() => new Promise((resolve) => (finish = resolve)),
+			(rows) => shown.push(rows),
+		);
 		// the copy shows before the read ends
 		expect(shown).toEqual([["first"], ["first"]]);
 		finish(["second"]);
@@ -71,14 +96,22 @@ describe("the read cache", () => {
 	});
 
 	it("keeps copies when the reads are forgotten", async () => {
-		await showThenRefresh("rows:Kept", async () => ["row"], () => {});
+		await showThenRefresh(
+			"rows:Kept",
+			async () => ["row"],
+			() => {},
+		);
 		forget();
 		expect(hasCopy("rows:Kept")).toBe(true);
 	});
 
 	it("loads a view one time, then shows its copy with no loading state", async () => {
 		const first = useTask();
-		const load = first.runCached("page:home", async () => "first", () => {});
+		const load = first.runCached(
+			"page:home",
+			async () => "first",
+			() => {},
+		);
 		expect(first.isRunning.value).toBe(true);
 		await load;
 
@@ -86,7 +119,11 @@ describe("the read cache", () => {
 		const again = useTask();
 		const shown = [];
 		let finish;
-		const refresh = again.runCached("page:home", () => new Promise((resolve) => (finish = resolve)), (value) => shown.push(value));
+		const refresh = again.runCached(
+			"page:home",
+			() => new Promise((resolve) => (finish = resolve)),
+			(value) => shown.push(value),
+		);
 		expect(again.isRunning.value).toBe(false);
 		expect(shown).toEqual(["first"]);
 		finish("second");

@@ -17,14 +17,33 @@ const { scripts, builder, api } = vi.hoisted(() => {
 	};
 	return { scripts, builder, api };
 });
-vi.mock("frappe-builder-extension-sdk", () => ({ default: builder }));
+vi.mock("../src/data/documents.js", () => ({
+	getDocuments: builder.data?.getList,
+	getDocument: builder.data?.getDoc,
+	updateDocument: builder.data?.update,
+	subscribeDocuments: builder.data?.subscribe,
+}));
+vi.mock("../src/editor/context.js", () => ({ getEditorContext: builder.context?.get }));
+vi.mock("../src/editor/page.js", () => ({
+	refreshPageData: builder.page?.refreshData,
+	setRouteVariables: builder.page?.setRouteVariables,
+}));
+vi.mock("../src/editor/canvas.js", () => ({
+	getRootBlock: async () => (await builder.page.getBlocks())[0],
+	getBlock: builder.block?.get,
+	updateBlock: builder.block?.update,
+	insertBlock: builder.block?.insert,
+}));
+vi.mock("frappe-ui", () => ({ toast: { error: builder.ui?.toast, success: builder.ui?.toast } }));
 vi.mock("../src/data/api.js", () => ({ api }));
 
 const { Collection } = await import("../src/cms/collection.js");
 const { writeSection } = await import("../src/data/scriptSections.js");
 
-const section = (script, name, doctype) => writeSection(script, name, { name, doctype, fields: ["name"] }, "pass");
-const sourceNames = (page) => [...scripts.get(page).matchAll(/builder-cms:start (\S+)/g)].map((match) => match[1]);
+const section = (script, name, doctype) =>
+	writeSection(script, name, { name, doctype, fields: ["name"] }, "pass");
+const sourceNames = (page) =>
+	[...scripts.get(page).matchAll(/builder-cms:start (\S+)/g)].map((match) => match[1]);
 
 describe("deleting a collection", () => {
 	beforeEach(() => {
