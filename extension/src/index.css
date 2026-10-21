@@ -1,0 +1,33 @@
+@import "frappe-ui/style.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Espresso tokens, sized to match Builder's own left panel */
+@layer components {
+	.cms-section-label {
+		@apply text-sm font-medium text-ink-gray-9;
+	}
+	.cms-hint {
+		@apply text-p-sm text-ink-gray-5;
+	}
+	.cms-card {
+		@apply rounded-4 border border-outline-gray-1 p-3;
+	}
+	.cms-empty {
+		@apply flex flex-col items-center gap-2 px-4 py-8 text-center text-p-sm text-ink-gray-5;
+	}
+	.cms-error {
+		@apply text-sm text-ink-red-8;
+	}
+	.cms-list-row {
+		@apply text-left hover:bg-surface-gray-2 focus-visible:focus-ring;
+	}
+}
+
+/* match Builder's dark base, which pins surface-base to gray-950. Not a checkbox:
+   this rule would beat its checked fill and hide its dark tick */
+[data-theme="dark"] .bg-surface-base:not([type="checkbox"]) {
+	background-color: var(--gray-950);
+}
