@@ -23,6 +23,11 @@ def is_manager(user: str | None = None) -> bool:
 	return bool(set(FIXED_ROLES) & set(frappe.get_roles(user)))
 
 
+def has_app_permission() -> bool:
+	"""The desk icon opens the collection list, which the CMS-wide roles read."""
+	return bool(frappe.has_permission(SETTINGS_DOCTYPE, "read"))
+
+
 def assert_manager() -> None:
 	if not is_manager():
 		frappe.throw(_("Only a System Manager or a Website Manager can do this."), frappe.PermissionError)

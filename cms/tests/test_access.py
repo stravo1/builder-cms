@@ -6,12 +6,13 @@ from frappe.permissions import add_permission
 
 from cms.api.access import get_access, update_cms_roles, update_collection_roles
 from cms.api.collections import map_doctype
-from cms.collections.access import get_cms_roles
+from cms.collections.access import get_cms_roles, has_app_permission
 from cms.tests.fixtures import (
 	AUTHOR,
 	AUTHOR_ROLE,
 	EDITOR,
 	EDITOR_ROLE,
+	OUTSIDER,
 	CMSTestCase,
 	make_role,
 )
@@ -98,3 +99,15 @@ class TestCollectionRoles(CMSTestCase):
 		frappe.set_user(AUTHOR)
 
 		self.assertFalse(frappe.has_permission(collection["collection"], "read"))
+
+
+class TestAppIcon(CMSTestCase):
+	def test_a_cms_wide_role_sees_the_desk_icon(self):
+		frappe.set_user(EDITOR)
+
+		self.assertTrue(has_app_permission())
+
+	def test_an_author_and_an_outsider_do_not(self):
+		for user in (AUTHOR, OUTSIDER):
+			frappe.set_user(user)
+			self.assertFalse(has_app_permission())

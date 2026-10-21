@@ -7,6 +7,17 @@ app_license = "mit"
 
 required_apps = ["builder"]
 
+# Each item in the list will be shown as an app in the apps page
+add_to_apps_screen = [
+	{
+		"name": "cms",
+		"logo": "/assets/cms/cms.svg",
+		"title": "CMS",
+		"route": "/app/cms-collection",
+		"has_permission": "cms.collections.access.has_app_permission",
+	}
+]
+
 # adopts what the CMS extension made before this app existed
 before_install = "cms.install.before_install"
 after_install = "cms.install.after_install"
