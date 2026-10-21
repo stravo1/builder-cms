@@ -35,7 +35,13 @@
 			/>
 			<p v-else class="cms-hint mt-3">No detail page connected yet.</p>
 		</div>
-		<Button label="Set up the current page" icon-left="lucide-file-plus" variant="solid" @click="emit('usePage')" />
+		<Button
+			v-if="access.can_manage"
+			label="Set up the current page"
+			icon-left="lucide-file-plus"
+			variant="solid"
+			@click="emit('usePage')"
+		/>
 	</div>
 	<div v-else-if="tab === 'settings'" class="overflow-y-auto"><CollectionConfig :collection="collection" @deleted="emit('back')" /></div>
 </template>
@@ -43,20 +49,24 @@
 <script setup>
 import builder from "frappe-builder-extension-sdk";
 import { Button, TabButtons } from "frappe-ui";
-import { ref } from "vue";
+import { computed, ref } from "vue";
 import PanelHeader from "../PanelHeader.vue";
 import CollectionEntries from "../table/CollectionEntries.vue";
 import CollectionConfig from "./CollectionConfig.vue";
+import { useAccess } from "../useAccess.js";
 import { useTask } from "../useTask.js";
 
 defineProps({ collection: { type: Object, required: true } });
 const emit = defineEmits(["back", "usePage"]);
 const tab = ref("entries");
-const tabs = [
+const access = useAccess();
+const TABS = [
 	{ label: "Entries", value: "entries" },
 	{ label: "Pages", value: "pages" },
 	{ label: "Settings", value: "settings" },
 ];
+// fields, URL, and delete are for the CMS-wide roles
+const tabs = computed(() => (access.value.can_manage ? TABS : TABS.slice(0, 2)));
 const { run } = useTask();
 const open = (name) =>
 	run(async () => {

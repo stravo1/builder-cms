@@ -9,7 +9,7 @@ Open **CMS → Collections**, then choose a collection.
 - **Entries** shows an editable table in the panel. Search the loaded rows, edit a cell, or choose **New entry**. The edit button opens the entry form in the panel. Click rich text or another multiline field to open the same form and focus that field. **Save** returns to the table; **Cancel** discards the draft. Leave a new CMS entry's slug empty to generate it from its title.
 - **View in dialog** expands the table into a large dialog. The edit button and multiline cells open an entry drawer over its right side. The table keeps its width and columns. The clicked field receives focus. **Save** closes the drawer and updates both tables immediately; **Cancel** discards the draft. A failed save keeps it open. The drawer has only a left divider, with no shadow or animation. Save or cancel pending changes before switching entries. Simple text cells save on Enter or blur; Escape cancels the edit.
 - **Pages** opens the collection's index and detail pages, or takes you to page setup.
-- **Settings** manages the URL and CMS fields. Fields show ten at a time; **Load more fields** reveals the next ten. Custom CMS fields can be removed after confirmation. Title, Slug, and Published are required by the CMS. **Delete collection** removes the DocType after Builder asks, and removes the collection from every page. For an existing DocType, **Disconnect** removes only the CMS link, and the DocType and its records stay.
+- **Settings** manages the URL and CMS fields. Fields show ten at a time; **Load more fields** reveals the next ten. Custom CMS fields can be removed after confirmation. Title, Slug, and Published are required by the CMS. **Delete collection** removes the DocType and its entries, and removes the collection from every page. For an existing DocType, **Disconnect** removes only the CMS link, and the DocType and its records stay.
 
 Existing DocTypes support simple entry fields in the same editor. Use **Open in Desk** for child tables, naming rules, and advanced fields. The plugin offers no schema removal or entry deletion for these collections.
 
@@ -36,7 +36,7 @@ Choose **Collections → New → Existing doctype**. Select a DocType, a slug fi
 
 ## Storage and rendering
 
-CMS collections use extension-owned `CMS <name>` DocTypes. `CMS Collection` stores collection settings and page assignments. Frappe applies its normal permissions and document validation when you edit entries.
+The `cms` app owns the collections. Each one is a `CMS Collection` row and a custom `CMS <name>` DocType in the CMS module. The row stores the settings, the page assignments, and the roles of that collection. The app writes the DocPerms of each DocType, so Frappe applies its normal permissions and document validation when you edit entries.
 
 Each page data source has a marked section in `page_data_script`. The plugin updates its own sections and keeps other script content. Public rendering reads the configured fields with `frappe.db.get_all`; a configured published field excludes drafts. Removing or adding a CMS field updates these generated sources. After an entry changes, the extension calls `builder.page.refreshData()` to update the canvas with the current page data.
 
@@ -53,9 +53,9 @@ npm run build
 
 Load the dev server through Builder's **Extensions → Load dev extension**. The SDK origin in `vite.config.js` must match the editor origin. Restart the dev server after changing dependencies.
 
-The host needs `data.subscribe` for live table updates across extension frames, the block binding APIs, `page.open`, `page.setRouteVariables`, `page.refreshData`, `data.uploadFile`, `ui.openUrl`, dialog sizing, and `schema.updateDoctype` with explicit `removeFields`. After changing the host SDK, run `yarn build:sdk` from Builder's `frontend` directory.
+The host needs the fetch bridge for `method.call`, `data.subscribe` with realtime updates, `data.getMeta`, the block binding APIs, `page.open`, `page.setRouteVariables`, `page.refreshData`, `data.uploadFile`, `ui.openUrl`, and dialog sizing. The SDK comes from `../../builder/frontend/extension-sdk`. After changing the host SDK, run `yarn build:sdk` from Builder's `frontend` directory.
 
-The extension uses `page.edit`, `data.access`, and `schema.write`. Schema changes require the site's normal System Manager permissions. Removing a field uses `update_doctype(remove_fields=[...])`; omitted fields remain.
+The extension uses `page.edit`, `data.access`, and `method.call`. It calls `cms.api.*` through frappe-ui's `call()` in `src/data/api.js`. The app checks each right. The panel hides what the user cannot use. Removing a field drops its column.
 
 ### Browser checks
 

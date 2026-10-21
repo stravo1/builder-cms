@@ -1,13 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { builder } = vi.hoisted(() => ({
-	builder: {
-		data: { getList: vi.fn(), update: vi.fn(), subscribe: vi.fn() },
-		schema: { listDoctypes: vi.fn(), getDoctype: vi.fn() },
-		ui: { toast: vi.fn() },
-	},
+const { builder, api } = vi.hoisted(() => ({
+	builder: { data: { subscribe: vi.fn() }, ui: { toast: vi.fn() } },
+	api: { getCollections: vi.fn(), updateCollection: vi.fn() },
 }));
 vi.mock("frappe-builder-extension-sdk", () => ({ default: builder }));
+vi.mock("../src/data/api.js", () => ({ api }));
 
 const { cached, forget, hasCopy, showThenRefresh } = await import("../src/data/cache.js");
 const { Collection } = await import("../src/cms/collection.js");
@@ -43,19 +41,18 @@ describe("the read cache", () => {
 	});
 
 	it("reads the collections again after a settings save", async () => {
-		builder.schema.listDoctypes.mockResolvedValue([{ doctype: "CMS Collection", exists: true }]);
-		// the settings doctype already has every field, so nothing writes the schema
-		const settingsFields = ["collection", "label", "url", "entry_page", "index_page", "slug_field", "published_field"];
-		builder.schema.getDoctype.mockResolvedValue({ fields: settingsFields.map((fieldname) => ({ fieldname })) });
-		builder.data.getList.mockResolvedValue([{ name: "row", collection: "Blog Post", label: "Posts" }]);
+		api.getCollections.mockResolvedValue([{ name: "row", collection: "CMS Blog Post", label: "Posts" }]);
 		const [posts] = await Collection.all();
 		await Collection.all();
-		expect(builder.data.getList).toHaveBeenCalledOnce();
+		expect(api.getCollections).toHaveBeenCalledOnce();
 		// a settings write in another frame, such as the dialog, reaches this frame here
 		expect(builder.data.subscribe).toHaveBeenCalledWith("CMS Collection", expect.any(Function));
 
-		builder.data.getList.mockResolvedValue([{ name: "row", collection: "Blog Post", label: "Articles" }]);
+		const renamed = { name: "row", collection: "CMS Blog Post", label: "Articles" };
+		api.updateCollection.mockResolvedValue(renamed);
+		api.getCollections.mockResolvedValue([renamed]);
 		await posts.saveSettings({ label: "Articles" });
+		expect(api.updateCollection).toHaveBeenCalledWith("CMS Blog Post", { label: "Articles" });
 		expect((await Collection.all())[0].label).toBe("Articles");
 	});
 

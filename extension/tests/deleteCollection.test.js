@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { scripts, builder } = vi.hoisted(() => {
+const { scripts, builder, api } = vi.hoisted(() => {
 	const scripts = new Map();
+	const api = { deleteCollection: vi.fn() };
 	const builder = {
-		schema: { deleteDoctype: vi.fn() },
 		data: {
 			getList: vi.fn(async (doctype, { start = 0 }) =>
 				[...scripts.keys()]
@@ -13,12 +13,12 @@ const { scripts, builder } = vi.hoisted(() => {
 			),
 			getDoc: vi.fn(async (doctype, name) => ({ name, page_data_script: scripts.get(name) })),
 			update: vi.fn(async (doctype, name, patch) => scripts.set(name, patch.page_data_script)),
-			delete: vi.fn(),
 		},
 	};
-	return { scripts, builder };
+	return { scripts, builder, api };
 });
 vi.mock("frappe-builder-extension-sdk", () => ({ default: builder }));
+vi.mock("../src/data/api.js", () => ({ api }));
 
 const { Collection } = await import("../src/cms/collection.js");
 const { writeSection } = await import("../src/data/scriptSections.js");
@@ -35,28 +35,25 @@ describe("deleting a collection", () => {
 		scripts.set("mixed", section(section("", "posts", "CMS Post"), "news", "CMS News"));
 	});
 
-	it("removes the doctype, its page sources, and its settings", async () => {
-		await new Collection("CMS Post", { name: "row-1" }).delete();
-		expect(builder.schema.deleteDoctype).toHaveBeenCalledWith("CMS Post");
+	it("asks the app to delete it, then removes its page sources", async () => {
+		await new Collection({ collection: "CMS Post" }).delete();
+		expect(api.deleteCollection).toHaveBeenCalledWith("CMS Post");
 		expect(sourceNames("page-0")).toEqual([]);
 		expect(sourceNames("page-100")).toEqual([]);
 		expect(sourceNames("mixed")).toEqual(["news"]);
-		expect(builder.data.delete).toHaveBeenCalledWith("CMS Collection", "row-1");
 	});
 
-	it("keeps a mapped doctype and only disconnects it", async () => {
+	it("disconnects a mapped doctype from its pages only", async () => {
 		scripts.set("mapped", section("", "users", "User"));
-		await new Collection("User", { name: "row-2" }).delete();
-		expect(builder.schema.deleteDoctype).not.toHaveBeenCalled();
+		await new Collection({ collection: "User", is_mapped: 1 }).delete();
+		expect(api.deleteCollection).toHaveBeenCalledWith("User");
 		expect(sourceNames("mapped")).toEqual([]);
 		expect(sourceNames("page-0")).toEqual(["posts"]);
-		expect(builder.data.delete).toHaveBeenCalledWith("CMS Collection", "row-2");
 	});
 
-	it("changes nothing when the user refuses the doctype deletion", async () => {
-		builder.schema.deleteDoctype.mockRejectedValueOnce(new Error("The user refused"));
-		await expect(new Collection("CMS Post", { name: "row-1" }).delete()).rejects.toThrow("The user refused");
+	it("changes no page when the app refuses the deletion", async () => {
+		api.deleteCollection.mockRejectedValueOnce(new Error("Not permitted"));
+		await expect(new Collection({ collection: "CMS Post" }).delete()).rejects.toThrow("Not permitted");
 		expect(sourceNames("page-0")).toEqual(["posts"]);
-		expect(builder.data.delete).not.toHaveBeenCalled();
 	});
 });

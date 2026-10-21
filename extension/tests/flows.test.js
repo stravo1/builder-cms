@@ -1,13 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const builder = vi.hoisted(() => ({
-	context: { get: vi.fn() },
-	page: { getBlocks: vi.fn(), setRouteVariables: vi.fn(), refreshData: vi.fn() },
-	block: { get: vi.fn(), update: vi.fn(), insert: vi.fn() },
-	data: { getList: vi.fn(), getDoc: vi.fn(), update: vi.fn(), insert: vi.fn(), subscribe: vi.fn() },
-	schema: { listDoctypes: vi.fn(), getDoctype: vi.fn() },
+const { builder, api } = vi.hoisted(() => ({
+	builder: {
+		context: { get: vi.fn() },
+		page: { getBlocks: vi.fn(), setRouteVariables: vi.fn(), refreshData: vi.fn() },
+		block: { get: vi.fn(), update: vi.fn(), insert: vi.fn() },
+		data: { getList: vi.fn(), getDoc: vi.fn(), update: vi.fn(), subscribe: vi.fn() },
+	},
+	api: { getCollections: vi.fn(), updateCollection: vi.fn(), getFields: vi.fn(), getNewestPublished: vi.fn() },
 }));
 vi.mock("frappe-builder-extension-sdk", () => ({ default: builder }));
+vi.mock("../src/data/api.js", () => ({ api }));
 
 import { Collection } from "../src/cms/collection.js";
 import { addCollectionList, addEntryContent, setCollectionPage, setIndexPage } from "../src/cms/pageActions.js";
@@ -25,33 +28,36 @@ let page;
 
 beforeEach(() => {
 	vi.resetAllMocks();
-	settings = [{ name: "posts", collection: "CMS Posts", index_page: "page", url: "/posts" }];
+	settings = [
+		{
+			name: "posts",
+			collection: "CMS Posts",
+			label: "Posts",
+			index_page: "page",
+			url: "/posts",
+			slug_field: "slug",
+			published_field: "published",
+		},
+	];
 	page = { name: "page", route: "posts", page_data_script: "data.custom = 'kept'" };
-	builder.schema.listDoctypes.mockResolvedValue([
-		{ doctype: "CMS Collection", exists: true },
-		{ doctype: "CMS Posts", exists: true },
-	]);
-	builder.schema.getDoctype.mockImplementation(async (doctype) => ({
-		fields:
-			doctype === "CMS Collection"
-				? ["collection", "label", "url", "entry_page", "index_page", "slug_field", "published_field"].map(
-						(fieldname) => ({ fieldname }),
-					)
-				: fields,
-	}));
-	builder.data.getList.mockImplementation(async (doctype) =>
-		doctype === "CMS Collection" ? structuredClone(settings) : [],
+	api.getCollections.mockImplementation(async () => structuredClone(settings));
+	api.getFields.mockResolvedValue(fields);
+	api.updateCollection.mockImplementation(async (collection, patch) =>
+		Object.assign(
+			settings.find((row) => row.collection === collection),
+			patch,
+		),
 	);
+	builder.data.getList.mockResolvedValue([]);
 	builder.data.getDoc.mockImplementation(async () => ({ ...page }));
-	builder.data.update.mockImplementation(async (doctype, name, patch) => {
-		const document = doctype === "Builder Page" ? page : settings.find((row) => row.name === name);
-		return Object.assign(document || { name }, patch);
-	});
+	builder.data.update.mockImplementation(async (doctype, name, patch) => Object.assign(page, patch));
 });
+
+const collectionOf = (row) => new Collection({ ...row });
 
 describe("page transitions", () => {
 	it("changes an index page to detail without leaving a second role assigned", async () => {
-		await setCollectionPage(new Collection("CMS Posts", { ...settings[0] }), "page");
+		await setCollectionPage(collectionOf(settings[0]), "page");
 		expect(settings[0]).toMatchObject({ index_page: "", entry_page: "page" });
 		expect(page.route).toBe("posts/:slug");
 		expect(page.page_data_script).toContain("data.custom = 'kept'");
@@ -61,23 +67,23 @@ describe("page transitions", () => {
 		settings[0] = { ...settings[0], index_page: "", entry_page: "page" };
 		const source = new DataSource({ name: "entry", type: "Document", doctype: "CMS Posts", fields: ["title"] });
 		page.page_data_script = writeSection(page.page_data_script, "entry", source.toJSON(), source.toPython());
-		await setIndexPage(new Collection("CMS Posts", { ...settings[0] }), "page");
+		await setIndexPage(collectionOf(settings[0]), "page");
 		expect(settings[0]).toMatchObject({ index_page: "page", entry_page: "" });
 		expect(page.page_data_script).not.toContain("data.entry");
 	});
 
 	it("clears the previous collection when a page changes collections", async () => {
-		settings.push({ name: "news", collection: "CMS News", url: "/news" });
-		await setCollectionPage(new Collection("CMS News", { ...settings[1] }), "page");
+		settings.push({ name: "news", collection: "CMS News", label: "News", url: "/news", slug_field: "slug" });
+		await setCollectionPage(collectionOf(settings[1]), "page");
 		expect(settings[0].index_page).toBe("");
 		expect(settings[1].entry_page).toBe("page");
 	});
 
 	it("keeps the list binding when an index page changes collections", async () => {
-		settings.push({ name: "news", collection: "CMS News", url: "/news" });
+		settings.push({ name: "news", collection: "CMS News", label: "News", url: "/news", slug_field: "slug" });
 		const source = new DataSource({ name: "posts", doctype: "CMS Posts", fields: ["title"], limit: 5 });
 		page.page_data_script = writeSection(page.page_data_script, "posts", source.toJSON(), source.toPython());
-		await setIndexPage(new Collection("CMS News", { ...settings[1] }), "page");
+		await setIndexPage(collectionOf(settings[1]), "page");
 		expect(page.page_data_script).toContain('"name":"posts"');
 		expect(page.page_data_script).toContain('"doctype":"CMS News"');
 		expect(page.page_data_script).toContain('"limit":5');
@@ -118,37 +124,8 @@ describe("field connections", () => {
 });
 
 describe("collection content", () => {
-	it("protects core fields and mapped DocTypes from field removal", async () => {
-		await expect(new Collection("CMS Posts").removeField("title")).rejects.toThrow("required");
-		await expect(new Collection("Blog Post").removeField("body")).rejects.toThrow("Desk");
-	});
-
 	it("refuses entry deletion for a mapped DocType", () => {
-		expect(() => new Collection("Blog Post").deleteEntry("post")).toThrow("Desk");
-	});
-	it("never sends framework fields back when saving a document", async () => {
-		const collection = new Collection("CMS Posts");
-		await collection.saveEntry({
-			name: "post",
-			title: "Hello",
-			slug: "",
-			doctype: "CMS Posts",
-			owner: "Administrator",
-			modified: "now",
-		});
-		expect(builder.data.update).toHaveBeenCalledWith("CMS Posts", "post", { title: "Hello", slug: "hello" });
-	});
-
-	it("uses the mapped fields when adding an existing DocType entry", async () => {
-		builder.schema.getDoctype.mockResolvedValue({
-			fields: [
-				{ fieldname: "headline", fieldtype: "Data" },
-				{ fieldname: "permalink", fieldtype: "Data" },
-			],
-		});
-		const collection = new Collection("Article", { slug_field: "permalink" });
-		await collection.saveEntry({ headline: "Hello", permalink: "hello" });
-		expect(builder.data.insert).toHaveBeenCalledWith("Article", { headline: "Hello", permalink: "hello" });
+		expect(() => new Collection({ collection: "Blog Post", is_mapped: 1 }).deleteEntry("post")).toThrow("Desk");
 	});
 });
 
@@ -162,14 +139,14 @@ describe("inserted blocks", () => {
 	});
 
 	it("inserts only the chosen fields in a collection list", async () => {
-		await addCollectionList(new Collection("CMS Posts", { ...settings[0] }), { layout: "table", fields: [title] });
+		await addCollectionList(collectionOf(settings[0]), { layout: "table", fields: [title] });
 		const [, tree] = builder.block.insert.mock.calls[0];
 		expect(tree.styles.gridTemplateColumns).toBe("fit-content(280px)");
 		expect(blockNames(tree)).toContain("Title heading");
 	});
 
 	it("inserts the entry content on a detail page each time the user asks", async () => {
-		const collection = new Collection("CMS Posts", { ...settings[0] });
+		const collection = collectionOf(settings[0]);
 		await setCollectionPage(collection, "page");
 		await addEntryContent(collection, [title]);
 		await addEntryContent(collection, [title]);
@@ -180,6 +157,6 @@ describe("inserted blocks", () => {
 	});
 
 	it("refuses entry content on a page with no entry source", async () => {
-		await expect(addEntryContent(new Collection("CMS Posts"), [title])).rejects.toThrow("detail page");
+		await expect(addEntryContent(collectionOf(settings[0]), [title])).rejects.toThrow("detail page");
 	});
 });

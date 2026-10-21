@@ -35,8 +35,13 @@ You do not have to publish the page again after you edit content.
 
 ## Permissions
 
-The CMS asks for these permissions:
+The CMS needs the `cms` app on the site. It asks for these permissions:
 
 - **Edit pages**, to set the URL, the data, and the blocks of a page.
-- **Read and write data**, to show and edit your entries.
-- **Change the schema**, to make content types and add or remove their fields. This needs a System Manager.
+- **Read and write data**, to read pages and upload images.
+- **Run actions**, to call the `cms` app. The app makes the content types and keeps their entries.
+
+A System Manager or a Website Manager chooses who uses the CMS:
+
+- In **CMS → Settings**, choose the roles that can use the whole CMS. These roles create collections and manage every collection.
+- In a collection's **Settings**, choose the roles that can use only that collection's entries.

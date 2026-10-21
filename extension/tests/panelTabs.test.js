@@ -7,9 +7,9 @@ vi.mock("frappe-ui", async () => ({
 	TabList: (await import("../node_modules/frappe-ui/src/components/Tabs/TabList.vue")).default,
 	TabPanel: (await import("../node_modules/frappe-ui/src/components/Tabs/TabPanel.vue")).default,
 	TabTrigger: (await import("../node_modules/frappe-ui/src/components/Tabs/TabTrigger.vue")).default,
-	setConfig: vi.fn(),
 }));
-vi.mock("frappe-builder-extension-sdk", () => ({ default: { data: { fetcher: vi.fn() } } }));
+vi.mock("frappe-builder-extension-sdk", () => ({ default: {} }));
+vi.mock("../src/cms/access.js", () => ({ getAccess: async () => ({ is_manager: false }) }));
 vi.mock("../src/panel/collections/CollectionsTab.vue", () => ({
 	default: { render: () => h("div", { "data-cms-view": "collections" }, "Collection content") },
 }));
@@ -26,5 +26,12 @@ describe("CMS panel tabs", () => {
 		expect(html).toContain('data-cms-view="collections"');
 		expect(html).toContain('aria-selected="true"');
 		expect(html).not.toContain('data-cms-view="page"');
+	});
+
+	it("shows no Settings tab before it knows the user is a manager", async () => {
+		const html = await renderToString(createSSRApp(CmsPanel));
+
+		expect(html).toContain("This page");
+		expect(html).not.toContain("Settings");
 	});
 });

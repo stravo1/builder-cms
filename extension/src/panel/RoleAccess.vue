@@ -24,54 +24,46 @@
 import builder from "frappe-builder-extension-sdk";
 import { Button, MultiSelect } from "frappe-ui";
 import { computed, onMounted, onUnmounted, ref, shallowRef } from "vue";
-import { forgetSchema, getDoctype } from "../data/doctypes.js";
+import { forgetAccess, getAccess } from "../cms/access.js";
 import { useTask } from "./useTask.js";
 
-/** They always keep access, so the picker leaves them out. */
-const DEFAULT_ROLES = ["System Manager", "Website Manager"];
-
-/** The roles of one doctype that this extension made. `hint` says what the roles can do. */
+/**
+ * Roles to pick, without System Manager and Website Manager, which always
+ * have access. `hint` says what the roles can do. `onSave` writes the roles
+ * and answers with the saved ones.
+ */
 const props = defineProps({
-	doctype: { type: String, required: true },
 	hint: { type: String, required: true },
+	saved: { type: Array, required: true },
+	onSave: { type: Function, required: true },
 });
-const roles = ref([]);
-const savedRoles = ref([]);
-const grantable = shallowRef([]);
+const savedRoles = ref([...props.saved]);
+const roles = ref([...props.saved]);
+const assignable = shallowRef([]);
 const { isRunning, error, run } = useTask();
 
-const withoutDefaults = (list) => list.filter((role) => !DEFAULT_ROLES.includes(role));
-// a role that already has access stays listed, though this user may not grant it, so a save keeps it
+// a role that already has access stays listed, though Frappe may refuse it now, so a save keeps it
 const options = computed(() =>
-	[...new Set([...grantable.value, ...savedRoles.value])].map((role) => ({ label: role, value: role })),
+	[...new Set([...assignable.value, ...savedRoles.value])].map((role) => ({ label: role, value: role })),
 );
 const isChanged = computed(() => [...roles.value].sort().join() !== [...savedRoles.value].sort().join());
 
-const show = (doctype) => {
-	savedRoles.value = withoutDefaults(doctype.roles ?? []);
-	roles.value = [...savedRoles.value];
+const loadRoles = () => run(async () => (assignable.value = (await getAccess()).assignable_roles));
+const reloadRoles = () => {
+	forgetAccess();
+	return loadRoles();
 };
 
-const loadRoles = async () => (grantable.value = withoutDefaults(await builder.schema.listRoles()));
-
-onMounted(() =>
-	run(async () => {
-		const [doctype] = await Promise.all([getDoctype(props.doctype), loadRoles()]);
-		show(doctype);
-	}),
-);
-
-// a role made in Desk shows up when the user comes back to this frame
-const reloadRoles = () => run(loadRoles);
-window.addEventListener("focus", reloadRoles);
+onMounted(() => {
+	loadRoles();
+	window.addEventListener("focus", reloadRoles);
+});
 onUnmounted(() => window.removeEventListener("focus", reloadRoles));
 
-/** Builder asks the user first, and names the roles. */
 const save = () =>
 	run(async () => {
-		// a plain copy: a message to Builder cannot carry a Vue proxy
-		const doctype = await builder.schema.setAccess(props.doctype, [...roles.value]);
-		forgetSchema(props.doctype);
-		show(doctype);
+		// a plain copy: a request body cannot carry a Vue proxy
+		savedRoles.value = await props.onSave([...roles.value]);
+		roles.value = [...savedRoles.value];
 	}, "Access saved");
 </script>

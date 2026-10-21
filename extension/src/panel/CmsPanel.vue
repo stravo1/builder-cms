@@ -2,9 +2,9 @@
 	<div class="flex h-full flex-col bg-surface-base text-ink-gray-8">
 		<Tabs v-model="activeTab" class="flex h-full flex-col">
 			<TabList class="shrink-0 px-5 py-2">
-				<TabTrigger v-for="tab in TABS" :key="tab.value" :value="tab.value" :label="tab.label" />
+				<TabTrigger v-for="tab in tabs" :key="tab.value" :value="tab.value" :label="tab.label" />
 			</TabList>
-			<TabPanel v-for="tab in TABS" :key="tab.value" :value="tab.value" class="min-h-0 flex-1 overflow-y-auto">
+			<TabPanel v-for="tab in tabs" :key="tab.value" :value="tab.value" class="min-h-0 flex-1 overflow-y-auto">
 				<div class="flex h-full flex-col">
 					<CollectionsTab v-if="tab.value === 0" @use-page="activeTab = 1" />
 					<PageTab v-else-if="tab.value === 1" @collections="activeTab = 0" />
@@ -16,15 +16,12 @@
 </template>
 
 <script setup>
-import builder from "frappe-builder-extension-sdk";
-import { setConfig, TabList, TabPanel, Tabs, TabTrigger } from "frappe-ui";
-import { ref } from "vue";
+import { TabList, TabPanel, Tabs, TabTrigger } from "frappe-ui";
+import { computed, onMounted, ref, shallowRef } from "vue";
+import { getAccess } from "../cms/access.js";
 import SettingsTab from "./SettingsTab.vue";
 import CollectionsTab from "./collections/CollectionsTab.vue";
 import PageTab from "./page/PageTab.vue";
-
-// only this frame fetches. Its resources go through the SDK, as Studio's go through Frappe
-setConfig("resourceFetcher", builder.data.fetcher);
 
 const TABS = [
 	{ value: 0, label: "Collections" },
@@ -32,4 +29,9 @@ const TABS = [
 	{ value: 2, label: "Settings" },
 ];
 const activeTab = ref(0);
+const access = shallowRef(null);
+// the CMS-wide roles are a manager's to choose
+const tabs = computed(() => (access.value?.is_manager ? TABS : TABS.slice(0, 2)));
+
+onMounted(async () => (access.value = await getAccess()));
 </script>

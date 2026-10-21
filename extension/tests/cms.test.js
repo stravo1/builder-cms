@@ -1,9 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 
+vi.mock("../src/data/api.js", () => ({ api: {} }));
 vi.mock("frappe-builder-extension-sdk", () => ({
 	default: {
-		schema: {
-			getDoctype: async () => ({
+		data: {
+			getMeta: async () => ({
 				fields: [
 					{ fieldname: "email", fieldtype: "Data" },
 					{ fieldname: "roles_html", fieldtype: "HTML" },
@@ -20,7 +21,7 @@ vi.mock("frappe-builder-extension-sdk", () => ({
 	},
 }));
 
-const { Collection, getCustomFields, markSameLabels, normalizeUrl } = await import("../src/cms/collection.js");
+const { Collection, markSameLabels, normalizeUrl } = await import("../src/cms/collection.js");
 const { getRetiredRoute } = await import("../src/cms/routes.js");
 const { getDoctypeFields, isMultilineField } = await import("../src/data/doctypes.js");
 const { getCardListBlock, getDocumentBlock, getListBlock } = await import("../src/blocks/pageBlocks.js");
@@ -283,6 +284,14 @@ describe("script sections", () => {
 	});
 });
 
+/** A collection the app made, as the app answers it. */
+const owned = (label, settings = {}) =>
+	new Collection({ collection: `CMS ${label}`, label, slug_field: "slug", published_field: "published", ...settings });
+
+/** An existing doctype, mapped. */
+const mapped = (doctype, settings = {}) =>
+	new Collection({ collection: doctype, is_mapped: 1, label: doctype, slug_field: "name", ...settings });
+
 describe("collections", () => {
 	it("starts a data source with published entries only, linked through the collection page", () => {
 		const fields = [
@@ -292,7 +301,7 @@ describe("collections", () => {
 			{ fieldname: "body", fieldtype: "Text Editor" },
 		];
 
-		const defaults = new Collection("CMS Blog Post").getSourceDefaults(fields);
+		const defaults = owned("Blog Post").getSourceDefaults(fields);
 
 		// complete on its own: nothing else fills in the doctype now
 		expect(() => new DataSource(defaults).validate()).not.toThrow();
@@ -308,32 +317,31 @@ describe("collections", () => {
 
 	it("names a collection by its label, and adds the doctype only when two labels match", () => {
 		const titles = markSameLabels([
-			new Collection("CMS Sample"),
-			new Collection("CMS Blog Post"),
-			new Collection("Blog Post"),
-			new Collection("Web Page", { name: "row", label: "Sample" }),
+			owned("Sample"),
+			owned("Blog Post"),
+			mapped("Blog Post"),
+			mapped("Web Page", { label: "Sample" }),
 		]).map((collection) => collection.title);
 
 		expect(titles).toEqual(["Sample - CMS", "Blog Post - CMS", "Blog Post - doctype", "Sample - Web Page"]);
 	});
 
 	it("lets a slug follow the title until the user types one", () => {
-		const posts = new Collection("CMS Blog Post");
+		const posts = owned("Blog Post");
 		expect(posts.isSlugFromTitle("", "")).toBe(true);
 		expect(posts.isSlugFromTitle("hello-world", "Hello World")).toBe(true);
 		expect(posts.isSlugFromTitle("my-own-slug", "Hello World")).toBe(false);
-		expect(new Collection("Web Page", { name: "row", slug_field: "name" }).isSlugFromTitle("", "")).toBe(false);
+		expect(mapped("Web Page").isSlugFromTitle("", "")).toBe(false);
 	});
 
 	describe("a mapped doctype", () => {
-		const posts = new Collection("Blog Post", {
-			name: "row-1",
+		const posts = mapped("Blog Post", {
 			label: "Posts",
 			url: "/posts",
 			slug_field: "route",
 			published_field: "published",
 		});
-		const pages = new Collection("Web Page", { name: "row-2", slug_field: "name", published_field: null });
+		const pages = mapped("Web Page", { published_field: null });
 
 		it("reads its slug and published fields from the mapping", () => {
 			expect([posts.isOwned, posts.label, posts.slugField, posts.publishedField]).toEqual([
@@ -393,8 +401,7 @@ describe("collections", () => {
 	});
 
 	describe("page roles", () => {
-		const blog = new Collection("CMS Blog Post", {
-			name: "row",
+		const blog = owned("Blog Post", {
 			url: "/blog",
 			index_page: "page-index",
 			entry_page: "page-detail",
@@ -416,7 +423,7 @@ describe("collections", () => {
 	});
 
 	it("puts the title first and the slug and published flag last in the table", async () => {
-		const blog = new Collection("CMS Blog Post");
+		const blog = owned("Blog Post");
 		blog.getFields = async () => [
 			{ fieldname: "slug" },
 			{ fieldname: "body" },
@@ -437,25 +444,6 @@ describe("collections", () => {
 		["/blog/news", "/blog/news"],
 		["Blog Posts", "/blog-posts"],
 	])("writes the URL %j as %j", (url, expected) => expect(normalizeUrl(url)).toBe(expected));
-
-	it("names custom fields from their labels", () => {
-		expect(getCustomFields([{ label: "Cover Image", fieldtype: "Attach Image" }])).toEqual([
-			{ label: "Cover Image", fieldtype: "Attach Image", fieldname: "cover_image" },
-		]);
-	});
-
-	it.each([
-		["a standard field", [{ label: "Title", fieldtype: "Data" }]],
-		[
-			"two fields with one name",
-			[
-				{ label: "Body", fieldtype: "Data" },
-				{ label: "body", fieldtype: "Data" },
-			],
-		],
-	])("refuses %s", (_case, fields) => {
-		expect(() => getCustomFields(fields)).toThrow("Pick another name");
-	});
 });
 
 describe("multiline fields", () => {

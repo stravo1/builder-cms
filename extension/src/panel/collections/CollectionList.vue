@@ -1,6 +1,6 @@
 <template>
 	<PanelHeader title="Collections">
-		<Button size="sm" icon-left="lucide-plus" label="New" @click="emit('create')" />
+		<Button v-if="access.can_create" size="sm" icon-left="lucide-plus" label="New" @click="emit('create')" />
 	</PanelHeader>
 	<div class="flex flex-col gap-0.5 p-2">
 		<FormControl
@@ -41,6 +41,7 @@ import { Button, FormControl, ItemListRow } from "frappe-ui";
 import { computed, onMounted, ref } from "vue";
 import { Collection } from "../../cms/collection.js";
 import PanelHeader from "../PanelHeader.vue";
+import { useAccess } from "../useAccess.js";
 import { useTask } from "../useTask.js";
 import SectionLoader from "../SectionLoader.vue";
 
@@ -51,6 +52,7 @@ const shown = computed(() =>
 	collections.value.filter((collection) => collection.title.toLowerCase().includes(query.value.toLowerCase())),
 );
 const { isRunning, error, run } = useTask();
+const access = useAccess();
 
 onMounted(() => run(async () => (collections.value = await Collection.all())));
 </script>

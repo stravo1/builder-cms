@@ -1,26 +1,26 @@
 /**
- * A collection is one content type, such as "Blog Post". It is a doctype that
- * this extension made, so Frappe stores, permits, and versions its entries.
+ * A collection is one content type, such as "Blog Post". The `cms` app owns it:
+ * a `CMS Collection` row and a doctype, so Frappe stores, permits, and versions
+ * its entries. A mapped collection shows a doctype that exists already.
  */
 
 import builder from "frappe-builder-extension-sdk";
+import { api } from "../data/api.js";
 import { cached, forget } from "../data/cache.js";
-import { forgetSchema, getDoctypeFields, getWritableFields, listMadeDoctypes } from "../data/doctypes.js";
 import { PageData } from "../data/pageData.js";
 import { claimRoute } from "./routes.js";
-import { ensureSettingsDoctype, getAllSettings, saveSettings, SETTINGS_DOCTYPE } from "./settings.js";
+
+/** The page data script reads this doctype on each request. */
+export const SETTINGS_DOCTYPE = "CMS Collection";
 
 let isListening = false;
 
-/** A settings write in another frame of this extension, such as the dialog, reaches this frame here. */
+/** A settings write in another frame, or by another user, reaches this frame here. */
 const listenForSettings = () => {
 	if (isListening) return;
 	isListening = true;
 	builder.data.subscribe(SETTINGS_DOCTYPE, () => forget("collections"));
 };
-
-/** Our doctypes start with this, so a collection cannot take the name of a Frappe doctype. */
-export const PREFIX = "CMS ";
 
 export const FIELD_TYPES = [
 	{ label: "Text", value: "Data" },
@@ -32,12 +32,8 @@ export const FIELD_TYPES = [
 	{ label: "Yes or no", value: "Check" },
 ];
 
-/** Every collection has these. The page bindings and the entry route need them. */
-const STANDARD_FIELDS = [
-	{ fieldname: "title", label: "Title", fieldtype: "Data", reqd: true, in_list_view: true },
-	{ fieldname: "slug", label: "Slug", fieldtype: "Data", unique: true },
-	{ fieldname: "published", label: "Published", fieldtype: "Check", default: 0, in_list_view: true },
-];
+/** Every collection the app makes has these. The page bindings and the entry route need them. */
+export const STANDARD_FIELDNAMES = ["title", "slug", "published"];
 
 export const slugify = (text) =>
 	text
@@ -48,20 +44,6 @@ export const slugify = (text) =>
 		.replace(/^-+|-+$/g, "");
 
 const snakeCase = (text) => slugify(text).replace(/-/g, "_");
-
-/**
- * Each field gets a fieldname from its label. Two fields cannot share one, and
- * `name` belongs to Frappe. `existing` holds the fieldnames a collection has.
- */
-export const getCustomFields = (fields, existing = []) => {
-	const taken = new Set(["name", ...STANDARD_FIELDS.map((field) => field.fieldname), ...existing]);
-	return fields.map((field) => {
-		const fieldname = snakeCase(field.label);
-		if (!fieldname || taken.has(fieldname)) throw new Error(`Pick another name for the field "${field.label}".`);
-		taken.add(fieldname);
-		return { label: field.label, fieldtype: field.fieldtype, fieldname };
-	});
-};
 
 /** `blog`, `/blog/`, and ` /Blog ` all become `/blog`. Each segment is a slug: `/blog/news` stays. */
 export const normalizeUrl = (url) => `/${url.split("/").map(slugify).filter(Boolean).join("/")}`;
@@ -88,57 +70,40 @@ const refreshAfterEntryWrite = async (write) => {
 };
 
 export class Collection {
-	constructor(doctype, settings = null) {
-		this.doctype = doctype;
+	/** `settings` is a collection as the app answers it. */
+	constructor(settings) {
 		this.settings = settings;
 	}
 
-	/** The doctypes this extension made, and every doctype a user mapped, each once. */
+	get doctype() {
+		return this.settings.collection;
+	}
+
+	/** The collections whose entries this user can read. */
 	static all() {
 		listenForSettings();
 		return cached("collections", Collection.read);
 	}
 
 	static async read() {
-		const made = (await listMadeDoctypes()).filter((row) => row.exists).map((row) => row.doctype);
-		const rows = made.includes(SETTINGS_DOCTYPE) ? await getAllSettings() : [];
-		// the settings doctype has the prefix too, and it is not a collection
-		const owned = made.filter((doctype) => doctype.startsWith(PREFIX) && doctype !== SETTINGS_DOCTYPE);
-		const doctypes = [...new Set([...owned, ...rows.map((row) => row.collection)])];
-		return markSameLabels(
-			doctypes.map(
-				(doctype) =>
-					new Collection(
-						doctype,
-						rows.find((row) => row.collection === doctype),
-					),
-			),
-		);
+		const rows = await api.getCollections();
+		return markSameLabels(rows.map((row) => new Collection(row)));
 	}
 
 	/**
 	 * Uses an existing doctype as a collection. Its rows stay where they are, and
 	 * Desk edits them. `publishedField` empty means every row is public.
 	 */
-	static async map(doctype, { label, url, slugField, publishedField }) {
-		if (!doctype || !slugField) throw new Error("Pick a doctype and its slug field.");
-		const existing = await Collection.all();
-		if (existing.some((collection) => collection.doctype === doctype)) {
-			throw new Error(`${doctype} is a collection already.`);
-		}
-		const collection = new Collection(doctype);
-		await collection.saveSettings({
-			label: label || doctype,
-			url: normalizeUrl(url || label || doctype),
-			slug_field: slugField,
-			published_field: publishedField || "",
-		});
+	static async map(doctype, settings) {
+		if (!doctype || !settings.slugField) throw new Error("Pick a doctype and its slug field.");
+		const collection = new Collection(await api.mapDoctype(doctype, settings));
+		forget("collections");
 		return collection;
 	}
 
-	/** True for a doctype this extension made. Its entries are edited in the panel. */
+	/** True for a collection the app made. Its entries are edited in the panel. */
 	get isOwned() {
-		return this.doctype.startsWith(PREFIX);
+		return !this.settings.is_mapped;
 	}
 
 	/** The label. Only when another collection has the same label, where it comes from follows it. */
@@ -149,7 +114,7 @@ export class Collection {
 	}
 
 	get slugField() {
-		return this.settings?.slug_field || "slug";
+		return this.settings.slug_field;
 	}
 
 	/**
@@ -160,9 +125,9 @@ export class Collection {
 		return this.slugField !== "name" && (slug ?? "") === slugify(title ?? "");
 	}
 
-	/** Empty when every row is public. A collection this extension made always has `published`. */
+	/** Empty when every row is public. A collection the app made always has `published`. */
 	get publishedField() {
-		return this.settings?.published_field || (this.isOwned ? "published" : "");
+		return this.settings.published_field || "";
 	}
 
 	/** Where Desk edits one row. Desk names a doctype by its slug: `blog-post`. */
@@ -171,31 +136,33 @@ export class Collection {
 		return `/app/${route}/${name === "new" ? `new-${route}-1` : encodeURIComponent(name)}`;
 	}
 
+	/** The app names each field from its label, and refuses a name that is taken. */
 	static async create(label, url, fields) {
 		if (!label) throw new Error("Give the collection a name.");
-		const custom = getCustomFields(fields);
-		await ensureSettingsDoctype();
-		await builder.schema.createDoctype(`${PREFIX}${label}`, [...STANDARD_FIELDS, ...custom], { naming: "hash" });
-		forgetSchema(`${PREFIX}${label}`);
-		const collection = new Collection(`${PREFIX}${label}`);
-		await collection.saveSettings({ url: normalizeUrl(url || label) });
+		const collection = new Collection(await api.createCollection(label, url, fields));
+		forget("collections");
 		return collection;
 	}
 
 	get label() {
-		return this.settings?.label || (this.isOwned ? this.doctype.slice(PREFIX.length) : this.doctype);
+		return this.settings.label;
 	}
 
 	get url() {
-		return this.settings?.url || normalizeUrl(this.label);
+		return this.settings.url || normalizeUrl(this.label);
+	}
+
+	/** The roles that use this collection's entries only. The CMS-wide roles are not here. */
+	get roles() {
+		return this.settings.roles;
 	}
 
 	get collectionPage() {
-		return this.settings?.entry_page || null;
+		return this.settings.entry_page || null;
 	}
 
 	get indexPage() {
-		return this.settings?.index_page || null;
+		return this.settings.index_page || null;
 	}
 
 	/** The route of the index page, such as `blog`. Builder stores a route with no leading slash. */
@@ -209,7 +176,17 @@ export class Collection {
 	}
 
 	async saveSettings(patch) {
-		this.settings = await saveSettings(this.doctype, this.settings, patch);
+		try {
+			this.settings = await api.updateCollection(this.doctype, patch);
+		} finally {
+			// after the write, so a read that ran during it does not stay
+			forget("collections");
+		}
+	}
+
+	async saveRoles(roles) {
+		this.settings = await api.updateCollectionRoles(this.doctype, roles);
+		forget("collections");
 	}
 
 	/** The index and detail pages follow the URL. Lists read the detail route on each request, so their links follow too. */
@@ -240,19 +217,16 @@ export class Collection {
 	}
 
 	async addFields(fields) {
-		const existing = (await this.getFields()).map((field) => field.fieldname);
-		await builder.schema.updateDoctype(this.doctype, getCustomFields(fields, existing));
+		await api.addFields(this.doctype, fields);
 		// before the pages read the fields again
-		forgetSchema(this.doctype);
+		forget(`fields:${this.doctype}`);
 		await this.refreshPageFields();
 	}
 
+	/** The app drops the field's column, with the data in it. */
 	async removeField(fieldname) {
-		if (!this.isOwned) throw new Error("Manage existing DocType fields in Desk.");
-		if (["title", "slug", "published"].includes(fieldname))
-			throw new Error("This field is required by the collection.");
-		await builder.schema.updateDoctype(this.doctype, [], { removeFields: [fieldname] });
-		forgetSchema(this.doctype);
+		await api.removeField(this.doctype, fieldname);
+		forget(`fields:${this.doctype}`);
 		await this.refreshPageFields(fieldname);
 	}
 
@@ -276,15 +250,13 @@ export class Collection {
 	}
 
 	/**
-	 * A collection this extension made loses its doctype first, so a refusal in
-	 * Builder's confirm dialog changes nothing. Frappe keeps the table. A mapped doctype stays.
+	 * The app drops a collection it made, with its entries. A mapped doctype and
+	 * its records stay. The pages lose their sources after, so a refusal changes nothing.
 	 */
 	async delete() {
-		if (this.isOwned) await builder.schema.deleteDoctype(this.doctype);
-		forgetSchema(this.doctype);
+		await api.deleteCollection(this.doctype);
+		forget("collections", `fields:${this.doctype}`);
 		for (const name of await Collection.getCmsPageNames()) await this.removePageSources(name);
-		if (this.settings?.name) await builder.data.delete(SETTINGS_DOCTYPE, this.settings.name);
-		forget("collections");
 	}
 
 	async removePageSources(pageName) {
@@ -303,8 +275,9 @@ export class Collection {
 		}
 	}
 
+	/** The fields that hold a value and that are safe to publish. */
 	getFields() {
-		return getDoctypeFields(this.doctype);
+		return cached(`fields:${this.doctype}`, () => api.getFields(this.doctype));
 	}
 
 	/**
@@ -335,39 +308,12 @@ export class Collection {
 	 * Each entry has `slug` and `published` under those names, whatever the
 	 * mapping calls them, so the panel reads one shape. `title` falls back to the slug.
 	 */
-	async getEntries({ start = 0 } = {}) {
-		const fields = await this.getFields();
-		const hasTitle = fields.some((field) => field.fieldname === "title");
-		const rows = await builder.data.getList(this.doctype, {
-			fields: [
-				...new Set([
-					"name",
-					"modified",
-					this.slugField,
-					...(this.publishedField ? [this.publishedField] : []),
-					...(hasTitle ? ["title"] : []),
-				]),
-			],
-			orderBy: "modified desc",
-			pageLength: 100,
-			start,
-		});
-		return rows.map((row) => ({
-			...row,
-			title: row.title || row[this.slugField] || row.name,
-			slug: row[this.slugField],
-			published: this.publishedField ? row[this.publishedField] : 1,
-		}));
+	getEntries({ start = 0 } = {}) {
+		return api.getEntries(this.doctype, start);
 	}
 
-	async getNewestPublished() {
-		const [entry] = await builder.data.getList(this.doctype, {
-			fields: [this.slugField],
-			filters: this.publishedField ? { [this.publishedField]: 1 } : {},
-			orderBy: "creation desc",
-			pageLength: 1,
-		});
-		return entry ? { slug: entry[this.slugField] } : null;
+	getNewestPublished() {
+		return api.getNewestPublished(this.doctype);
 	}
 
 	/** The table's columns: the title first, then the content, then the slug and the published flag. */
@@ -380,35 +326,29 @@ export class Collection {
 
 	/** Every row, with the fields the table shows. */
 	getRows(fields, { start = 0 } = {}) {
-		return builder.data.getList(this.doctype, {
-			fields: ["name", ...fields.map((field) => field.fieldname)],
-			orderBy: "modified desc",
-			pageLength: 200,
+		return api.getRows(
+			this.doctype,
+			fields.map((field) => field.fieldname),
 			start,
-		});
+		);
 	}
 
 	/** Saves one or more fields of one row. Frappe validates, and answers with the saved row. */
 	updateEntry(name, patch) {
-		return refreshAfterEntryWrite(builder.data.update(this.doctype, name, patch));
+		return this.saveEntry({ ...patch, name });
 	}
 
 	getEntry(name) {
-		return builder.data.getDoc(this.doctype, name);
+		return api.getEntry(this.doctype, name);
 	}
 
-	async saveEntry(entry) {
-		const fields = getWritableFields(await this.getFields());
-		const doc = Object.fromEntries(
-			fields.filter((field) => field.fieldname in entry).map((field) => [field.fieldname, entry[field.fieldname]]),
-		);
-		if (this.isOwned) doc.slug = doc.slug || slugify(doc.title || "");
-		if (entry.name) return this.updateEntry(entry.name, doc);
-		return refreshAfterEntryWrite(builder.data.insert(this.doctype, doc));
+	/** The app keeps only the fields it can write, and fills an empty slug from the title. */
+	saveEntry(entry) {
+		return refreshAfterEntryWrite(api.saveEntry(this.doctype, entry));
 	}
 
 	deleteEntry(name) {
 		if (!this.isOwned) throw new Error("Manage deletion of existing DocType entries in Desk.");
-		return refreshAfterEntryWrite(builder.data.delete(this.doctype, name));
+		return refreshAfterEntryWrite(api.deleteEntry(this.doctype, name));
 	}
 }

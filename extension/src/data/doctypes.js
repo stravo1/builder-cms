@@ -1,7 +1,8 @@
 /** The doctypes and fields a data source can read. */
 
 import builder from "frappe-builder-extension-sdk";
-import { cached, forget } from "./cache.js";
+import { api } from "./api.js";
+import { cached } from "./cache.js";
 
 /**
  * Fields with no database column, as `frappe.model.no_value_fields` lists them.
@@ -21,32 +22,11 @@ const NO_VALUE_TYPES = new Set([
 	"Heading",
 ]);
 
-/** A doctype as the schema API gives it. */
-export const getDoctype = (doctype) => cached(`doctype:${doctype}`, () => builder.schema.getDoctype(doctype));
+/** A doctype's meta, with its fields. */
+export const getDoctype = (doctype) => cached(`doctype:${doctype}`, () => builder.data.getMeta(doctype));
 
-/** The doctypes this extension made, whether or not each still exists. */
-export const listMadeDoctypes = () => cached("made-doctypes", () => builder.schema.listDoctypes());
-
-/** After a schema write: the doctype, the lists of doctypes, and the collections built on them. */
-export const forgetSchema = (doctype) => forget(`doctype:${doctype}`, "made-doctypes", "doctype-names", "collections");
-
-/** Child tables are left out. Their rows belong to a parent document. */
-export const getDoctypeNames = () => cached("doctype-names", readDoctypeNames);
-
-const readDoctypeNames = async () => {
-	const names = [];
-	while (true) {
-		const rows = await builder.data.getList("DocType", {
-			fields: ["name"],
-			filters: { istable: 0, issingle: 0 },
-			orderBy: "name asc",
-			pageLength: 500,
-			start: names.length,
-		});
-		names.push(...rows.map((row) => row.name));
-		if (rows.length < 500) return names;
-	}
-};
+/** The doctypes a manager can map. Child tables and Singles are left out. */
+export const getDoctypeNames = () => cached("doctype-names", api.getDoctypeNames);
 
 /**
  * Secrets. A collection is public: a list renders every field it binds to any

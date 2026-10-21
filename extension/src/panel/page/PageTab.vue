@@ -7,6 +7,7 @@
 		<template v-else>
 			<fieldset :disabled="context.readOnly" class="min-w-0">
 				<PageRoleChooser
+					v-if="access.can_manage"
 					:collections="collections"
 					:role="role"
 					:page-name="context.page.name"
@@ -39,6 +40,7 @@ import { computed, ref, shallowRef, watch } from "vue";
 import { Collection } from "../../cms/collection.js";
 import { getPageRole } from "../../cms/pageActions.js";
 import { PageData } from "../../data/pageData.js";
+import { useAccess } from "../useAccess.js";
 import { useTask } from "../useTask.js";
 import BindFields from "../bind/BindFields.vue";
 import AddToPage from "../collections/AddToPage.vue";
@@ -47,6 +49,8 @@ import PageRoleChooser from "./PageRoleChooser.vue";
 import SectionLoader from "../SectionLoader.vue";
 
 const emit = defineEmits(["collections"]);
+// a page connection writes the collection settings, which the CMS-wide roles own
+const access = useAccess();
 const context = useBuilderContext(["page", "readOnly"]);
 const collections = shallowRef([]);
 const sources = shallowRef([]);
