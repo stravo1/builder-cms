@@ -5,6 +5,20 @@ app_description = "Content collections for Frappe Builder pages"
 app_email = "mail.sntn.dev@gmail.com"
 app_license = "mit"
 
+required_apps = ["builder"]
+
+# adopts what the CMS extension made before this app existed
+before_install = "cms.install.before_install"
+after_install = "cms.install.after_install"
+
+# Desk's Role Permission Manager changes CMS-wide roles too
+doc_events = {
+	"Custom DocPerm": {
+		"on_update": "cms.collections.access.sync_all_collections",
+		"after_delete": "cms.collections.access.sync_all_collections",
+	}
+}
+
 # Send non-GET requests for this app's endpoints as native `application/json`
 # bodies instead of form-encoded, per-key JSON-stringified values.
 use_json_request_body = True
@@ -304,4 +318,3 @@ require_type_annotated_api_methods = True
 # ------------
 # List of apps whose translatable strings should be excluded from this app's translations.
 # ignore_translatable_strings_from = []
-

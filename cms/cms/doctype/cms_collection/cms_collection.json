@@ -1,0 +1,119 @@
+{
+ "actions": [],
+ "autoname": "hash",
+ "creation": "2026-10-21 12:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "label",
+  "collection",
+  "is_mapped",
+  "url",
+  "column_break_pages",
+  "index_page",
+  "entry_page",
+  "slug_field",
+  "published_field",
+  "access_section",
+  "roles"
+ ],
+ "fields": [
+  {
+   "fieldname": "label",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Label",
+   "reqd": 1
+  },
+  {
+   "description": "The DocType that holds the entries.",
+   "fieldname": "collection",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Collection",
+   "read_only": 1,
+   "unique": 1
+  },
+  {
+   "default": "0",
+   "description": "An existing DocType that the CMS shows. The CMS does not change its fields or permissions.",
+   "fieldname": "is_mapped",
+   "fieldtype": "Check",
+   "label": "Mapped",
+   "read_only": 1
+  },
+  {
+   "fieldname": "url",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "URL"
+  },
+  {
+   "fieldname": "column_break_pages",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "index_page",
+   "fieldtype": "Link",
+   "label": "Index page",
+   "options": "Builder Page"
+  },
+  {
+   "fieldname": "entry_page",
+   "fieldtype": "Link",
+   "label": "Detail page",
+   "options": "Builder Page"
+  },
+  {
+   "fieldname": "slug_field",
+   "fieldtype": "Data",
+   "label": "Slug field"
+  },
+  {
+   "fieldname": "published_field",
+   "fieldtype": "Data",
+   "label": "Published field"
+  },
+  {
+   "fieldname": "access_section",
+   "fieldtype": "Section Break",
+   "label": "Access"
+  },
+  {
+   "description": "Roles that can work with the entries of this collection only.",
+   "fieldname": "roles",
+   "fieldtype": "Table",
+   "label": "Roles",
+   "options": "CMS Collection Role"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-10-21 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "CMS",
+ "name": "CMS Collection",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "read": 1,
+   "role": "System Manager",
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "read": 1,
+   "role": "Website Manager",
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "label",
+ "track_changes": 1
+}
