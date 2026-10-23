@@ -7,12 +7,14 @@
 					:collection="collection"
 					:selected-entry-name="selection?.name || ''"
 					@edit="selectEntry"
-					@create="selectEntry({ name: '' })" />
+					@create="selectEntry({ name: '' })"
+				/>
 			</div>
 			<aside
 				v-if="selection"
 				aria-label="Entry details"
-				class="entry-drawer absolute inset-y-0 right-0 z-40 flex min-h-0 w-3/5 max-w-2xl flex-col border-l border-outline-gray-2">
+				class="entry-drawer absolute inset-y-0 right-0 z-40 flex min-h-0 w-3/5 max-w-2xl flex-col border-l border-outline-gray-2"
+			>
 				<p v-if="hasUnsavedWarning" role="status" class="cms-hint px-3 py-2">
 					Save or cancel your changes before opening another entry.
 				</p>
@@ -24,7 +26,8 @@
 					:field-name="selection.fieldName"
 					is-drawer
 					@back="closeEntry"
-					@saved="entrySaved" />
+					@saved="entrySaved"
+				/>
 			</aside>
 		</template>
 		<div v-else-if="error" class="cms-empty">
@@ -53,7 +56,7 @@ const props = defineProps({
 });
 const collection = shallowRef(null);
 const selection = shallowRef(
-	props.view === "entry" ? { name: props.entryName, fieldName: props.fieldName } : null,
+	props.view === "entry" ? { name: props.entryName, fieldName: props.fieldName } : null
 );
 const entries = ref(null);
 const editor = ref(null);
@@ -86,7 +89,11 @@ const findCollection = async () => {
 };
 // a reopened dialog shows its last copy at once, while the fresh read checks it
 const load = () =>
-	runCached(`collection:${props.doctype}`, findCollection, (found) => (collection.value = found));
+	runCached(
+		`collection:${props.doctype}`,
+		findCollection,
+		(found) => (collection.value = found)
+	);
 // Reload field metadata when this view opens after a schema change.
 forget();
 onMounted(load);
@@ -94,7 +101,8 @@ onMounted(load);
 
 <style scoped>
 .cms-dialog,
-.cms-dialog :deep(.bg-surface-base),
+/* a checked box fills with its own colour */
+.cms-dialog :deep(.bg-surface-base:not(:checked)),
 .entry-drawer {
 	background-color: var(--surface-base);
 }
