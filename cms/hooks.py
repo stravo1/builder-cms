@@ -7,6 +7,9 @@ app_license = "mit"
 
 required_apps = ["builder"]
 
+# Builder installs this extension with the app. `bench build` builds it through package.json
+builder_extensions = ["extension"]
+
 # Each item in the list will be shown as an app in the apps page
 add_to_apps_screen = [
 	{
