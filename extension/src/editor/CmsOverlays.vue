@@ -24,19 +24,18 @@ const CollectionDialog = defineAsyncComponent(() => import("../panel/table/Colle
 	<Dialog
 		v-if="collectionDialog"
 		:model-value="true"
-		:options="{ title: collectionDialog.title, size: collectionDialog.size || '5xl' }"
+		:title="collectionDialog.title"
+		:size="collectionDialog.size || '5xl'"
 		@update:model-value="
 			(open) => {
 				if (!open) closeCollectionDialog();
 			}
 		"
 	>
-		<template #body-content>
-			<div data-cms>
-				<div class="h-[min(600px,75vh)] overflow-hidden">
-					<CollectionDialog v-bind="collectionDialog.props" />
-				</div>
+		<div data-cms>
+			<div class="h-[min(600px,75vh)] overflow-hidden">
+				<CollectionDialog v-bind="collectionDialog.props" />
 			</div>
-		</template>
+		</div>
 	</Dialog>
 </template>
