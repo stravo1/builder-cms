@@ -3,7 +3,7 @@
 
 import frappe
 
-from cms.api.collections import (
+from builder_cms.api.collections import (
 	add_fields,
 	create_collection,
 	delete_collection,
@@ -13,8 +13,8 @@ from cms.api.collections import (
 	remove_field,
 	update_collection,
 )
-from cms.collections.schema import MODULE
-from cms.tests.fixtures import AUTHOR, AUTHOR_ROLE, EDITOR, EDITOR_ROLE, OUTSIDER, CMSTestCase
+from builder_cms.collections.schema import MODULE
+from builder_cms.tests.fixtures import AUTHOR, AUTHOR_ROLE, EDITOR, EDITOR_ROLE, OUTSIDER, CMSTestCase
 
 
 class TestCreateCollection(CMSTestCase):

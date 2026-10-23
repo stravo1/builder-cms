@@ -41,7 +41,7 @@ repos:
                 cms/public/dist/.*|
                 .*node_modules.*|
                 .*boilerplate.*|
-                cms/templates/includes/.*|
+                builder_cms/templates/includes/.*|
                 cms/public/js/lib/.*
             )$
 
@@ -58,7 +58,7 @@ repos:
                 cms/public/dist/.*|
                 .*node_modules.*|
                 .*boilerplate.*|
-                cms/templates/includes/.*|
+                builder_cms/templates/includes/.*|
                 cms/public/js/lib/.*
             )$
 

@@ -3,10 +3,10 @@
 
 import frappe
 
-from cms.collections.access import SETTINGS_DOCTYPE
-from cms.collections.schema import STANDARD_FIELDS
-from cms.install import ExtensionCollection, get_extension_doctypes
-from cms.tests.fixtures import AUTHOR_ROLE, EDITOR_ROLE, CMSTestCase
+from builder_cms.collections.access import SETTINGS_DOCTYPE
+from builder_cms.collections.schema import STANDARD_FIELDS
+from builder_cms.install import ExtensionCollection, get_extension_doctypes
+from builder_cms.tests.fixtures import AUTHOR_ROLE, EDITOR_ROLE, CMSTestCase
 
 
 class TestAdoptExtensionCollection(CMSTestCase):

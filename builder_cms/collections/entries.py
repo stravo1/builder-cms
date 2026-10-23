@@ -7,7 +7,7 @@ who can do what. A read names only the fields that are safe to publish.
 import frappe
 from frappe import _
 
-from cms.collections.schema import CollectionSchema, slugify
+from builder_cms.collections.schema import CollectionSchema, slugify
 
 EDITABLE_TYPES = frozenset(
 	{

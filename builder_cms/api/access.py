@@ -2,8 +2,8 @@
 
 import frappe
 
-from cms.api.collections import describe, get_collection
-from cms.collections.access import (
+from builder_cms.api.collections import describe, get_collection
+from builder_cms.collections.access import (
 	SETTINGS_DOCTYPE,
 	assert_manager,
 	get_assignable_roles,

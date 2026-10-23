@@ -5,8 +5,8 @@ A collection is named by its DocType, such as `CMS Blog Post`.
 
 import frappe
 
-from cms.collections.access import SETTINGS_DOCTYPE, assert_manager
-from cms.collections.schema import CollectionSchema
+from builder_cms.collections.access import SETTINGS_DOCTYPE, assert_manager
+from builder_cms.collections.schema import CollectionSchema
 
 SETTINGS_FIELDS = (
 	"name",

@@ -4,10 +4,10 @@
 import frappe
 from frappe.permissions import add_permission
 
-from cms.api.access import get_access, update_cms_roles, update_collection_roles
-from cms.api.collections import map_doctype
-from cms.collections.access import get_cms_roles, has_app_permission
-from cms.tests.fixtures import (
+from builder_cms.api.access import get_access, update_cms_roles, update_collection_roles
+from builder_cms.api.collections import map_doctype
+from builder_cms.collections.access import get_cms_roles, has_app_permission
+from builder_cms.tests.fixtures import (
 	AUTHOR,
 	AUTHOR_ROLE,
 	EDITOR,

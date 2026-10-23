@@ -3,8 +3,8 @@
 
 import frappe
 
-from cms.api.entries import delete_entry, get_entries, get_entry, get_newest_published, save_entry
-from cms.tests.fixtures import AUTHOR, AUTHOR_ROLE, OUTSIDER, CMSTestCase
+from builder_cms.api.entries import delete_entry, get_entries, get_entry, get_newest_published, save_entry
+from builder_cms.tests.fixtures import AUTHOR, AUTHOR_ROLE, OUTSIDER, CMSTestCase
 
 
 class TestEntries(CMSTestCase):

@@ -1,5 +1,5 @@
-app_name = "cms"
-app_title = "CMS"
+app_name = "builder_cms"
+app_title = "Builder CMS"
 app_publisher = "stravo1"
 app_description = "Content collections for Frappe Builder pages"
 app_email = "mail.sntn.dev@gmail.com"
@@ -13,23 +13,23 @@ builder_extensions = ["extension"]
 # Each item in the list will be shown as an app in the apps page
 add_to_apps_screen = [
 	{
-		"name": "cms",
-		"logo": "/assets/cms/cms.svg",
-		"title": "CMS",
+		"name": "builder_cms",
+		"logo": "/assets/builder_cms/cms.svg",
+		"title": "Builder CMS",
 		"route": "/app/cms-collection",
-		"has_permission": "cms.collections.access.has_app_permission",
+		"has_permission": "builder_cms.collections.access.has_app_permission",
 	}
 ]
 
 # adopts what the CMS extension made before this app existed
-before_install = "cms.install.before_install"
-after_install = "cms.install.after_install"
+before_install = "builder_cms.install.before_install"
+after_install = "builder_cms.install.after_install"
 
 # Desk's Role Permission Manager changes CMS-wide roles too
 doc_events = {
 	"Custom DocPerm": {
-		"on_update": "cms.collections.access.sync_all_collections",
-		"after_delete": "cms.collections.access.sync_all_collections",
+		"on_update": "builder_cms.collections.access.sync_all_collections",
+		"after_delete": "builder_cms.collections.access.sync_all_collections",
 	}
 }
 
@@ -49,7 +49,7 @@ use_json_request_body = True
 # 		"logo": "/assets/cms/logo.png",
 # 		"title": "CMS",
 # 		"route": "/cms",
-# 		"has_permission": "cms.api.permission.has_app_permission",
+# 		"has_permission": "builder_cms.api.permission.has_app_permission",
 # 	}
 # ]
 
@@ -128,21 +128,21 @@ use_json_request_body = True
 
 # add methods and filters to jinja environment
 # jinja = {
-# 	"methods": "cms.utils.jinja_methods",
-# 	"filters": "cms.utils.jinja_filters"
+# 	"methods": "builder_cms.utils.jinja_methods",
+# 	"filters": "builder_cms.utils.jinja_filters"
 # }
 
 # Installation
 # ------------
 
-# before_install = "cms.install.before_install"
-# after_install = "cms.install.after_install"
+# before_install = "builder_cms.install.before_install"
+# after_install = "builder_cms.install.after_install"
 
 # Uninstallation
 # ------------
 
-# before_uninstall = "cms.uninstall.before_uninstall"
-# after_uninstall = "cms.uninstall.after_uninstall"
+# before_uninstall = "builder_cms.uninstall.before_uninstall"
+# after_uninstall = "builder_cms.uninstall.after_uninstall"
 
 # Disable / Enable
 # ----------------
@@ -150,49 +150,49 @@ use_json_request_body = True
 # without uninstalling it. Use this to hide/restore fields this app adds
 # to other apps' doctypes.
 
-# before_disable = "cms.uninstall.before_disable"
-# after_disable = "cms.uninstall.after_disable"
-# before_enable = "cms.install.before_enable"
-# after_enable = "cms.install.after_enable"
+# before_disable = "builder_cms.uninstall.before_disable"
+# after_disable = "builder_cms.uninstall.after_disable"
+# before_enable = "builder_cms.install.before_enable"
+# after_enable = "builder_cms.install.after_enable"
 
 # Integration Setup
 # ------------------
 # To set up dependencies/integrations with other apps
 # Name of the app being installed is passed as an argument
 
-# before_app_install = "cms.utils.before_app_install"
-# after_app_install = "cms.utils.after_app_install"
+# before_app_install = "builder_cms.utils.before_app_install"
+# after_app_install = "builder_cms.utils.after_app_install"
 
 # Integration Cleanup
 # -------------------
 # To clean up dependencies/integrations with other apps
 # Name of the app being uninstalled is passed as an argument
 
-# before_app_uninstall = "cms.utils.before_app_uninstall"
-# after_app_uninstall = "cms.utils.after_app_uninstall"
+# before_app_uninstall = "builder_cms.utils.before_app_uninstall"
+# after_app_uninstall = "builder_cms.utils.after_app_uninstall"
 
 # Build
 # ------------------
 # To hook into the build process
 
-# after_build = "cms.build.after_build"
+# after_build = "builder_cms.build.after_build"
 
 # To hook into the build process of other apps
 # The list of apps being built is passed as an argument
 
-# after_app_build = "cms.build.after_app_build"
+# after_app_build = "builder_cms.build.after_app_build"
 
 # Desk Notifications
 # ------------------
 # See frappe.core.notifications.get_notification_config
 
-# notification_config = "cms.notifications.get_notification_config"
+# notification_config = "builder_cms.notifications.get_notification_config"
 
 # Awesome Bar
 # -----------
 # Extra search results: list of dicts with label, description, route, index.
 # route: ["List", "ToDo"], "/desk/docs/some/page", or "https://example.com"
-# awesomebar_search = ["cms.search.awesomebar_results"]
+# awesomebar_search = ["builder_cms.search.awesomebar_results"]
 
 # Permissions
 # -----------
@@ -223,47 +223,47 @@ use_json_request_body = True
 
 # scheduler_events = {
 # 	"all": [
-# 		"cms.tasks.all"
+# 		"builder_cms.tasks.all"
 # 	],
 # 	"daily": [
-# 		"cms.tasks.daily"
+# 		"builder_cms.tasks.daily"
 # 	],
 # 	"hourly": [
-# 		"cms.tasks.hourly"
+# 		"builder_cms.tasks.hourly"
 # 	],
 # 	"weekly": [
-# 		"cms.tasks.weekly"
+# 		"builder_cms.tasks.weekly"
 # 	],
 # 	"monthly": [
-# 		"cms.tasks.monthly"
+# 		"builder_cms.tasks.monthly"
 # 	],
 # }
 
 # Testing
 # -------
 
-# before_tests = "cms.install.before_tests"
+# before_tests = "builder_cms.install.before_tests"
 
 # Extend DocType Class
 # ------------------------------
 #
 # Specify custom mixins to extend the standard doctype controller.
 # extend_doctype_class = {
-# 	"Task": "cms.custom.task.CustomTaskMixin"
+# 	"Task": "builder_cms.custom.task.CustomTaskMixin"
 # }
 
 # Overriding Methods
 # ------------------------------
 #
 # override_whitelisted_methods = {
-# 	"frappe.desk.doctype.event.event.get_events": "cms.event.get_events"
+# 	"frappe.desk.doctype.event.event.get_events": "builder_cms.event.get_events"
 # }
 #
 # each overriding function accepts a `data` argument;
 # generated from the base implementation of the doctype dashboard,
 # along with any modifications made in other Frappe apps
 # override_doctype_dashboards = {
-# 	"Task": "cms.task.get_dashboard_data"
+# 	"Task": "builder_cms.task.get_dashboard_data"
 # }
 
 # exempt linked doctypes from being automatically cancelled
@@ -277,15 +277,15 @@ use_json_request_body = True
 
 # Request Events
 # ----------------
-# before_request = ["cms.utils.before_request"]
-# after_request = ["cms.utils.after_request"]
+# before_request = ["builder_cms.utils.before_request"]
+# after_request = ["builder_cms.utils.after_request"]
 
 # Job Events
 # ----------
-# before_job = ["cms.utils.before_job"]
-# after_job = ["cms.utils.after_job"]
+# before_job = ["builder_cms.utils.before_job"]
+# after_job = ["builder_cms.utils.after_job"]
 
-# after_file_upload = ["cms.utils.after_file_upload"]
+# after_file_upload = ["builder_cms.utils.after_file_upload"]
 
 # User Data Protection
 # --------------------
@@ -315,7 +315,7 @@ use_json_request_body = True
 # --------------------------------
 
 # auth_hooks = [
-# 	"cms.auth.validate"
+# 	"builder_cms.auth.validate"
 # ]
 
 # Automatically update python controller files with type annotations for this app.

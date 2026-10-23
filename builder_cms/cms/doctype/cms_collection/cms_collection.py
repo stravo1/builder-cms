@@ -12,13 +12,13 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 
-from cms.collections.access import (
+from builder_cms.collections.access import (
 	SETTINGS_DOCTYPE,
 	assert_assignable,
 	assert_manager,
 	get_collection_roles,
 )
-from cms.collections.schema import PREFIX, CollectionSchema, slugify
+from builder_cms.collections.schema import PREFIX, CollectionSchema, slugify
 
 
 def normalize_url(url: str) -> str:
@@ -36,7 +36,7 @@ class CMSCollection(Document):
 	if TYPE_CHECKING:
 		from frappe.types import DF
 
-		from cms.cms.doctype.cms_collection_role.cms_collection_role import CMSCollectionRole
+		from builder_cms.cms.doctype.cms_collection_role.cms_collection_role import CMSCollectionRole
 
 		collection: DF.Data | None
 		entry_page: DF.Link | None

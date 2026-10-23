@@ -8,14 +8,14 @@ to the CMS module. Every row and entry stays.
 
 import frappe
 
-from cms.collections.access import (
+from builder_cms.collections.access import (
 	FIXED_ROLES,
 	SETTINGS_DOCTYPE,
 	add_cms_role,
 	get_assignable_roles,
 	get_cms_roles,
 )
-from cms.collections.schema import MODULE, PREFIX
+from builder_cms.collections.schema import MODULE, PREFIX
 
 EXTENSION = "stravo1/cms"
 RESOURCE_TABLE = "Builder Extension Resource"

@@ -6,9 +6,9 @@
 import frappe
 from frappe.tests import IntegrationTestCase
 
-from cms.api.collections import create_collection
-from cms.collections.access import SETTINGS_DOCTYPE, get_cms_roles, set_cms_roles
-from cms.collections.schema import CollectionSchema
+from builder_cms.api.collections import create_collection
+from builder_cms.collections.access import SETTINGS_DOCTYPE, get_cms_roles, set_cms_roles
+from builder_cms.collections.schema import CollectionSchema
 
 EDITOR_ROLE = "CMS Test Editor"
 AUTHOR_ROLE = "CMS Test Author"

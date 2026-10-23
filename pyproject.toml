@@ -1,5 +1,5 @@
 [project]
-name = "cms"
+name = "builder_cms"
 authors = [
     { name = "stravo1", email = "mail.sntn.dev@gmail.com"}
 ]

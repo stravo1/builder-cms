@@ -2,8 +2,8 @@
 
 import frappe
 
-from cms.api.collections import get_collection
-from cms.collections.entries import CollectionEntries
+from builder_cms.api.collections import get_collection
+from builder_cms.collections.entries import CollectionEntries
 
 
 def get_entries_of(collection: str) -> CollectionEntries:

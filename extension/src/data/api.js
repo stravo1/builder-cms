@@ -4,13 +4,14 @@
 
 import { call } from "frappe-ui";
 
-const COLLECTIONS = "cms.api.collections";
-const ENTRIES = "cms.api.entries";
-const ACCESS = "cms.api.access";
+const COLLECTIONS = "builder_cms.api.collections";
+const ENTRIES = "builder_cms.api.entries";
+const ACCESS = "builder_cms.api.access";
 
 export const api = {
 	getCollections: () => call(`${COLLECTIONS}.get_collections`),
-	createCollection: (label, url, fields) => call(`${COLLECTIONS}.create_collection`, { label, url, fields }),
+	createCollection: (label, url, fields) =>
+		call(`${COLLECTIONS}.create_collection`, { label, url, fields }),
 	mapDoctype: (doctype, { label, url, slugField, publishedField }) =>
 		call(`${COLLECTIONS}.map_doctype`, {
 			doctype,
@@ -19,15 +20,18 @@ export const api = {
 			slug_field: slugField,
 			published_field: publishedField,
 		}),
-	updateCollection: (collection, values) => call(`${COLLECTIONS}.update_collection`, { collection, values }),
+	updateCollection: (collection, values) =>
+		call(`${COLLECTIONS}.update_collection`, { collection, values }),
 	deleteCollection: (collection) => call(`${COLLECTIONS}.delete_collection`, { collection }),
 	getFields: (collection) => call(`${COLLECTIONS}.get_fields`, { collection }),
 	addFields: (collection, fields) => call(`${COLLECTIONS}.add_fields`, { collection, fields }),
-	removeField: (collection, fieldname) => call(`${COLLECTIONS}.remove_field`, { collection, fieldname }),
+	removeField: (collection, fieldname) =>
+		call(`${COLLECTIONS}.remove_field`, { collection, fieldname }),
 	getDoctypeNames: () => call(`${COLLECTIONS}.get_doctype_names`),
 
 	getEntries: (collection, start) => call(`${ENTRIES}.get_entries`, { collection, start }),
-	getRows: (collection, fieldnames, start) => call(`${ENTRIES}.get_rows`, { collection, fieldnames, start }),
+	getRows: (collection, fieldnames, start) =>
+		call(`${ENTRIES}.get_rows`, { collection, fieldnames, start }),
 	getEntry: (collection, name) => call(`${ENTRIES}.get_entry`, { collection, name }),
 	getNewestPublished: (collection) => call(`${ENTRIES}.get_newest_published`, { collection }),
 	saveEntry: (collection, entry) => call(`${ENTRIES}.save_entry`, { collection, entry }),
