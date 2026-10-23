@@ -1,21 +1,30 @@
 <template>
-	<div data-cms-panel class="flex h-full flex-col bg-surface-base text-ink-gray-8">
-		<Tabs v-model="activeTab" class="flex h-full flex-col">
-			<TabList class="shrink-0 px-5 py-2">
-				<TabTrigger v-for="tab in tabs" :key="tab.value" :value="tab.value" :label="tab.label" />
-			</TabList>
-			<TabPanel
-				v-for="tab in tabs"
-				:key="tab.value"
-				:value="tab.value"
-				class="min-h-0 flex-1 overflow-y-auto">
-				<div class="flex h-full flex-col">
-					<CollectionsTab v-if="tab.value === 0" @use-page="activeTab = 1" />
-					<PageTab v-else-if="tab.value === 1" @collections="activeTab = 0" />
-					<SettingsTab v-else />
-				</div>
-			</TabPanel>
-		</Tabs>
+	<!-- the scoped utilities match only inside [data-cms], so this root sizes itself with a style -->
+	<div data-cms style="height: 100%">
+		<div data-cms-panel class="flex h-full flex-col bg-surface-base text-ink-gray-8">
+			<Tabs v-model="activeTab" class="flex h-full flex-col">
+				<TabList class="shrink-0 px-5 py-2">
+					<TabTrigger
+						v-for="tab in tabs"
+						:key="tab.value"
+						:value="tab.value"
+						:label="tab.label"
+					/>
+				</TabList>
+				<TabPanel
+					v-for="tab in tabs"
+					:key="tab.value"
+					:value="tab.value"
+					class="min-h-0 flex-1 overflow-y-auto"
+				>
+					<div class="flex h-full flex-col">
+						<CollectionsTab v-if="tab.value === 0" @use-page="activeTab = 1" />
+						<PageTab v-else-if="tab.value === 1" @collections="activeTab = 0" />
+						<SettingsTab v-else />
+					</div>
+				</TabPanel>
+			</Tabs>
+		</div>
 	</div>
 </template>
 

@@ -12,10 +12,13 @@ const CollectionDialog = defineAsyncComponent(() => import("../panel/table/Colle
 		:model-value="true"
 		:width="320"
 		:height="440"
-		@update:model-value="bindPopover = false">
+		@update:model-value="bindPopover = false"
+	>
 		<template #header>Bind to data</template>
 		<template #content>
-			<div class="max-h-[min(440px,60vh)] overflow-y-auto"><BindPopover /></div>
+			<div data-cms>
+				<div class="max-h-[min(440px,60vh)] overflow-y-auto"><BindPopover /></div>
+			</div>
 		</template>
 	</DraggablePopup>
 	<Dialog
@@ -26,10 +29,13 @@ const CollectionDialog = defineAsyncComponent(() => import("../panel/table/Colle
 			(open) => {
 				if (!open) closeCollectionDialog();
 			}
-		">
+		"
+	>
 		<template #body-content>
-			<div class="h-[min(600px,75vh)] overflow-hidden">
-				<CollectionDialog v-bind="collectionDialog.props" />
+			<div data-cms>
+				<div class="h-[min(600px,75vh)] overflow-hidden">
+					<CollectionDialog v-bind="collectionDialog.props" />
+				</div>
 			</div>
 		</template>
 	</Dialog>
