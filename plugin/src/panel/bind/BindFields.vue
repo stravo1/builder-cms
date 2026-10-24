@@ -6,22 +6,25 @@
 			{{
 				sources.length
 					? "Select a block inside a collection list to connect the fields of each item."
-					: "Add a list to this page first."
+					: "Add a list from a collection's Settings, or repeat a container for each entry."
 			}}
 		</p>
 		<template v-else>
-			<FormControl v-model="target" type="select" label="Block property" :options="targets" />
-			<FormControl
-				v-if="fitting.length > 1"
-				v-model="sourceName"
-				type="combobox"
-				label="Content from"
-				:options="sourceOptions" />
-			<div v-else class="rounded-1 bg-surface-gray-2 px-2 py-1.5 text-sm text-ink-gray-7">
-				{{ sourceOptions[0]?.label }}
+			<!-- one row in the drawer, one column in the narrow popover -->
+			<div class="grid items-end gap-3 [grid-template-columns:repeat(auto-fit,minmax(13rem,1fr))]">
+				<FormControl v-model="target" type="select" label="Block property" :options="targets" />
+				<FormControl
+					v-if="fitting.length > 1"
+					v-model="sourceName"
+					type="combobox"
+					label="Content from"
+					:options="sourceOptions" />
+				<div v-else class="rounded-1 bg-surface-gray-2 px-2 py-1.5 text-sm text-ink-gray-7">
+					{{ sourceOptions[0]?.label }}
+				</div>
+				<FormControl v-model="query" placeholder="Search fields…" aria-label="Search fields" />
 			</div>
-			<FormControl v-model="query" placeholder="Search fields…" aria-label="Search fields" />
-			<div class="flex min-h-0 flex-col gap-1 overflow-y-auto">
+			<div class="grid min-h-0 gap-1 overflow-y-auto [grid-template-columns:repeat(auto-fill,minmax(14rem,1fr))]">
 				<ItemListRow
 					v-for="field in shownFields.slice(0, visibleCount)"
 					:key="field.fieldname"
@@ -40,15 +43,19 @@
 						<span v-if="keyOf(field) === boundKey" class="lucide-check size-4 text-ink-gray-7" />
 					</template>
 				</ItemListRow>
-				<p v-if="!shownFields.length" class="cms-hint p-2">No matching fields for this property.</p>
+				<p v-if="!shownFields.length" class="cms-hint col-span-full p-2">
+					No matching fields for this property.
+				</p>
 			</div>
 			<Button
 				v-if="shownFields.length > visibleCount"
+				class="self-start"
 				variant="ghost"
 				label="Load more fields"
 				@click="visibleCount += 10" />
 			<Button
 				v-if="boundKey"
+				class="self-start"
 				variant="ghost"
 				label="Disconnect field"
 				:disabled="isRunning"
@@ -65,13 +72,7 @@ import { getDocuments } from "../../data/documents.js";
 
 import { Button, FormControl, ItemListRow } from "frappe-ui";
 import { computed, ref, shallowRef, watch } from "vue";
-import {
-	bindBlock,
-	fitsBlock,
-	getBindingTargets,
-	getBoundKey,
-	getSourcesForBlock,
-} from "../../blocks/blockActions.js";
+import { bindBlock, fitsBlock, getBindingTargets, getBoundKey, getSourcesForBlock } from "../../blocks/blockActions.js";
 import { Collection } from "../../cms/collection.js";
 import { getDoctypeFields } from "../../data/doctypes.js";
 import { PageData } from "../../data/pageData.js";
@@ -97,9 +98,7 @@ const { run, isRunning, error } = useTask();
 let loadVersion = 0;
 let fieldVersion = 0;
 const source = computed(() => fitting.value.find((each) => each.source.name === sourceName.value)?.source);
-const prefix = computed(
-	() => fitting.value.find((each) => each.source.name === sourceName.value)?.prefix || "",
-);
+const prefix = computed(() => fitting.value.find((each) => each.source.name === sourceName.value)?.prefix || "");
 const targets = computed(() => getBindingTargets(context.selection));
 const sourceOptions = computed(() =>
 	fitting.value.map(({ source }) => ({
@@ -173,7 +172,7 @@ const loadFields = () =>
 		fields.value = [{ fieldname: "name", label: "Name", fieldtype: "Data" }, ...all].filter((field) =>
 			current.readFields.includes(field.fieldname),
 		);
-		if (current.link) fields.value.push({ fieldname: "url", label: "Template page URL", fieldtype: "Data" });
+		if (current.link) fields.value.push({ fieldname: "url", label: "Collection page URL", fieldtype: "Data" });
 		const collection = collections.value.find((each) => each.doctype === current.doctype);
 		row.value = sample && {
 			...sample,

@@ -1,9 +1,10 @@
 <template>
 	<div class="flex flex-col gap-2">
 		<div class="flex items-center gap-1 rounded hover:bg-surface-gray-2">
-			<button type="button" class="flex min-w-0 flex-1 flex-col items-start px-2 py-1.5 text-left" @click="select">
-				<span class="w-full truncate text-sm text-ink-gray-8">{{ title }}</span>
-				<span class="w-full truncate text-xs text-ink-gray-5">{{ summary }}</span>
+			<button type="button" class="flex min-w-0 flex-1 items-center gap-2 px-2 py-1.5 text-left" @click="select">
+				<span class="lucide-file-text size-4 shrink-0 text-ink-gray-6" aria-hidden="true" />
+				<span class="min-w-0 flex-1 truncate text-sm text-ink-gray-8">{{ page.page_title }}</span>
+				<span class="max-w-40 shrink-0 truncate text-sm text-ink-gray-5">{{ summary }}</span>
 			</button>
 			<Dropdown
 				aria-label="List actions"
@@ -12,7 +13,7 @@
 		</div>
 		<div v-if="isMissing && !form" class="flex items-center justify-between gap-2 px-2">
 			<p class="cms-hint">Not on the page.</p>
-			<Button v-if="collection" label="Insert" size="sm" :loading="isRunning" @click="insertMissing" />
+			<Button label="Insert" size="sm" :loading="isRunning" @click="insertMissing" />
 		</div>
 		<form v-if="form === 'change'" class="cms-card flex flex-col gap-2" @submit.prevent="change">
 			<FormControl v-model="orderBy" type="select" label="Order" :options="SORT_OPTIONS" />
@@ -23,7 +24,7 @@
 			</div>
 		</form>
 		<div v-else-if="form === 'remove'" class="cms-card flex flex-col gap-2">
-			<p class="text-p-sm text-ink-gray-7">Remove this list and its blocks from the page?</p>
+			<p class="text-p-sm text-ink-gray-7">Remove this list and its blocks from "{{ page.page_title }}"?</p>
 			<div class="flex gap-2">
 				<Button theme="red" variant="solid" label="Remove" :loading="isRunning" @click="remove" />
 				<Button label="Cancel" :disabled="isRunning" @click="form = null" />
@@ -42,12 +43,14 @@ import {
 	removeCollectionList,
 	selectCollectionList,
 } from "../../cms/pageActions.js";
+import { openPage } from "../../editor/page.js";
 import { useTask } from "../useTask.js";
 
-/** `collection` is missing when the list reads a DocType that is no longer a collection. */
+/** One list of `collection` on `page`, which need not be the open page. */
 const props = defineProps({
+	page: { type: Object, required: true },
 	source: { type: Object, required: true },
-	collection: { type: Object, default: null },
+	collection: { type: Object, required: true },
 });
 const emit = defineEmits(["changed"]);
 const { isRunning, error, run } = useTask();
@@ -55,7 +58,6 @@ const form = ref(null);
 const isMissing = ref(false);
 const orderBy = ref(props.source.orderBy);
 const limit = ref(props.source.limit);
-const title = computed(() => props.collection?.title || props.source.doctype);
 const summary = computed(() =>
 	[SORT_OPTIONS.find((option) => option.value === props.source.orderBy)?.label, `${props.source.limit} entries`]
 		.filter(Boolean)
@@ -66,9 +68,14 @@ const menu = [
 	{ label: "Remove", icon: "lucide-trash-2", theme: "red", onClick: () => (form.value = "remove") },
 ];
 
-const select = () => run(async () => (isMissing.value = !selectCollectionList(props.source)));
+const select = () =>
+	run(async () => {
+		await openPage(props.page.name);
+		isMissing.value = !selectCollectionList(props.source);
+	});
 const insertMissing = async () => {
 	const inserted = await run(async () => {
+		await openPage(props.page.name);
 		const fields = props.collection.getDisplayFields(await props.collection.getFields());
 		await insertBlocks(props.source, fields, props.collection.label);
 		return true;
@@ -81,6 +88,14 @@ const finish = async (task, message) => {
 	emit("changed");
 };
 const change = () =>
-	finish(() => changeCollectionList(props.source, { orderBy: orderBy.value, limit: limit.value }), "List changed");
-const remove = () => finish(() => removeCollectionList(props.source), "List removed");
+	finish(
+		() => changeCollectionList(props.page.name, props.source, { orderBy: orderBy.value, limit: limit.value }),
+		"List changed",
+	);
+// its blocks are on the canvas, so the page must be open
+const remove = () =>
+	finish(async () => {
+		await openPage(props.page.name);
+		await removeCollectionList(props.source);
+	}, "List removed");
 </script>

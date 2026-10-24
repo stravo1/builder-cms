@@ -13,9 +13,6 @@ vi.mock("../src/cms/access.js", () => ({ getAccess: async () => ({ is_manager: f
 vi.mock("../src/panel/collections/CollectionsTab.vue", () => ({
 	default: { render: () => h("div", { "data-cms-view": "collections" }, "Collection content") },
 }));
-vi.mock("../src/panel/page/PageTab.vue", () => ({
-	default: { render: () => h("div", { "data-cms-view": "page" }, "Page content") },
-}));
 
 import CmsPanel from "../src/panel/CmsPanel.vue";
 
@@ -25,13 +22,12 @@ describe("CMS panel tabs", () => {
 
 		expect(html).toContain('data-cms-view="collections"');
 		expect(html).toContain('aria-selected="true"');
-		expect(html).not.toContain('data-cms-view="page"');
 	});
 
 	it("shows no Settings tab before it knows the user is a manager", async () => {
 		const html = await renderToString(createSSRApp(CmsPanel));
 
-		expect(html).toContain("This page");
+		expect(html).toContain("Collections");
 		expect(html).not.toContain("Settings");
 	});
 });

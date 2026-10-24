@@ -2,7 +2,7 @@
 	<form class="cms-card flex flex-col gap-3" @submit.prevent="insert">
 		<span class="cms-section-label">{{ copy.title }}</span>
 		<FormControl
-			v-if="kind === 'index'"
+			v-if="collections.length > 1"
 			v-model="chosenDoctype"
 			type="combobox"
 			label="Collection"
@@ -43,7 +43,7 @@ const props = defineProps({
 	kind: { type: String, required: true },
 });
 const emit = defineEmits(["changed", "cancel"]);
-const chosenDoctype = ref(props.kind === "detail" ? props.collections[0]?.doctype : "");
+const chosenDoctype = ref(props.collections.length === 1 ? props.collections[0].doctype : "");
 const layout = ref("cards");
 const fields = shallowRef([]);
 const chosen = ref([]);
