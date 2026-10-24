@@ -19,7 +19,7 @@
 			v-for="collection in shown"
 			:key="collection.doctype"
 			:as="NativeButton"
-			class="cms-list-row"
+			class="cms-list-row transition-none"
 			@click="emit('open', collection)">
 			<template #prefix>
 				<span class="lucide-database size-4 text-ink-gray-5" aria-hidden="true" />
