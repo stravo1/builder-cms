@@ -20,6 +20,8 @@
 			:key="collection.doctype"
 			:as="NativeButton"
 			class="cms-list-row transition-none"
+			:class="{ 'bg-surface-gray-2': collection.doctype === selected }"
+			:aria-current="collection.doctype === selected || undefined"
 			@click="emit('open', collection)">
 			<template #prefix>
 				<span class="lucide-database size-4 text-ink-gray-5" aria-hidden="true" />
@@ -44,6 +46,7 @@ import { useAccess } from "../useAccess.js";
 import { useTask } from "../useTask.js";
 import SectionLoader from "../SectionLoader.vue";
 
+defineProps({ selected: { type: String, default: "" } });
 const emit = defineEmits(["open", "create"]);
 const collections = ref([]);
 const query = ref("");

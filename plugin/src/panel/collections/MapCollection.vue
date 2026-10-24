@@ -1,5 +1,5 @@
 <template>
-	<form class="flex flex-col gap-4 p-3" @submit.prevent="map">
+	<form class="flex flex-col gap-4 px-3" @submit.prevent="map">
 		<FormControl v-model="doctype" type="combobox" label="Doctype" :options="doctypeNames" />
 		<template v-if="doctype">
 			<FormControl v-model="label" label="Name" :placeholder="doctype" />
@@ -17,13 +17,16 @@
 			/>
 		</template>
 		<p v-if="error" role="alert" class="cms-error">{{ error }}</p>
-		<Button
-			type="submit"
-			variant="solid"
-			label="Use as collection"
-			:disabled="!doctype || !slugField"
-			:loading="isRunning"
-		/>
+		<div class="flex justify-end gap-2">
+			<Button label="Cancel" :disabled="isRunning" @click="emit('cancel')" />
+			<Button
+				type="submit"
+				variant="solid"
+				label="Use as collection"
+				:disabled="!doctype || !slugField"
+				:loading="isRunning"
+			/>
+		</div>
 	</form>
 </template>
 
@@ -34,7 +37,7 @@ import { Collection, normalizeUrl } from "../../cms/collection.js";
 import { getDoctypeFields, getDoctypeNames } from "../../data/doctypes.js";
 import { useTask } from "../useTask.js";
 
-const emit = defineEmits(["created"]);
+const emit = defineEmits(["created", "cancel"]);
 const doctypeNames = ref([]);
 const doctype = ref("");
 const label = ref("");

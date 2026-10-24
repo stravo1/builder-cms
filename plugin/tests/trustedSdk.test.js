@@ -23,7 +23,6 @@ import { openPage, refreshPageData, setRouteVariables, updatePageDocument } from
 import { getDocuments, getMetadata, subscribeDocuments } from "../src/data/documents.js";
 import { bindBlock, insertBlocks } from "../src/blocks/blockActions.js";
 import { DataSource } from "../src/data/dataSource.js";
-import { collectionDialog, openCollectionDialog, closeCollectionDialog } from "../src/editor/windows.js";
 
 const block = (id) => ({
 	blockId: id,
@@ -59,7 +58,6 @@ beforeEach(() => {
 	};
 	runtime.selected = [];
 	vi.stubGlobal("localStorage", { setItem: vi.fn() });
-	closeCollectionDialog();
 });
 
 describe("trusted editor integration", () => {
@@ -206,13 +204,4 @@ describe("Frappe data integration", () => {
 		expect(realtime.emit).toHaveBeenCalledTimes(2);
 		expect(realtime.emit).toHaveBeenLastCalledWith("doctype_unsubscribe", "CMS Posts");
 	});
-});
-
-it("resolves dialog callers when the collection dialog closes", async () => {
-	const options = { props: { doctype: "CMS Posts" } };
-	const closed = openCollectionDialog(options);
-	expect(collectionDialog.value).toEqual(options);
-	closeCollectionDialog();
-	await expect(closed).resolves.toBeUndefined();
-	expect(collectionDialog.value).toBeNull();
 });

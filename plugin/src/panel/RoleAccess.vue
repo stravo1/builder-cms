@@ -8,12 +8,14 @@
 			:options="options"
 			placeholder="Choose roles…"
 			:disabled="isRunning" />
-		<Button v-if="isChanged" variant="solid" label="Save" :loading="isRunning" @click="save" />
-		<Button
-			variant="ghost"
-			icon-left="lucide-external-link"
-			label="Manage roles in Desk"
-			@click="openUrl('/app/role')" />
+		<div class="flex items-center gap-2">
+			<Button v-if="isChanged" variant="solid" label="Save" :loading="isRunning" @click="save" />
+			<Button
+				variant="ghost"
+				icon-left="lucide-external-link"
+				label="Manage roles in Desk"
+				@click="openUrl('/app/role')" />
+		</div>
 		<p v-if="error" role="alert" class="cms-error">{{ error }}</p>
 	</div>
 </template>

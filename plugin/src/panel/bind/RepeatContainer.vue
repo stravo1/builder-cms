@@ -1,13 +1,14 @@
 <template>
-	<form class="flex flex-col gap-2 border-t border-outline-gray-1 p-3" @submit.prevent="repeat">
+	<form class="flex flex-wrap items-end gap-2 border-t border-outline-gray-1 p-3" @submit.prevent="repeat">
 		<FormControl
 			v-model="chosen"
+			class="w-full max-w-sm"
 			type="combobox"
 			label="Repeat for each entry of"
 			:options="collections.map((each) => ({ label: each.title, value: each.doctype }))"
 			placeholder="Choose a collection…" />
 		<Button v-if="chosen" type="submit" label="Repeat" :loading="isRunning" />
-		<p v-if="error" role="alert" class="cms-error">{{ error }}</p>
+		<p v-if="error" role="alert" class="cms-error basis-full">{{ error }}</p>
 	</form>
 </template>
 <script setup>

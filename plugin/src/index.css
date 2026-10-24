@@ -8,6 +8,10 @@
 .cms-hint {
 	@apply text-p-sm text-ink-gray-5;
 }
+/* a form or a stack of settings, which reads badly across the full drawer */
+.cms-form-column {
+	@apply mx-auto w-full max-w-lg;
+}
 .cms-card {
 	@apply rounded-4 border border-outline-gray-1 p-3;
 }

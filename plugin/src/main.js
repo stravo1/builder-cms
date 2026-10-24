@@ -10,7 +10,7 @@ export default {
 			name: "cms",
 			label: "CMS",
 			icon: lucideIcon("lucide-newspaper"),
-			keepOpenOnSelection: true,
+			placement: "drawer",
 			component: defineAsyncComponent(() => import("./panel/CmsPanel.vue")),
 		});
 		toolbarItems.register({ name: "cms-overlays", region: "right", component: CmsOverlays });
@@ -20,6 +20,6 @@ export default {
 			action: openBindPopover,
 			disabled: () => useBuilderStore().readOnlyMode,
 		});
-		context.setOpenHandler(() => (useBuilderStore().leftPanelActiveTab = "cms"));
+		context.setOpenHandler(() => (useBuilderStore().activeDrawerTab = "cms"));
 	},
 };

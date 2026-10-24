@@ -5,7 +5,6 @@
 			<Select v-model="field.fieldtype" :options="FIELD_TYPES" class="w-28" />
 			<Button variant="ghost" icon="lucide-x" label="Remove field" @click="fields.splice(index, 1)" />
 		</div>
-		<Button variant="subtle" icon-left="lucide-plus" label="Add field" @click="fields.push({ label: '', fieldtype: 'Data' })" />
 	</div>
 </template>
 

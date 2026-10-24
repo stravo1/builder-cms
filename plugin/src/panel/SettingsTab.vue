@@ -1,6 +1,6 @@
 <template>
 	<SectionLoader v-if="!access" label="Loading access" />
-	<div v-else class="p-3">
+	<div v-else class="cms-form-column px-3 py-6">
 		<RoleAccess
 			:saved="access.cms_roles"
 			:on-save="saveCmsRoles"
