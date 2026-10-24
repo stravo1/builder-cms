@@ -1,7 +1,7 @@
 {
 	"private": true,
 	"scripts": {
-		"postinstall": "cd extension && npm ci",
-		"build": "cd extension && npm run build"
+		"postinstall": "cd plugin && npm ci",
+		"build": "cd plugin && npm run build"
 	}
 }

@@ -1,5 +1,5 @@
 /**
- * Reads that the panel repeats on each view: the doctypes this extension made,
+ * Reads that the panel repeats on each view: the doctypes this plugin made,
  * the fields of a doctype, and the collections. Each key is read one time,
  * until a write forgets it. Every frame keeps its own copy.
  */
@@ -34,7 +34,7 @@ export const hasCopy = (key) => copies.has(key);
 
 /**
  * Shows the last copy of `key` at once, then reads again and shows the fresh
- * value. For content that can change outside this extension, such as entries,
+ * value. For content that can change outside this plugin, such as entries,
  * so a stale copy never stays.
  */
 export const showThenRefresh = async (key, read, show) => {

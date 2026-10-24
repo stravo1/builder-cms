@@ -1,5 +1,5 @@
 import vue from "@vitejs/plugin-vue";
-import builderExtension from "frappe-builder-extension-sdk/vite";
+import builderPlugin from "frappe-builder-plugin-sdk/vite";
 import tailwindcss from "tailwindcss";
 import IconsEsbuild from "unplugin-icons/esbuild";
 import Icons from "unplugin-icons/vite";
@@ -10,7 +10,7 @@ export default defineConfig({
 	plugins: [
 		Icons({ compiler: "vue3" }),
 		vue(),
-		builderExtension({ builderUrl: "http://builder.localhost:8080" }),
+		builderPlugin({ builderUrl: "http://builder.localhost:8080" }),
 	],
 	optimizeDeps: {
 		exclude: ["frappe-ui/editor"],

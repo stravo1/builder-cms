@@ -36,7 +36,7 @@ try {
 		.filter({ has: page.locator(".lucide-plug") })
 		.first()
 		.click();
-	await page.getByRole("button", { name: "Load dev extension", exact: true }).click();
+	await page.getByRole("button", { name: "Load dev plugin", exact: true }).click();
 	await page.getByPlaceholder("http://localhost:5173").fill(devServer);
 	await page.getByRole("button", { name: "Load", exact: true }).click();
 	await page.waitForFunction(

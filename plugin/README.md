@@ -38,7 +38,7 @@ Choose **Collections → New → Existing doctype**. Select a DocType, a slug fi
 
 The `cms` app owns the collections. Each one is a `CMS Collection` row and a custom `CMS <name>` DocType in the CMS module. The row stores the settings, the page assignments, and the roles of that collection. The app writes the DocPerms of each DocType, so Frappe applies its normal permissions and document validation when you edit entries.
 
-Each page data source has a marked section in `page_data_script`. The plugin updates its own sections and keeps other script content. Public rendering reads the configured fields with `frappe.db.get_all`; a configured published field excludes drafts. Removing or adding a CMS field updates these generated sources. After an entry changes, the extension calls `builder.page.refreshData()` to update the canvas with the current page data.
+Each page data source has a marked section in `page_data_script`. The plugin updates its own sections and keeps other script content. Public rendering reads the configured fields with `frappe.db.get_all`; a configured published field excludes drafts. Removing or adding a CMS field updates these generated sources. After an entry changes, the plugin calls `builder.page.refreshData()` to update the canvas with the current page data.
 
 Content edits appear on published pages without republishing their layouts. A detail page answers 404 for a draft or unknown slug. In the editor, **Preview content** also lists drafts. This needs a Builder version that gives page scripts `in_preview`. A page connected with version 0.1.0 gets this after you connect it again. Image fields take a URL or an upload. An upload is public and lands in Builder's upload folder. The panel shows an image icon for an image on another site, because a frame may load images only from the site.
 
@@ -51,23 +51,23 @@ npm test
 npm run build
 ```
 
-Load the dev server through Builder's **Extensions → Load dev extension**. The SDK origin in `vite.config.js` must match the editor origin. Restart the dev server after changing dependencies.
+Load the dev server through Builder's **Plugins → Load dev plugin**. The SDK origin in `vite.config.js` must match the editor origin. Restart the dev server after changing dependencies.
 
-The extension uses the trusted SDK from `stravo1/frappe-builder-extension-sdk` on the `trusted-extensions-api` branch.
+The plugin uses the trusted SDK from `stravo1/frappe-builder-extension-sdk` on the `trusted-extensions-api` branch.
 Its entry exports a Vue plugin. The plugin registers the CMS panel, block menu, and overlay component.
-Builder supplies the extension's Vue, stores, and frappe-ui through shared imports.
+Builder supplies the plugin's Vue, stores, and frappe-ui through shared imports.
 
 `src/editor/` reads the editor state, changes canvas blocks, and opens dialogs and the binding popup.
 `src/data/documents.js` uses Frappe's document APIs and the editor's realtime connection.
 It keeps page data scripts in sync with the active page after a write.
 The rich text editor remains a lazy-loaded dependency of the entry form.
 
-The extension calls `cms.api.*` through frappe-ui's `call()` in `src/data/api.js`.
+The plugin calls `cms.api.*` through frappe-ui's `call()` in `src/data/api.js`.
 Each request uses the current user's session. The CMS app checks permissions.
 The manifest has no bridge capabilities. Removing a field still drops its column.
 
 Component edits use Vite hot reload with a development Vue build of Builder.
-With a production Vue build, the SDK automatically reloads Builder and restores the dev extension.
+With a production Vue build, the SDK automatically reloads Builder and restores the dev plugin.
 Registration changes can also trigger a full reload.
 
 ### Browser checks
@@ -76,7 +76,7 @@ The Playwright checks use a separate browser and keep authentication in memory. 
 
 Optional variables:
 
-- `CMS_TEST_ORIGIN`, `CMS_TEST_USER`, `CMS_TEST_DEV_SERVER`: local site and extension connection.
+- `CMS_TEST_ORIGIN`, `CMS_TEST_USER`, `CMS_TEST_DEV_SERVER`: local site and plugin connection.
 - `CMS_TEST_MAPPED_COLLECTION`, `CMS_TEST_OWNED_COLLECTION`: collections for the table restrictions and entry form checks.
 - `CMS_TEST_COMPLEX_FIELDS`: comma-separated multiline field labels to check in the mapped collection (defaults to `Bio,Email Signature` for `User`).
 - `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH`: an existing Chromium executable.

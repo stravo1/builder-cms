@@ -1,7 +1,7 @@
 import { getDocuments, updateDocument } from "../data/documents.js";
 /**
  * Keeps one page on a template route. Builder does not refuse two pages on
- * one route, so the extension checks before it writes one.
+ * one route, so the plugin checks before it writes one.
  */
 
 const PAGE = "Builder Page";

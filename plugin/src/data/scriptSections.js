@@ -1,5 +1,5 @@
 /**
- * The sections this extension owns in a page data script.
+ * The sections this plugin owns in a page data script.
  *
  * A section starts with `# builder-cms:start <name> <definition as JSON>` and
  * ends with `# builder-cms:end <name>`. The Python between them is made from
