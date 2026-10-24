@@ -145,12 +145,18 @@ describe("trusted editor integration", () => {
 		expect(runtime.page.setPageData).toHaveBeenCalledOnce();
 	});
 
-	it("loads a page before changing the route", async () => {
+	it("loads a page before changing the route, and waits until the editor saves changes", async () => {
 		runtime.page.setPage.mockImplementation(async (name) => {
 			runtime.page.activePage = { name };
+			runtime.page.settingPage = true;
+			setTimeout(() => (runtime.page.settingPage = false), 120);
 		});
 		await openPage("other");
-		expect(runtime.router.push).toHaveBeenCalledWith({ name: "builder", params: { pageId: "other" } });
+		expect(runtime.page.settingPage).toBe(false);
+		expect(runtime.router.push).toHaveBeenCalledWith({
+			name: "builder",
+			params: { pageId: "other" },
+		});
 		expect(runtime.page.setPage.mock.invocationCallOrder[0]).toBeLessThan(
 			runtime.router.push.mock.invocationCallOrder[0],
 		);

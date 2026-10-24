@@ -11,7 +11,7 @@ import { toast } from "frappe-ui";
 import { api } from "../data/api.js";
 import { cached, forget } from "../data/cache.js";
 import { PageData } from "../data/pageData.js";
-import { claimRoute } from "./routes.js";
+import { assertRouteFree, claimRoute } from "./routes.js";
 
 /** The page data script reads this doctype on each request. */
 export const SETTINGS_DOCTYPE = "CMS Collection";
@@ -164,16 +164,7 @@ export class Collection {
 		return this.settings.entry_page || null;
 	}
 
-	get indexPage() {
-		return this.settings.index_page || null;
-	}
-
-	/** The route of the index page, such as `blog`. Builder stores a route with no leading slash. */
-	get indexRoute() {
-		return this.url.slice(1);
-	}
-
-	/** The route of the detail page. Builder stores a route with no leading slash. */
+	/** The route of the template page. Builder stores a route with no leading slash. */
 	get collectionPageRoute() {
 		return `${this.url.slice(1)}/:slug`;
 	}
@@ -192,14 +183,15 @@ export class Collection {
 		forget("collections");
 	}
 
-	/** The index and detail pages follow the URL. Lists read the detail route on each request, so their links follow too. */
+	/** The template page follows the URL. Lists read its route on each request, so their links follow too. */
 	async changeUrl(url) {
 		const previous = this.settings;
 		this.settings = { ...previous, url: normalizeUrl(url) };
 		try {
-			if (this.indexPage) await claimRoute(this.indexRoute, this.indexPage, this.indexPage);
-			if (this.collectionPage)
-				await claimRoute(this.collectionPageRoute, this.collectionPage, this.collectionPage);
+			if (this.collectionPage) {
+				await assertRouteFree(this.collectionPageRoute, this.collectionPage);
+				await claimRoute(this.collectionPageRoute, this.collectionPage);
+			}
 		} catch (error) {
 			// the route was not taken, so the URL stays as it was
 			this.settings = previous;
@@ -208,9 +200,9 @@ export class Collection {
 		await this.saveSettings({ url: this.settings.url });
 	}
 
-	/** Shows one entry on the collection page: previewed in the editor, or live in a new tab. */
+	/** Shows one entry on the template page: previewed in the editor, or live in a new tab. */
 	async openEntry(slug, live = false) {
-		if (!this.collectionPage) throw new Error("Set up a detail page first.");
+		if (!this.collectionPage) throw new Error("Set up a template page first.");
 		if (!live) {
 			await openPage(this.collectionPage);
 			return setRouteVariables({ slug });
@@ -237,7 +229,7 @@ export class Collection {
 	/** Reads every name before a caller writes, because a page without CMS sections leaves the filter and shifts the paging. */
 	static async getCmsPageNames() {
 		const names = [];
-		while (true) {
+		for (;;) {
 			const pages = await getDocuments("Builder Page", {
 				fields: ["name"],
 				filters: [["page_data_script", "like", "%builder-cms:start%"]],
@@ -287,7 +279,7 @@ export class Collection {
 
 	/**
 	 * A complete data source of this collection: the content fields, newest
-	 * first, published entries only, and a link through the collection page.
+	 * first, published entries only, and a link through the template page.
 	 */
 	getSourceDefaults(fields) {
 		return {
@@ -297,7 +289,7 @@ export class Collection {
 			fields: [...new Set(["name", ...fields.map((field) => field.fieldname)])],
 			orderBy: "creation desc",
 			publishedField: this.publishedField || null,
-			// the slug field gives the value. The collection page route names it `:slug`
+			// the slug field gives the value. The template page route names it `:slug`
 			link: { collection: this.doctype, field: this.slugField, variable: "slug" },
 		};
 	}

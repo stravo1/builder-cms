@@ -40,7 +40,6 @@ class CMSCollection(Document):
 
 		collection: DF.Data | None
 		entry_page: DF.Link | None
-		index_page: DF.Link | None
 		is_mapped: DF.Check
 		label: DF.Data
 		published_field: DF.Data | None

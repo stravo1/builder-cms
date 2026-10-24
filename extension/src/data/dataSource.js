@@ -88,8 +88,8 @@ export class DataSource {
 	}
 
 	/**
-	 * The page a row links to. A collection names its collection page in its
-	 * settings, read on each request, so a list links as soon as the collection page
+	 * The page a row links to. A collection names its template page in its
+	 * settings, read on each request, so a list links as soon as the template page
 	 * exists, and still links after it moves. Before that, `fallback` gives the
 	 * route under the collection URL, such as `/user/:slug`.
 	 */

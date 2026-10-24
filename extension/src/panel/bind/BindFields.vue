@@ -9,7 +9,7 @@
 			{{
 				sources.length
 					? "Select a block inside a collection list to connect the fields of each item."
-					: "Connect this page to a collection first."
+					: "Add a list to this page first."
 			}}
 		</p>
 		<template v-else>
@@ -176,7 +176,7 @@ const loadFields = () =>
 		fields.value = [{ fieldname: "name", label: "Name", fieldtype: "Data" }, ...all].filter((field) =>
 			current.readFields.includes(field.fieldname),
 		);
-		if (current.link) fields.value.push({ fieldname: "url", label: "Detail page URL", fieldtype: "Data" });
+		if (current.link) fields.value.push({ fieldname: "url", label: "Template page URL", fieldtype: "Data" });
 		const collection = collections.value.find((each) => each.doctype === current.doctype);
 		row.value = sample && {
 			...sample,

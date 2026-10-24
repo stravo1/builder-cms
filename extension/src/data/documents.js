@@ -13,6 +13,7 @@ export const getDocuments = (doctype, options = {}) => {
 		order_by: orderBy,
 	});
 };
+export const insertDocument = (doctype, values) => call("frappe.client.insert", { doc: { doctype, ...values } });
 export const updateDocument = (doctype, name, values) =>
 	doctype === "Builder Page"
 		? updatePageDocument(name, values)

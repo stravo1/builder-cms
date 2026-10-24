@@ -1,35 +1,41 @@
 import { getDocuments, updateDocument } from "../data/documents.js";
 /**
- * Keeps one page on a collection route. Builder does not refuse two pages on
+ * Keeps one page on a template route. Builder does not refuse two pages on
  * one route, so the extension checks before it writes one.
  */
 
 const PAGE = "Builder Page";
 
-/**
- * Where a page goes when another page takes its role. Unique, because page
- * names are. A detail route keeps its `:slug` at the end.
- */
-export const getRetiredRoute = (route, pageName) =>
-	route.endsWith("/:slug")
-		? route.replace(/\/:slug$/, `/previous-${pageName}/:slug`)
-		: `${route}/previous-${pageName}`;
+/** Builder gives a new page this route. A page that leaves a template route goes back to it. */
+export const getDefaultRoute = (pageName) => `pages/${pageName}`;
 
-/**
- * Gives `route` to `pageName`. The previous collection page moves aside. Any other
- * page on the route stops the change: the extension never moves a page it did not set up.
- */
-export const claimRoute = async (route, pageName, previousCollectionPage) => {
+/** The other pages on `route`. */
+export const getRouteHolders = async (route, pageName) => {
 	const holders = await getDocuments(PAGE, {
-		fields: ["name", "page_title"],
+		fields: ["name", "page_title", "route"],
 		filters: { route },
 		pageLength: 20,
 	});
-	for (const holder of holders.filter((page) => page.name !== pageName)) {
-		if (holder.name !== previousCollectionPage) {
-			throw new Error(`The page "${holder.page_title}" already uses /${route}. Give it another route first.`);
-		}
-		await updateDocument(PAGE, holder.name, { route: getRetiredRoute(route, holder.name) });
+	return holders.filter((page) => page.name !== pageName);
+};
+
+export const assertRouteFree = async (route, pageName) => {
+	const [holder] = await getRouteHolders(route, pageName);
+	if (holder) throw new Error(`The page "${holder.page_title}" already uses /${route}. Give it another route first.`);
+};
+
+/** Gives `route` to `pageName`. The user confirmed the move of each other page on it. */
+export const claimRoute = async (route, pageName) => {
+	for (const holder of await getRouteHolders(route, pageName)) {
+		await updateDocument(PAGE, holder.name, { route: getDefaultRoute(holder.name) });
 	}
+	await updateDocument(PAGE, pageName, { route });
+};
+
+/** Moves a page to a route the user typed. Builder stores it with no leading or trailing slash. */
+export const moveToRoute = async (pageName, typedRoute) => {
+	const route = (typedRoute || "").trim().replace(/^\/+|\/+$/g, "");
+	if (!route) throw new Error("Give the page a URL.");
+	await assertRouteFree(route, pageName);
 	await updateDocument(PAGE, pageName, { route });
 };

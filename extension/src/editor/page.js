@@ -12,6 +12,14 @@ export const refreshPageData = async () => {
 	await store.setPageData(store.activePage);
 };
 
+// setPage returns before the page's components load, and the editor does not save a change until then
+const waitForPageLoad = async (store) => {
+	for (let waited = 0; store.settingPage; waited += 50) {
+		if (waited > 10000) throw new Error("The page did not finish loading.");
+		await new Promise((resolve) => setTimeout(resolve, 50));
+	}
+};
+
 export const openPage = async (name) => {
 	const store = usePageStore();
 	if (store.activePage?.name !== name) {
@@ -20,6 +28,7 @@ export const openPage = async (name) => {
 		if (store.activePage?.name !== name) throw new Error("The page could not open.");
 	}
 	await router.push({ name: "builder", params: { pageId: name } });
+	await waitForPageLoad(store);
 };
 
 export const setRouteVariables = async (variables) => {

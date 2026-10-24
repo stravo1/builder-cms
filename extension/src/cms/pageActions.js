@@ -1,15 +1,16 @@
 import { getRootBlock, updateBlock } from "../editor/canvas.js";
-import { setRouteVariables } from "../editor/page.js";
+import { openPage, setRouteVariables } from "../editor/page.js";
 import { getEditorContext } from "../editor/context.js";
 /**
- * What the CMS does to the open page. The user makes the page; these do
- * everything after that: the route, the data source, the blocks, the preview.
+ * What the CMS does to pages: the template page of a collection, and lists
+ * and entry content on the open page.
  */
 
 import { insertBlocks } from "../blocks/blockActions.js";
 import { DataSource } from "../data/dataSource.js";
+import { insertDocument } from "../data/documents.js";
 import { PageData } from "../data/pageData.js";
-import { claimRoute } from "./routes.js";
+import { claimRoute, getDefaultRoute, getRouteHolders, moveToRoute } from "./routes.js";
 import { Collection } from "./collection.js";
 
 export const SORT_OPTIONS = [
@@ -18,7 +19,7 @@ export const SORT_OPTIONS = [
 	{ label: "Recently updated", value: "modified desc" },
 ];
 
-/** The name of the data source on a collection page. Bindings read `entry.title`. */
+/** The name of the data source on a template page. Bindings read `entry.title`. */
 export const ENTRY_SOURCE = "entry";
 
 const getWritablePage = async () => {
@@ -35,14 +36,31 @@ export const isPageEmpty = async () => {
 	return !root.children?.length;
 };
 
+/** What Use changes, for the user to confirm: the route, and each other page that moves off it. */
+export const getCollectionPageChange = async (collection, pageName) => {
+	const route = collection.collectionPageRoute;
+	const holders = await getRouteHolders(route, pageName);
+	return {
+		route,
+		moves: holders.map((page) => ({
+			title: page.page_title,
+			route: getDefaultRoute(page.name),
+		})),
+		replaces:
+			collection.collectionPage && collection.collectionPage !== pageName ? collection.collectionPage : null,
+	};
+};
+
 /**
- * Makes `pageName` the collection page: the collection route, the `entry`
+ * Makes `pageName` the template page: the template route, the `entry`
  * source, and the settings. It works on any page, open or not. The previous
- * collection page moves aside, so one page holds the route.
+ * template page loses its `entry` source, and each page on the route moves off it.
  */
 export const setCollectionPage = async (collection, pageName) => {
 	const fields = await collection.getFields();
-	await claimRoute(collection.collectionPageRoute, pageName, collection.collectionPage);
+	const previous = collection.collectionPage;
+	if (previous && previous !== pageName) await new PageData(previous).remove(ENTRY_SOURCE);
+	await claimRoute(collection.collectionPageRoute, pageName);
 	const pageData = new PageData(pageName);
 	await pageData.load();
 	const source = new DataSource({
@@ -55,74 +73,44 @@ export const setCollectionPage = async (collection, pageName) => {
 		publishedField: collection.publishedField || null,
 	});
 	await pageData.save(source);
-	await assignPageRole(collection, pageName, "entry_page");
+	await assignCollectionPage(collection, pageName);
 	return { source, fields };
 };
 
-/** Ends the role. The page keeps its route and its content, and stops being the detail page. */
-export const clearCollectionPage = (collection) => collection.saveSettings({ entry_page: "" });
-
-export const clearIndexPage = (collection) => collection.saveSettings({ index_page: "" });
-
-/** The role of a page: index or detail of a collection, or none. */
-export const getPageRole = (collections, page, sources) => {
-	const detail = collections.find((collection) => isCollectionPageOf(collection, page, sources));
-	if (detail) return { kind: "detail", collection: detail };
-	const index = collections.find((collection) => isIndexPageOf(collection, page));
-	return index ? { kind: "index", collection: index } : null;
+/** Stop: the page moves to `route` and loses its `entry` source. Its design and bindings stay. */
+export const clearCollectionPage = async (collection, route) => {
+	const pageName = collection.collectionPage;
+	await moveToRoute(pageName, route);
+	await new PageData(pageName).remove(ENTRY_SOURCE);
+	await collection.saveSettings({ entry_page: "" });
 };
 
-/** The open page becomes the collection page. An empty page also gets bound blocks, and a preview. */
-export const useAsCollectionPage = async (collection) => {
-	const page = await getWritablePage();
-	const { source, fields } = await setCollectionPage(collection, page.name);
+/**
+ * The collection whose template page this is. `isBroken` when the user
+ * removed its `:slug` route or its `entry` source by hand.
+ */
+export const getPageRole = (collections, page, sources) => {
+	const collection = collections.find((each) => each.collectionPage === page.name);
+	return collection ? { collection, isBroken: !isCollectionPageOf(collection, page, sources) } : null;
+};
+
+/** Makes `pageName` the template page and opens it. An empty page also gets bound blocks, and a preview. */
+export const useCollectionPage = async (collection, pageName) => {
+	const { source, fields } = await setCollectionPage(collection, pageName);
+	await openPage(pageName);
 	// a designed page keeps its blocks. "Bind to data" binds any block to a field
 	if (await isPageEmpty()) await insertBlocks(source, collection.getDisplayFields(fields), collection.label);
 	const newest = await collection.getNewestPublished();
 	if (newest) await setRouteVariables({ slug: newest.slug });
 };
 
-/**
- * Makes `pageName` the index page: it takes the collection URL, such as
- * `/blog`, and lists the collection. The previous index page moves aside.
- */
-export const setIndexPage = async (collection, pageName) => {
-	const previous = (await Collection.all()).find((each) => each.indexPage === pageName);
-	await claimRoute(collection.indexRoute, pageName, collection.indexPage);
-	const data = new PageData(pageName);
-	const sources = await data.load();
-	if (sources.some((source) => source.name === ENTRY_SOURCE)) await data.remove(ENTRY_SOURCE);
-	const previousSource = sources.find((source) => source.isList && source.doctype === previous?.doctype);
-	if (previousSource && previous.doctype !== collection.doctype) {
-		const defaults = collection.getSourceDefaults(await collection.getFields());
-		await data.save(
-			new DataSource({
-				...defaults,
-				name: previousSource.name,
-				orderBy: previousSource.orderBy,
-				limit: previousSource.limit,
-			}),
-		);
-	}
-	await assignPageRole(collection, pageName, "index_page");
+/** A new draft page, made the template page. */
+export const createCollectionPage = async (collection) => {
+	const page = await insertDocument("Builder Page", {
+		page_title: `${collection.label} template`,
+	});
+	await useCollectionPage(collection, page.name);
 };
-
-/** The open page becomes the index page. It gets a list, unless it lists this collection already. */
-export const useAsIndexPage = async (collection) => {
-	const page = await getWritablePage();
-	await setIndexPage(collection, page.name);
-	const sources = await new PageData(page.name).load();
-	const hasList = sources.some((source) => source.isList && source.doctype === collection.doctype);
-	if (!hasList) {
-		const source = await getCollectionListSource(collection);
-		if (await isPageEmpty())
-			await insertBlocks(source, collection.getDisplayFields(await collection.getFields()), collection.label);
-	}
-};
-
-/** True when this page is the index page: the settings point at it, and it still has the collection URL. */
-export const isIndexPageOf = (collection, page) =>
-	collection.indexPage === page.name && (page.route || "").replace(/^\//, "") === collection.indexRoute;
 
 /** A free name such as `blog_post`, then `blog_post_2`, so two lists of one collection can share a page. */
 const getFreeName = (base, sources) => {
@@ -134,7 +122,7 @@ const getFreeName = (base, sources) => {
 
 /**
  * Adds a list of a collection to the open page. The data source behind it
- * takes the collection's defaults: published entries, links to the collection page.
+ * takes the collection's defaults: published entries, links to the template page.
  */
 export const getCollectionListSource = async (
 	collection,
@@ -154,32 +142,19 @@ export const getCollectionListSource = async (
 
 const SLUG_ROUTE = /:slug\b|<slug>/;
 
-/**
- * The page owns this fact: a `:slug` route and an `entry` source of the
- * collection. The settings only point at the page. So a user who removes the
- * route or the source by hand ends the role, and the panel follows.
- */
+/** The settings point at the page, and the page still has a `:slug` route and the `entry` source of the collection. */
 export const isCollectionPageOf = (collection, page, sources) =>
 	collection.collectionPage === page.name &&
 	SLUG_ROUTE.test(page.route || "") &&
 	sources.some((source) => source.name === ENTRY_SOURCE && source.doctype === collection.doctype);
 
-/** A page has one role. Clear every old assignment after the new route and source are ready. */
-const assignPageRole = async (collection, pageName, field) => {
-	const collections = await Collection.all();
-	for (const other of collections) {
-		const patch = {};
-		for (const role of ["index_page", "entry_page"]) {
-			if (other.settings?.[role] === pageName) patch[role] = "";
-		}
-		if (other.doctype === collection.doctype) {
-			collection.settings = other.settings;
-			await collection.saveSettings({ ...patch, [field]: pageName });
-		} else if (Object.keys(patch).length) await other.saveSettings(patch);
+/** A page is the template of one collection. */
+const assignCollectionPage = async (collection, pageName) => {
+	for (const other of await Collection.all()) {
+		if (other.doctype !== collection.doctype && other.collectionPage === pageName)
+			await other.saveSettings({ entry_page: "" });
 	}
-	if (!collections.some((other) => other.doctype === collection.doctype)) {
-		await collection.saveSettings({ [field]: pageName });
-	}
+	await collection.saveSettings({ entry_page: pageName });
 };
 
 export const addCollectionList = async (collection, { fields, ...options }) => {
@@ -187,11 +162,11 @@ export const addCollectionList = async (collection, { fields, ...options }) => {
 	return insertBlocks(source, fields, collection.label, options.layout);
 };
 
-/** Inserts blocks bound to the entry of the detail page. Each call adds a new set. */
+/** Inserts blocks bound to the entry of the template page. Each call adds a new set. */
 export const addEntryContent = async (collection, fields) => {
 	const page = await getWritablePage();
 	const source = (await new PageData(page.name).load()).find((each) => each.name === ENTRY_SOURCE);
-	if (!source) throw new Error("Connect this page as the detail page first.");
+	if (!source) throw new Error("Make this page the template page first.");
 	return insertBlocks(source, fields, collection.label);
 };
 

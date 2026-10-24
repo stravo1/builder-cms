@@ -18,10 +18,9 @@ vi.mock("../src/data/documents.js", () => ({
 }));
 
 const { Collection, markSameLabels, normalizeUrl } = await import("../src/cms/collection.js");
-const { getRetiredRoute } = await import("../src/cms/routes.js");
 const { getDoctypeFields, isMultilineField } = await import("../src/data/doctypes.js");
 const { getCardListBlock, getDocumentBlock, getListBlock } = await import("../src/blocks/pageBlocks.js");
-const { getPageRole, isCollectionPageOf, isIndexPageOf } = await import("../src/cms/pageActions.js");
+const { getPageRole, isCollectionPageOf } = await import("../src/cms/pageActions.js");
 const { DataSource } = await import("../src/data/dataSource.js");
 const { isIdentifier, toPython } = await import("../src/data/python.js");
 const { readSections, removeSection, writeSection } = await import("../src/data/scriptSections.js");
@@ -65,13 +64,10 @@ describe("getListBlock", () => {
 		["table", getListBlock],
 		["cards", getCardListBlock],
 		["detail page", getDocumentBlock],
-	])(
-		"shows rich text in a block span in the %s, a text block that can hold a heading or a list",
-		(_, getBlock) => {
-			const body = { fieldname: "body", label: "Body", fieldtype: "Text Editor" };
-			const find = (block) =>
-				block.blockName === "Body" ? block : (block.children || []).map(find).find(Boolean);
-			const richText = find(getBlock(new DataSource({ name: "posts" }), [{ ...fields[0] }, body]));
+	])("shows rich text in a block span in the %s, a text block that can hold a heading or a list", (_, getBlock) => {
+		const body = { fieldname: "body", label: "Body", fieldtype: "Text Editor" };
+		const find = (block) => (block.blockName === "Body" ? block : (block.children || []).map(find).find(Boolean));
+		const richText = find(getBlock(new DataSource({ name: "posts" }), [{ ...fields[0] }, body]));
 
 			expect(richText.element).toBe("span");
 			expect(richText.baseStyles.display).toMatch(/block|box/);
@@ -431,28 +427,16 @@ describe("collections", () => {
 		});
 	});
 
-	it("moves a previous page to a route no other page has", () => {
-		expect(getRetiredRoute("blog/:slug", "page-1")).toBe("blog/previous-page-1/:slug");
-		expect(getRetiredRoute("blog", "page-1")).toBe("blog/previous-page-1");
-	});
-
 	describe("page roles", () => {
-		const blog = owned("Blog Post", {
-			url: "/blog",
-			index_page: "page-index",
-			entry_page: "page-detail",
-		});
+		const blog = owned("Blog Post", { url: "/blog", entry_page: "page-detail" });
 		const entry = { name: "entry", doctype: "CMS Blog Post" };
 
-		it("knows an index page by the pointer and the collection URL", () => {
-			expect(isIndexPageOf(blog, { name: "page-index", route: "blog" })).toBe(true);
-			expect(isIndexPageOf(blog, { name: "page-index", route: "news" })).toBe(false);
-		});
-
-		it("tells an index page from a detail page", () => {
-			expect(getPageRole([blog], { name: "page-index", route: "blog" }, [])).toMatchObject({ kind: "index" });
+		it("finds the template page by the setting, and flags one the user changed by hand", () => {
 			expect(getPageRole([blog], { name: "page-detail", route: "blog/:slug" }, [entry])).toMatchObject({
-				kind: "detail",
+				isBroken: false,
+			});
+			expect(getPageRole([blog], { name: "page-detail", route: "blog" }, [entry])).toMatchObject({
+				isBroken: true,
 			});
 			expect(getPageRole([blog], { name: "page-other", route: "about" }, [])).toBe(null);
 		});

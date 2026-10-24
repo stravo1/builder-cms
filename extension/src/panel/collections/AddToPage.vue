@@ -40,7 +40,7 @@ import { addCollectionList, addEntryContent, connectCollectionList } from "../..
 import { useTask } from "../useTask.js";
 const COPY = {
 	index: {
-		title: "Collection list",
+		title: "Add a list",
 		hint: "Insert a list, or repeat the children of a container you designed. Select a block inside it to connect fields.",
 		insert: "Insert collection list",
 		inserted: "Collection list inserted",

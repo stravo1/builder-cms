@@ -6,20 +6,33 @@
 		<SectionLoader v-if="isRunning" label="Loading page connection" />
 		<template v-else>
 			<fieldset :disabled="context.readOnly" class="min-w-0">
-				<PageRoleChooser
-					v-if="access.can_manage"
+				<section v-if="role" class="flex flex-col gap-1 p-3">
+					<div class="flex items-center justify-between gap-2">
+						<span class="cms-section-label">Template for each {{ role.collection.label }}</span>
+						<Button
+							label="Change"
+							variant="ghost"
+							size="sm"
+							@click="emit('collections', role.collection)" />
+					</div>
+					<p class="cms-hint">/{{ context.page.route }}</p>
+					<p v-if="role.isBroken" role="alert" class="cms-error">
+						This page lost its /:slug URL or its entry content. Repair it with Change.
+					</p>
+				</section>
+				<template v-if="role && !role.isBroken">
+					<DetailPagePreview :collection="role.collection" />
+					<AddToPage
+						:key="role.collection.doctype"
+						kind="detail"
+						:collection="role.collection"
+						@changed="changed" />
+				</template>
+				<PageLists
 					:collections="collections"
-					:role="role"
-					:page-name="context.page.name"
+					:sources="sources"
 					@changed="changed"
 					@collections="emit('collections')" />
-				<DetailPagePreview v-if="role?.kind === 'detail'" :collection="role.collection" />
-				<AddToPage
-					v-if="role"
-					:key="`${role.kind}:${role.collection.doctype}`"
-					:kind="role.kind"
-					:collection="role.collection"
-					@changed="changed" />
 			</fieldset>
 			<section class="border-t border-outline-gray-1">
 				<div class="px-3 pt-4">
@@ -35,29 +48,25 @@
 <script setup>
 import { useEditorContext } from "../../editor/context.js";
 
+import { Button } from "frappe-ui";
 import { computed, ref, shallowRef, watch } from "vue";
 import { Collection } from "../../cms/collection.js";
 import { getPageRole } from "../../cms/pageActions.js";
 import { PageData } from "../../data/pageData.js";
-import { useAccess } from "../useAccess.js";
 import { useTask } from "../useTask.js";
 import BindFields from "../bind/BindFields.vue";
 import AddToPage from "../collections/AddToPage.vue";
 import DetailPagePreview from "./DetailPagePreview.vue";
-import PageRoleChooser from "./PageRoleChooser.vue";
+import PageLists from "./PageLists.vue";
 import SectionLoader from "../SectionLoader.vue";
 
 const emit = defineEmits(["collections"]);
-// a page connection writes the collection settings, which the CMS-wide roles own
-const access = useAccess();
 const context = useEditorContext();
 const collections = shallowRef([]);
 const sources = shallowRef([]);
 const revision = ref(0);
 const { runCached, error, isRunning } = useTask();
-const role = computed(() =>
-	context.page ? getPageRole(collections.value, context.page, sources.value) : null,
-);
+const role = computed(() => (context.page ? getPageRole(collections.value, context.page, sources.value) : null));
 const reload = () => {
 	const name = context.page?.name;
 	if (!name) return;

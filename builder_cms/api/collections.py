@@ -14,14 +14,13 @@ SETTINGS_FIELDS = (
 	"label",
 	"url",
 	"is_mapped",
-	"index_page",
 	"entry_page",
 	"slug_field",
 	"published_field",
 )
 
 # what a page connection and the settings form change. The rest is set once
-CHANGEABLE_FIELDS = ("label", "url", "index_page", "entry_page")
+CHANGEABLE_FIELDS = ("label", "url", "entry_page")
 
 
 def get_collection(collection: str):

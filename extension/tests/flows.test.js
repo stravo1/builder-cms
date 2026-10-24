@@ -3,9 +3,20 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const { builder, api } = vi.hoisted(() => ({
 	builder: {
 		context: { get: vi.fn() },
-		page: { getBlocks: vi.fn(), setRouteVariables: vi.fn(), refreshData: vi.fn() },
+		page: {
+			getBlocks: vi.fn(),
+			setRouteVariables: vi.fn(),
+			refreshData: vi.fn(),
+			open: vi.fn(),
+		},
 		block: { get: vi.fn(), update: vi.fn(), insert: vi.fn() },
-		data: { getList: vi.fn(), getDoc: vi.fn(), update: vi.fn(), subscribe: vi.fn() },
+		data: {
+			getList: vi.fn(),
+			getDoc: vi.fn(),
+			update: vi.fn(),
+			insert: vi.fn(),
+			subscribe: vi.fn(),
+		},
 	},
 	api: {
 		getCollections: vi.fn(),
@@ -18,12 +29,14 @@ vi.mock("../src/data/documents.js", () => ({
 	getDocuments: builder.data?.getList,
 	getDocument: builder.data?.getDoc,
 	updateDocument: builder.data?.update,
+	insertDocument: builder.data?.insert,
 	subscribeDocuments: builder.data?.subscribe,
 }));
 vi.mock("../src/editor/context.js", () => ({ getEditorContext: builder.context?.get }));
 vi.mock("../src/editor/page.js", () => ({
 	refreshPageData: builder.page?.refreshData,
 	setRouteVariables: builder.page?.setRouteVariables,
+	openPage: builder.page?.open,
 }));
 vi.mock("../src/editor/canvas.js", () => ({
 	getRootBlock: async () => (await builder.page.getBlocks())[0],
@@ -38,8 +51,9 @@ import { Collection } from "../src/cms/collection.js";
 import {
 	addCollectionList,
 	addEntryContent,
+	clearCollectionPage,
+	createCollectionPage,
 	setCollectionPage,
-	setIndexPage,
 } from "../src/cms/pageActions.js";
 import { bindBlock, getSourcesForBlock } from "../src/blocks/blockActions.js";
 import { DataSource } from "../src/data/dataSource.js";
@@ -51,6 +65,7 @@ const fields = [
 	{ fieldname: "published", fieldtype: "Check" },
 ];
 let settings;
+let pages;
 let page;
 
 beforeEach(() => {
@@ -60,13 +75,18 @@ beforeEach(() => {
 			name: "posts",
 			collection: "CMS Posts",
 			label: "Posts",
-			index_page: "page",
 			url: "/posts",
 			slug_field: "slug",
 			published_field: "published",
 		},
 	];
-	page = { name: "page", route: "posts", page_data_script: "data.custom = 'kept'" };
+	page = {
+		name: "page",
+		page_title: "About",
+		route: "about",
+		page_data_script: "data.custom = 'kept'",
+	};
+	pages = { page };
 	api.getCollections.mockImplementation(async () => structuredClone(settings));
 	api.getFields.mockResolvedValue(fields);
 	api.updateCollection.mockImplementation(async (collection, patch) =>
@@ -75,50 +95,88 @@ beforeEach(() => {
 			patch,
 		),
 	);
-	builder.data.getList.mockResolvedValue([]);
-	builder.data.getDoc.mockImplementation(async () => ({ ...page }));
-	builder.data.update.mockImplementation(async (doctype, name, patch) => Object.assign(page, patch));
+	builder.data.getList.mockImplementation(async (doctype, { filters }) =>
+		Object.values(pages).filter((each) => each.route === filters.route),
+	);
+	builder.data.getDoc.mockImplementation(async (doctype, name) => ({ ...pages[name] }));
+	builder.data.update.mockImplementation(async (doctype, name, patch) => Object.assign(pages[name], patch));
 });
 
 const collectionOf = (row) => new Collection({ ...row });
 
-describe("page transitions", () => {
-	it("changes an index page to detail without leaving a second role assigned", async () => {
+const entrySource = new DataSource({
+	name: "entry",
+	type: "Document",
+	doctype: "CMS Posts",
+	fields: ["title"],
+});
+const addPage = (name, route, script = "") =>
+	(pages[name] = { name, page_title: name, route, page_data_script: script });
+
+describe("template page", () => {
+	it("gets the template route, the entry source and the setting, and keeps its own script", async () => {
 		await setCollectionPage(collectionOf(settings[0]), "page");
-		expect(settings[0]).toMatchObject({ index_page: "", entry_page: "page" });
+		expect(settings[0].entry_page).toBe("page");
 		expect(page.route).toBe("posts/:slug");
 		expect(page.page_data_script).toContain("data.custom = 'kept'");
+		expect(page.page_data_script).toContain("data.entry");
 	});
 
-	it("changes detail to index and removes the route-dependent entry source", async () => {
-		settings[0] = { ...settings[0], index_page: "", entry_page: "page" };
-		const source = new DataSource({
-			name: "entry",
-			type: "Document",
-			doctype: "CMS Posts",
-			fields: ["title"],
-		});
-		page.page_data_script = writeSection(page.page_data_script, "entry", source.toJSON(), source.toPython());
-		await setIndexPage(collectionOf(settings[0]), "page");
-		expect(settings[0]).toMatchObject({ index_page: "page", entry_page: "" });
-		expect(page.page_data_script).not.toContain("data.entry");
+	it("moves each other page off the template route to its default route", async () => {
+		addPage("other", "posts/:slug");
+		await setCollectionPage(collectionOf(settings[0]), "page");
+		expect(pages.other.route).toBe("pages/other");
+	});
+
+	it("takes over from the old template, which loses its entry source", async () => {
+		addPage("old", "posts/:slug", writeSection("", "entry", entrySource.toJSON(), entrySource.toPython()));
+		settings[0].entry_page = "old";
+		await setCollectionPage(collectionOf(settings[0]), "page");
+		expect(pages.old).toMatchObject({ route: "pages/old", page_data_script: "" });
+		expect(settings[0].entry_page).toBe("page");
 	});
 
 	it("clears the previous collection when a page changes collections", async () => {
-		settings.push({ name: "news", collection: "CMS News", label: "News", url: "/news", slug_field: "slug" });
+		settings[0].entry_page = "page";
+		settings.push({
+			name: "news",
+			collection: "CMS News",
+			label: "News",
+			url: "/news",
+			slug_field: "slug",
+		});
 		await setCollectionPage(collectionOf(settings[1]), "page");
-		expect(settings[0].index_page).toBe("");
+		expect(settings[0].entry_page).toBe("");
 		expect(settings[1].entry_page).toBe("page");
 	});
 
-	it("keeps the list binding when an index page changes collections", async () => {
-		settings.push({ name: "news", collection: "CMS News", label: "News", url: "/news", slug_field: "slug" });
-		const source = new DataSource({ name: "posts", doctype: "CMS Posts", fields: ["title"], limit: 5 });
-		page.page_data_script = writeSection(page.page_data_script, "posts", source.toJSON(), source.toPython());
-		await setIndexPage(collectionOf(settings[1]), "page");
-		expect(page.page_data_script).toContain('"name":"posts"');
-		expect(page.page_data_script).toContain('"doctype":"CMS News"');
-		expect(page.page_data_script).toContain('"limit":5');
+	it("stops: moves to the typed route and loses the entry source, but keeps its own script", async () => {
+		const collection = collectionOf(settings[0]);
+		await setCollectionPage(collection, "page");
+		await clearCollectionPage(collection, " /about-us/ ");
+		expect(page.route).toBe("about-us");
+		expect(page.page_data_script).not.toContain("data.entry");
+		expect(page.page_data_script).toContain("data.custom = 'kept'");
+		expect(settings[0].entry_page).toBe("");
+	});
+
+	it("refuses to stop onto a route another page has", async () => {
+		addPage("contact", "contact");
+		const collection = collectionOf({ ...settings[0], entry_page: "page" });
+		await expect(clearCollectionPage(collection, "/contact")).rejects.toThrow('"contact" already uses /contact');
+	});
+
+	it("creates a draft page and opens it as the template", async () => {
+		builder.data.insert.mockImplementation(async () => addPage("new", "pages/new"));
+		builder.page.getBlocks.mockResolvedValue([{ blockId: "root", children: [] }]);
+		builder.context.get.mockResolvedValue({ selection: { count: 0 } });
+		await createCollectionPage(collectionOf(settings[0]));
+		expect(builder.data.insert).toHaveBeenCalledWith("Builder Page", {
+			page_title: "Posts template",
+		});
+		expect(pages.new.route).toBe("posts/:slug");
+		expect(builder.page.open).toHaveBeenCalledWith("new");
+		expect(builder.block.insert).toHaveBeenCalled();
 	});
 });
 
@@ -179,7 +237,7 @@ describe("inserted blocks", () => {
 		expect(blockNames(tree)).toContain("Title heading");
 	});
 
-	it("inserts the entry content on a detail page each time the user asks", async () => {
+	it("inserts the entry content on a template page each time the user asks", async () => {
 		const collection = collectionOf(settings[0]);
 		await setCollectionPage(collection, "page");
 		await addEntryContent(collection, [title]);
@@ -191,6 +249,6 @@ describe("inserted blocks", () => {
 	});
 
 	it("refuses entry content on a page with no entry source", async () => {
-		await expect(addEntryContent(collectionOf(settings[0]), [title])).rejects.toThrow("detail page");
+		await expect(addEntryContent(collectionOf(settings[0]), [title])).rejects.toThrow("template page");
 	});
 });

@@ -16,8 +16,8 @@
 				class="min-h-0 flex-1 overflow-y-auto"
 			>
 				<div class="flex h-full flex-col">
-					<CollectionsTab v-if="tab.value === 0" @use-page="activeTab = 1" />
-					<PageTab v-else-if="tab.value === 1" @collections="activeTab = 0" />
+					<CollectionsTab v-if="tab.value === 0" :start-at="startAt" @use-page="activeTab = 1" />
+					<PageTab v-else-if="tab.value === 1" @collections="showCollections" />
 					<SettingsTab v-else />
 				</div>
 			</TabPanel>
@@ -27,7 +27,7 @@
 
 <script setup>
 import { TabList, TabPanel, Tabs, TabTrigger } from "frappe-ui";
-import { computed, onMounted, ref, shallowRef } from "vue";
+import { computed, onMounted, ref, shallowRef, watch } from "vue";
 import { getAccess } from "../cms/access.js";
 import SettingsTab from "./SettingsTab.vue";
 import CollectionsTab from "./collections/CollectionsTab.vue";
@@ -40,6 +40,13 @@ const TABS = [
 ];
 const activeTab = ref(0);
 const access = shallowRef(null);
+// the collection the Collections tab opens on, once
+const startAt = shallowRef(null);
+const showCollections = (collection = null) => {
+	startAt.value = collection;
+	activeTab.value = 0;
+};
+watch(activeTab, (tab) => tab !== 0 && (startAt.value = null));
 // the CMS-wide roles are a manager's to choose
 const tabs = computed(() => (access.value?.is_manager ? TABS : TABS.slice(0, 2)));
 

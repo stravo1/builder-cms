@@ -52,7 +52,7 @@
 						size="sm"
 						variant="ghost"
 						icon="lucide-eye"
-						label="Preview on the detail page"
+						label="Preview on the template page"
 						@click="emit('preview', row)" />
 					<Button
 						size="sm"
