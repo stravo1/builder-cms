@@ -72,9 +72,15 @@ import { getDocuments } from "../../data/documents.js";
 
 import { Button, FormControl, ItemListRow } from "frappe-ui";
 import { computed, ref, shallowRef, watch } from "vue";
-import { bindBlock, fitsBlock, getBindingTargets, getBoundKey, getSourcesForBlock } from "../../blocks/blockActions.js";
+import {
+	bindBlock,
+	fitsBlock,
+	getBindingTargets,
+	getBoundKey,
+	getSourceFields,
+	getSourcesForBlock,
+} from "../../blocks/blockActions.js";
 import { Collection } from "../../cms/collection.js";
-import { getDoctypeFields } from "../../data/doctypes.js";
 import { PageData } from "../../data/pageData.js";
 import { useTask } from "../useTask.js";
 import SectionLoader from "../SectionLoader.vue";
@@ -159,7 +165,7 @@ const loadFields = () =>
 		row.value = null;
 		visibleCount.value = 10;
 		if (!current) return;
-		const all = await getDoctypeFields(current.doctype);
+		const sourceFields = await getSourceFields(current);
 		const options = current.getPreviewOptions();
 		if (!current.isList && context.routeVariables?.slug) {
 			const routeFilter = current.filters.find(
@@ -169,10 +175,7 @@ const loadFields = () =>
 		}
 		const [sample] = await getDocuments(current.doctype, options);
 		if (version !== fieldVersion) return;
-		fields.value = [{ fieldname: "name", label: "Name", fieldtype: "Data" }, ...all].filter((field) =>
-			current.readFields.includes(field.fieldname),
-		);
-		if (current.link) fields.value.push({ fieldname: "url", label: "Collection page URL", fieldtype: "Data" });
+		fields.value = sourceFields;
 		const collection = collections.value.find((each) => each.doctype === current.doctype);
 		row.value = sample && {
 			...sample,

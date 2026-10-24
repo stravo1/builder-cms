@@ -5,6 +5,8 @@ import { getEditorContext } from "../editor/context.js";
  * bind one more block to a field.
  */
 
+import { getDoctypeFields } from "../data/doctypes.js";
+import { PageData } from "../data/pageData.js";
 import { getDocumentBlock, getListBlock, getCardListBlock } from "./pageBlocks.js";
 import { guessBindings } from "./guessBindings.js";
 
@@ -54,6 +56,37 @@ export const fitsBlock = (field, selection, target = selection.isImage ? "image"
 	if (target === "link") return ["Data", "Link", "Read Only"].includes(field.fieldtype);
 	if (target === "image") return ["Attach Image", "Attach", "Data"].includes(field.fieldtype);
 	return field.fieldtype !== "Check" && field.fieldtype !== "Attach Image";
+};
+
+/** The fields a source reads, and the URL of its collection page when it links to one. */
+export const getSourceFields = async (source) => {
+	const all = [{ fieldname: "name", label: "Name", fieldtype: "Data" }, ...(await getDoctypeFields(source.doctype))];
+	const fields = all.filter((field) => source.readFields.includes(field.fieldname));
+	if (source.link) fields.push({ fieldname: "url", label: "Collection page URL", fieldtype: "Data" });
+	return fields;
+};
+
+// the property controls of Builder's "Set Dynamic Value", by the binding target each one sets
+const TARGETS = { "key:innerHTML": "text", "attribute:src": "image", "attribute:href": "link" };
+
+/** The fields that fit one property control, as items of Builder's "Set Dynamic Value" picker. */
+export const getFieldItems = async ({ block, property, type }) => {
+	const target = TARGETS[`${type}:${property}`];
+	const { page } = getEditorContext();
+	if (!target || !page) return [];
+	const available = await getSourcesForBlock(await new PageData(page.name).load(), block.blockId);
+	const items = await Promise.all(
+		available.map(async ({ source, prefix }) =>
+			(await getSourceFields(source))
+				.filter((field) => fitsBlock(field, null, target))
+				.map((field) => ({
+					key: `${prefix}${field.fieldname}`,
+					label: `${available.length > 1 ? `${source.name} · ` : ""}${field.label || field.fieldname}`,
+					comesFrom: "dataScript",
+				})),
+		),
+	);
+	return items.flat();
 };
 
 export const getBoundKey = async (selection, target = selection.isImage ? "image" : "text") => {
