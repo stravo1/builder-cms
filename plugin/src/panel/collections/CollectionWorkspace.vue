@@ -8,12 +8,14 @@
 	</header>
 	<!-- v-show: it keeps its rows, so a return to this tab reads nothing again -->
 	<EntriesView v-show="tab === 'entries'" :collection="collection" />
-	<CollectionConfig
-		v-if="tab === 'settings'"
-		class="mx-auto w-full max-w-4xl"
-		:collection="collection"
-		@deleted="emit('deleted')"
-		@open="open" />
+	<!-- only the content scrolls, so the header with the tabs stays in view -->
+	<div v-if="tab === 'settings'" class="min-h-0 flex-1 overflow-y-auto">
+		<CollectionConfig
+			class="mx-auto w-full max-w-4xl"
+			:collection="collection"
+			@deleted="emit('deleted')"
+			@open="open" />
+	</div>
 </template>
 
 <script setup>

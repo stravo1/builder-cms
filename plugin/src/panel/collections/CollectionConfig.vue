@@ -3,27 +3,29 @@
 		<div class="cms-settings-grid">
 			<div v-if="access.can_manage" class="flex flex-col gap-5 [grid-area:content]">
 				<section v-if="collection.isOwned" class="flex flex-col gap-1">
-					<div class="flex items-center justify-between gap-2">
-						<span class="cms-section-label">Fields</span>
+					<div class="flex items-center gap-2">
+						<span class="cms-section-label mr-auto">Fields</span>
+						<!-- only once a new field has a name, so a collection with nothing to save shows no button -->
+						<Button
+							v-if="hasNewFields"
+							type="submit"
+							form="cms-new-fields"
+							variant="solid"
+							size="sm"
+							label="Save"
+							:loading="isRunning" />
 						<Button
 							variant="ghost"
 							size="sm"
 							icon="lucide-plus"
 							label="Add field"
-							@click="newFields.push(blankField())" />
+							@click="newFields.unshift(blankField())" />
 					</div>
-					<FieldList :fields="collectionFields" removable :disabled="isRunning" @remove="removeField" />
-					<form class="flex flex-col gap-2 pt-2" @submit.prevent="addFields">
+					<!-- new rows go at the top, where the + button is -->
+					<form id="cms-new-fields" class="flex flex-col gap-2" @submit.prevent="addFields">
 						<FieldRows v-model="newFields" />
-						<!-- only once a new field has a name, so a collection with nothing to save shows no button -->
-						<Button
-							v-if="hasNewFields"
-							class="self-end"
-							type="submit"
-							variant="solid"
-							label="Save"
-							:loading="isRunning" />
 					</form>
+					<FieldList :fields="collectionFields" removable :disabled="isRunning" @remove="removeField" />
 				</section>
 				<section v-if="!collection.isOwned" class="flex flex-col gap-1">
 					<div class="flex items-center justify-between gap-2">
