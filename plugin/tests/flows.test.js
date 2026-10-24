@@ -59,10 +59,12 @@ import {
 	addCollectionList,
 	addEntryContent,
 	changeCollectionList,
-	clearCollectionPage,
+	getCollectionLists,
 	createCollectionPage,
+	disconnectCollectionPage,
 	removeCollectionList,
 	setCollectionPage,
+	useCollectionPage,
 } from "../src/cms/pageActions.js";
 import { bindBlock, getSourcesForBlock } from "../src/blocks/blockActions.js";
 import { DataSource } from "../src/data/dataSource.js";
@@ -113,17 +115,11 @@ beforeEach(() => {
 
 const collectionOf = (row) => new Collection({ ...row });
 
-const entrySource = new DataSource({
-	name: "entry",
-	type: "Document",
-	doctype: "CMS Posts",
-	fields: ["title"],
-});
 const addPage = (name, route, script = "") =>
 	(pages[name] = { name, page_title: name, route, page_data_script: script });
 
-describe("template page", () => {
-	it("gets the template route, the entry source and the setting, and keeps its own script", async () => {
+describe("collection page", () => {
+	it("gets the collection page route, the entry source and the setting, and keeps its own script", async () => {
 		await setCollectionPage(collectionOf(settings[0]), "page");
 		expect(settings[0].entry_page).toBe("page");
 		expect(page.route).toBe("posts/:slug");
@@ -135,14 +131,6 @@ describe("template page", () => {
 		addPage("other", "posts/:slug");
 		await setCollectionPage(collectionOf(settings[0]), "page");
 		expect(pages.other.route).toBe("pages/other");
-	});
-
-	it("takes over from the old template, which loses its entry source", async () => {
-		addPage("old", "posts/:slug", writeSection("", "entry", entrySource.toJSON(), entrySource.toPython()));
-		settings[0].entry_page = "old";
-		await setCollectionPage(collectionOf(settings[0]), "page");
-		expect(pages.old).toMatchObject({ route: "pages/old", page_data_script: "" });
-		expect(settings[0].entry_page).toBe("page");
 	});
 
 	it("clears the previous collection when a page changes collections", async () => {
@@ -159,29 +147,41 @@ describe("template page", () => {
 		expect(settings[1].entry_page).toBe("page");
 	});
 
-	it("stops: moves to the typed route and loses the entry source, but keeps its own script", async () => {
+	it("binds the blocks of an existing page that match a field, and inserts nothing", async () => {
+		const heading = {
+			blockId: "heading",
+			blockName: "Title",
+			isText: () => true,
+			isImage: () => false,
+			getTextContent: () => "Hello",
+		};
+		builder.page.getBlocks.mockResolvedValue([{ blockId: "root", children: [heading] }]);
+		builder.block.get.mockReturnValue(heading);
+		const bound = await useCollectionPage(collectionOf(settings[0]), "page", { guess: true });
+		expect(bound).toBe(1);
+		expect(builder.block.update).toHaveBeenCalledWith("heading", {
+			dynamicValues: [{ key: "entry.title", type: "key", property: "innerHTML", comesFrom: "dataScript" }],
+		});
+		expect(builder.block.insert).not.toHaveBeenCalled();
+	});
+
+	it("disconnects: back to the default route, no entry source, but keeps its own script", async () => {
 		const collection = collectionOf(settings[0]);
 		await setCollectionPage(collection, "page");
-		await clearCollectionPage(collection, " /about-us/ ");
-		expect(page.route).toBe("about-us");
+		await disconnectCollectionPage(collection);
+		expect(page.route).toBe("pages/page");
 		expect(page.page_data_script).not.toContain("data.entry");
 		expect(page.page_data_script).toContain("data.custom = 'kept'");
 		expect(settings[0].entry_page).toBe("");
 	});
 
-	it("refuses to stop onto a route another page has", async () => {
-		addPage("contact", "contact");
-		const collection = collectionOf({ ...settings[0], entry_page: "page" });
-		await expect(clearCollectionPage(collection, "/contact")).rejects.toThrow('"contact" already uses /contact');
-	});
-
-	it("creates a draft page and opens it as the template", async () => {
+	it("creates a draft page and opens it as the collection page", async () => {
 		builder.data.insert.mockImplementation(async () => addPage("new", "pages/new"));
 		builder.page.getBlocks.mockResolvedValue([{ blockId: "root", children: [] }]);
 		builder.context.get.mockResolvedValue({ selection: { count: 0 } });
 		await createCollectionPage(collectionOf(settings[0]));
 		expect(builder.data.insert).toHaveBeenCalledWith("Builder Page", {
-			page_title: "Posts template",
+			page_title: "Posts page",
 		});
 		expect(pages.new.route).toBe("posts/:slug");
 		expect(builder.page.open).toHaveBeenCalledWith("new");
@@ -211,8 +211,14 @@ describe("lists on a page", () => {
 		expect(page.page_data_script).toContain("data.custom = 'kept'");
 	});
 
+	it("finds each list of a collection on any page, and skips other sources", async () => {
+		builder.data.getList.mockImplementation(async () => [page]);
+		const lists = await getCollectionLists(collectionOf({ ...settings[0], collection: "CMS Posts" }));
+		expect(lists.map(({ page, source }) => [page.name, source.name])).toEqual([["page", "posts"]]);
+	});
+
 	it("changes the order and the number of entries", async () => {
-		await changeCollectionList(posts, { orderBy: "modified desc", limit: 5 });
+		await changeCollectionList("page", posts, { orderBy: "modified desc", limit: 5 });
 		expect(page.page_data_script).toContain('"orderBy":"modified desc"');
 		expect(page.page_data_script).toContain('"limit":5');
 	});
@@ -253,9 +259,7 @@ describe("field connections", () => {
 
 describe("collection content", () => {
 	it("refuses entry deletion for a mapped DocType", () => {
-		expect(() => new Collection({ collection: "Blog Post", is_mapped: 1 }).deleteEntry("post")).toThrow(
-			"Desk",
-		);
+		expect(() => new Collection({ collection: "Blog Post", is_mapped: 1 }).deleteEntry("post")).toThrow("Desk");
 	});
 });
 
@@ -275,7 +279,7 @@ describe("inserted blocks", () => {
 		expect(blockNames(tree)).toContain("Title heading");
 	});
 
-	it("inserts the entry content on a template page each time the user asks", async () => {
+	it("inserts the entry content on a collection page each time the user asks", async () => {
 		const collection = collectionOf(settings[0]);
 		await setCollectionPage(collection, "page");
 		await addEntryContent(collection, [title]);
@@ -287,6 +291,6 @@ describe("inserted blocks", () => {
 	});
 
 	it("refuses entry content on a page with no entry source", async () => {
-		await expect(addEntryContent(collectionOf(settings[0]), [title])).rejects.toThrow("template page");
+		await expect(addEntryContent(collectionOf(settings[0]), [title])).rejects.toThrow("collection page");
 	});
 });

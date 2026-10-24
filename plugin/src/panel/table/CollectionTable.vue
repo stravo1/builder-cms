@@ -52,7 +52,7 @@
 						size="sm"
 						variant="ghost"
 						icon="lucide-eye"
-						label="Preview on the template page"
+						label="Preview on the collection page"
 						@click="emit('preview', row)" />
 					<Button
 						size="sm"
@@ -80,8 +80,9 @@
 import { openUrl } from "../../editor/windows.js";
 
 import { Button } from "frappe-ui";
-import { computed, ref } from "vue";
+import { computed } from "vue";
 import { isMultilineField } from "../../data/doctypes.js";
+import { useArmedClick } from "../useArmedClick.js";
 import TableCell from "./TableCell.vue";
 
 const props = defineProps({
@@ -93,7 +94,7 @@ const props = defineProps({
 });
 const emit = defineEmits(["save", "openField", "edit", "preview", "delete"]);
 // the frame cannot open a confirm() dialog, so a delete takes two clicks
-const armed = ref("");
+const { armed, confirm } = useArmedClick();
 
 /** One grid for every row, so a column fits its widest cell. The last column holds the row actions. */
 const columns = computed(() => {
@@ -106,11 +107,7 @@ const columns = computed(() => {
 	return [...props.fields.map(width), "max-content"].join(" ");
 });
 
-const remove = (row) => {
-	if (armed.value !== row.name) return void (armed.value = row.name);
-	armed.value = "";
-	emit("delete", row);
-};
+const remove = (row) => confirm(row.name) && emit("delete", row);
 </script>
 
 <style scoped>

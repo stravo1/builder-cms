@@ -13,6 +13,7 @@ from builder_cms.api.collections import (
 	remove_field,
 	update_collection,
 )
+from builder_cms.collections.access import SETTINGS_DOCTYPE
 from builder_cms.collections.schema import MODULE
 from builder_cms.tests.fixtures import AUTHOR, AUTHOR_ROLE, EDITOR, EDITOR_ROLE, OUTSIDER, CMSTestCase
 
@@ -106,6 +107,17 @@ class TestDeleteCollection(CMSTestCase):
 
 		with self.assertRaises(frappe.PermissionError):
 			delete_collection(collection["collection"])
+
+
+class TestCollectionPage(CMSTestCase):
+	def test_deleting_the_collection_page_clears_the_setting(self):
+		collection = self.make_collection()
+		page = frappe.get_doc({"doctype": "Builder Page", "page_title": "Collection page"}).insert()
+		update_collection(collection["collection"], {"entry_page": page.name})
+
+		frappe.delete_doc("Builder Page", page.name)
+
+		self.assertFalse(frappe.db.get_value(SETTINGS_DOCTYPE, collection["name"], "entry_page"))
 
 
 class TestListCollections(CMSTestCase):

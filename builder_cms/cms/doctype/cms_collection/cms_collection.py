@@ -27,6 +27,12 @@ def normalize_url(url: str) -> str:
 	return "/" + "/".join(segment for segment in segments if segment)
 
 
+def unlink_page(page: Document, method: str | None = None) -> None:
+	"""Frappe runs this before its link check, so a collection page deletes like any other page."""
+	for name in frappe.get_all(SETTINGS_DOCTYPE, filters={"entry_page": page.name}, pluck="name"):
+		frappe.db.set_value(SETTINGS_DOCTYPE, name, "entry_page", "")
+
+
 class CMSCollection(Document):
 	# begin: auto-generated types
 	# This code is auto-generated. Do not modify anything in this block.

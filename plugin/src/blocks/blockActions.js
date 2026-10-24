@@ -6,6 +6,7 @@ import { getEditorContext } from "../editor/context.js";
  */
 
 import { getDocumentBlock, getListBlock, getCardListBlock } from "./pageBlocks.js";
+import { guessBindings } from "./guessBindings.js";
 
 /** The blocks from a root down to `blockId`, or null when the tree does not hold it. */
 const findPath = (block, blockId, path = []) => {
@@ -85,6 +86,28 @@ export const bindBlock = async (blockId, key, target) => {
 		dynamicValues,
 		...(clearLegacy && { dataKey: null }),
 	});
+};
+
+/** Text and image blocks outside lists: the blocks a guess may bind to a document source. */
+const getGuessableBlocks = (block) =>
+	block.isRepeaterBlock
+		? []
+		: [
+				...(block.isText?.() || block.isImage?.() ? [block] : []),
+				...(block.children || []).flatMap(getGuessableBlocks),
+			];
+
+/** Binds each block that `guessBindings` matches to a field of `source`. Returns how many it bound. */
+export const bindGuessedBlocks = async (source, fields) => {
+	const blocks = getGuessableBlocks(await getRootBlock()).map((block) => ({
+		blockId: block.blockId,
+		name: block.blockName,
+		text: block.getTextContent(),
+		isImage: block.isImage(),
+	}));
+	const guesses = await guessBindings(blocks, fields);
+	for (const guess of guesses) await bindBlock(guess.blockId, `${source.name}.${guess.fieldname}`, guess.target);
+	return guesses.length;
 };
 
 /** Into the selected container, or at the end of the page. */

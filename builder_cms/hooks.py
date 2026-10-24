@@ -30,7 +30,8 @@ doc_events = {
 	"Custom DocPerm": {
 		"on_update": "builder_cms.collections.access.sync_all_collections",
 		"after_delete": "builder_cms.collections.access.sync_all_collections",
-	}
+	},
+	"Builder Page": {"on_trash": "builder_cms.cms.doctype.cms_collection.cms_collection.unlink_page"},
 }
 
 # Send non-GET requests for this app's endpoints as native `application/json`

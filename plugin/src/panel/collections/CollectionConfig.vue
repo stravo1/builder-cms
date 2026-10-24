@@ -1,62 +1,99 @@
 <template>
-	<div class="flex flex-col gap-5 p-3">
-		<section v-if="collection.isOwned" class="flex flex-col gap-1">
-			<span class="cms-section-label">Fields</span>
-			<FieldList :fields="collectionFields" removable :disabled="isRunning" @remove="removeField" />
-			<form class="flex flex-col gap-2 pt-2" @submit.prevent="addFields">
-				<FieldRows v-model="newFields" />
-				<!-- only once a new field has a name, so a collection with nothing to save shows no button -->
-				<Button v-if="hasNewFields" type="submit" variant="solid" label="Save" :loading="isRunning" />
-			</form>
-		</section>
-		<form class="flex flex-col gap-2" @submit.prevent="saveUrl">
-			<FormControl v-model="url" label="URL" />
-			<p class="cms-hint">Entries live at {{ normalizeUrl(url || "/") }}/:slug.</p>
-			<Button type="submit" variant="subtle" label="Save URL" :loading="isRunning" />
-		</form>
-		<div v-if="!collection.isOwned" class="flex flex-col gap-1">
-			<span class="cms-section-label">Mapping</span>
-			<p class="text-p-sm text-ink-gray-7">
-				Entries from {{ collection.doctype }} use
-				<i>
-					<code>{{ collection.slugField }}</code>
-				</i>
-				as slug.
-				{{
-					collection.publishedField
-						? `Only entries with "${collection.publishedField}" checked are public.`
-						: "All entries are public (No publish field selected)."
-				}}
-			</p>
-			<Button
-				variant="ghost"
-				label="Open in Desk"
-				@click="run(() => openUrl(`/app/${slugify(collection.doctype)}`))" />
+	<div class="flex flex-col gap-5 px-3 py-6">
+		<!-- auto-fit: two columns where the drawer is wide, one where it is narrow -->
+		<div class="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] items-start gap-x-10 gap-y-5">
+			<div v-if="access.can_manage" class="flex flex-col gap-5">
+				<section v-if="collection.isOwned" class="flex flex-col gap-1">
+					<div class="flex items-center justify-between gap-2">
+						<span class="cms-section-label">Fields</span>
+						<Button
+							variant="ghost"
+							size="sm"
+							icon="lucide-plus"
+							label="Add field"
+							@click="newFields.push(blankField())" />
+					</div>
+					<FieldList :fields="collectionFields" removable :disabled="isRunning" @remove="removeField" />
+					<form class="flex flex-col gap-2 pt-2" @submit.prevent="addFields">
+						<FieldRows v-model="newFields" />
+						<!-- only once a new field has a name, so a collection with nothing to save shows no button -->
+						<Button
+							v-if="hasNewFields"
+							class="self-end"
+							type="submit"
+							variant="solid"
+							label="Save"
+							:loading="isRunning" />
+					</form>
+				</section>
+				<div v-if="!collection.isOwned" class="flex flex-col gap-1">
+					<span class="cms-section-label">Mapping</span>
+					<p class="text-p-sm text-ink-gray-7">
+						Entries from {{ collection.doctype }} use
+						<i>
+							<code>{{ collection.slugField }}</code>
+						</i>
+						as slug.
+						{{
+							collection.publishedField
+								? `Only entries with "${collection.publishedField}" checked are public.`
+								: "All entries are public (No publish field selected)."
+						}}
+					</p>
+					<Button
+						class="self-start"
+						variant="ghost"
+						label="Open in Desk"
+						@click="run(() => openUrl(`/app/${slugify(collection.doctype)}`))" />
+				</div>
+			</div>
+			<div class="flex flex-col gap-5">
+				<form v-if="access.can_manage" class="flex flex-col gap-1.5" @submit.prevent="saveUrl">
+					<FormLabel label="URL" />
+					<div class="flex gap-2">
+						<FormControl v-model="url" class="flex-1" aria-label="URL" />
+						<Button
+							type="submit"
+							variant="subtle"
+							icon="lucide-check"
+							aria-label="Save URL"
+							tooltip="Save URL"
+							:disabled="normalizeUrl(url || '/') === collection.url"
+							:loading="isRunning" />
+					</div>
+					<p class="cms-hint">Entries live at {{ normalizeUrl(url || "/") }}/:slug.</p>
+				</form>
+				<CollectionPageSetup :collection="collection" @open="(name) => emit('open', name)" />
+				<CollectionLists :collection="collection" />
+				<section v-if="collection.isOwned && access.is_manager" class="border-t border-outline-gray-1 pt-4">
+					<RoleAccess
+						:saved="collection.roles"
+						:on-save="saveRoles"
+						hint="Roles that can read and change its entries only. The CMS roles reach every collection." />
+				</section>
+				<section v-if="access.can_manage" class="flex flex-col gap-2 border-t border-outline-gray-1 pt-4">
+					<span class="cms-section-label">
+						{{ collection.isOwned ? "Delete collection" : "Disconnect DocType" }}
+					</span>
+					<p class="cms-hint">
+						{{
+							collection.isOwned
+								? "Pages stop showing its entries."
+								: `Pages stop showing its entries. ${collection.doctype} and its records stay.`
+						}}
+					</p>
+					<Button
+						class="self-start"
+						theme="red"
+						:variant="armed ? 'solid' : 'subtle'"
+						:label="
+							armed ? 'Click again to confirm' : collection.isOwned ? 'Delete collection' : 'Disconnect'
+						"
+						:loading="isRunning"
+						@click="remove" />
+				</section>
+			</div>
 		</div>
-		<section v-if="collection.isOwned && access.is_manager" class="border-t border-outline-gray-1 pt-4">
-			<RoleAccess
-				:saved="collection.roles"
-				:on-save="saveRoles"
-				hint="Roles that can read and change its entries only. The CMS roles reach every collection." />
-		</section>
-		<section class="flex flex-col gap-2 border-t border-outline-gray-1 pt-4">
-			<span class="cms-section-label">
-				{{ collection.isOwned ? "Delete collection" : "Disconnect DocType" }}
-			</span>
-			<p class="cms-hint">
-				{{
-					collection.isOwned
-						? "Pages stop showing its entries."
-						: `Pages stop showing its entries. ${collection.doctype} and its records stay.`
-				}}
-			</p>
-			<Button
-				theme="red"
-				:variant="isArmed ? 'solid' : 'subtle'"
-				:label="isArmed ? 'Click again to confirm' : collection.isOwned ? 'Delete collection' : 'Disconnect'"
-				:loading="isRunning"
-				@click="remove" />
-		</section>
 		<p v-if="error" role="alert" class="cms-error">{{ error }}</p>
 	</div>
 </template>
@@ -64,17 +101,20 @@
 <script setup>
 import { openUrl } from "../../editor/windows.js";
 
-import { Button, FormControl } from "frappe-ui";
-import { computed, onMounted, ref, shallowRef } from "vue";
-import { normalizeUrl, slugify } from "../../cms/collection.js";
+import { Button, FormControl, FormLabel } from "frappe-ui";
+import { computed, ref, shallowRef, watch } from "vue";
+import { blankField, normalizeUrl, slugify } from "../../cms/collection.js";
 import { useAccess } from "../useAccess.js";
+import { useArmedClick } from "../useArmedClick.js";
 import { useTask } from "../useTask.js";
 import RoleAccess from "../RoleAccess.vue";
+import CollectionLists from "../page/CollectionLists.vue";
+import CollectionPageSetup from "./CollectionPageSetup.vue";
 import FieldList from "./FieldList.vue";
 import FieldRows from "./FieldRows.vue";
 
 const props = defineProps({ collection: { type: Object, required: true } });
-const emit = defineEmits(["deleted"]);
+const emit = defineEmits(["deleted", "open"]);
 
 const url = ref(props.collection.url);
 /** The rows of the new fields form. The collection's own fields are `collectionFields`. */
@@ -112,13 +152,17 @@ const addFields = async () => {
 };
 
 // the frame cannot open a confirm() dialog, so a delete takes two clicks
-const isArmed = ref(false);
+const { armed, confirm } = useArmedClick();
 const remove = async () => {
-	if (!isArmed.value) return void (isArmed.value = true);
-	isArmed.value = false;
+	if (!confirm()) return;
 	const message = props.collection.isOwned ? "Collection deleted" : "DocType disconnected";
 	if (await run(async () => (await props.collection.delete(), true), message)) emit("deleted");
 };
 
-onMounted(loadFields);
+// access arrives after mount, and a user who cannot manage sees only the collection page
+watch(
+	() => access.value.can_manage,
+	(canManage) => canManage && loadFields(),
+	{ immediate: true },
+);
 </script>

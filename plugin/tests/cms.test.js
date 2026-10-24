@@ -431,7 +431,7 @@ describe("collections", () => {
 		const blog = owned("Blog Post", { url: "/blog", entry_page: "page-detail" });
 		const entry = { name: "entry", doctype: "CMS Blog Post" };
 
-		it("finds the template page by the setting, and flags one the user changed by hand", () => {
+		it("finds the collection page by the setting, and flags one the user changed by hand", () => {
 			expect(getPageRole([blog], { name: "page-detail", route: "blog/:slug" }, [entry])).toMatchObject({
 				isBroken: false,
 			});

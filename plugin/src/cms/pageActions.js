@@ -1,16 +1,17 @@
-import { getRootBlock, removeBlock, selectBlock, updateBlock } from "../editor/canvas.js";
+import { removeBlock, selectBlock, updateBlock } from "../editor/canvas.js";
 import { openPage, setRouteVariables } from "../editor/page.js";
 import { getEditorContext } from "../editor/context.js";
 /**
- * What the CMS does to pages: the template page of a collection, and lists
+ * What the CMS does to pages: the collection page of a collection, and lists
  * and entry content on the open page.
  */
 
-import { getListBlocks, insertBlocks } from "../blocks/blockActions.js";
+import { bindGuessedBlocks, getListBlocks, insertBlocks } from "../blocks/blockActions.js";
 import { DataSource } from "../data/dataSource.js";
-import { insertDocument } from "../data/documents.js";
+import { getDocuments, insertDocument } from "../data/documents.js";
 import { PageData } from "../data/pageData.js";
-import { claimRoute, getDefaultRoute, getRouteHolders, moveToRoute } from "./routes.js";
+import { readSections } from "../data/scriptSections.js";
+import { claimRoute, getDefaultRoute, getRouteHolders, releaseRoute } from "./routes.js";
 import { Collection } from "./collection.js";
 
 export const SORT_OPTIONS = [
@@ -19,7 +20,7 @@ export const SORT_OPTIONS = [
 	{ label: "Recently updated", value: "modified desc" },
 ];
 
-/** The name of the data source on a template page. Bindings read `entry.title`. */
+/** The name of the data source on a collection page. Bindings read `entry.title`. */
 export const ENTRY_SOURCE = "entry";
 
 const getWritablePage = async () => {
@@ -31,11 +32,6 @@ const getWritablePage = async () => {
 	return context.page;
 };
 
-export const isPageEmpty = async () => {
-	const root = getRootBlock();
-	return !root.children?.length;
-};
-
 /** What Use changes, for the user to confirm: the route, and each other page that moves off it. */
 export const getCollectionPageChange = async (collection, pageName) => {
 	const route = collection.collectionPageRoute;
@@ -43,23 +39,20 @@ export const getCollectionPageChange = async (collection, pageName) => {
 	return {
 		route,
 		moves: holders.map((page) => ({
+			name: page.name,
 			title: page.page_title,
 			route: getDefaultRoute(page.name),
 		})),
-		replaces:
-			collection.collectionPage && collection.collectionPage !== pageName ? collection.collectionPage : null,
 	};
 };
 
 /**
- * Makes `pageName` the template page: the template route, the `entry`
- * source, and the settings. It works on any page, open or not. The previous
- * template page loses its `entry` source, and each page on the route moves off it.
+ * Makes `pageName` the collection page: its route, the `entry` source, and
+ * the settings. It works on any page, open or not. Each other page on the
+ * route moves off it.
  */
 export const setCollectionPage = async (collection, pageName) => {
 	const fields = await collection.getFields();
-	const previous = collection.collectionPage;
-	if (previous && previous !== pageName) await new PageData(previous).remove(ENTRY_SOURCE);
 	await claimRoute(collection.collectionPageRoute, pageName);
 	const pageData = new PageData(pageName);
 	await pageData.load();
@@ -77,16 +70,16 @@ export const setCollectionPage = async (collection, pageName) => {
 	return { source, fields };
 };
 
-/** Stop: the page moves to `route` and loses its `entry` source. Its design and bindings stay. */
-export const clearCollectionPage = async (collection, route) => {
+/** The page leaves the collection: back to Builder's default route, without the `entry` source. Its design and bindings stay. */
+export const disconnectCollectionPage = async (collection) => {
 	const pageName = collection.collectionPage;
-	await moveToRoute(pageName, route);
+	await releaseRoute(pageName);
 	await new PageData(pageName).remove(ENTRY_SOURCE);
 	await collection.saveSettings({ entry_page: "" });
 };
 
 /**
- * The collection whose template page this is. `isBroken` when the user
+ * The collection whose collection page this is. `isBroken` when the user
  * removed its `:slug` route or its `entry` source by hand.
  */
 export const getPageRole = (collections, page, sources) => {
@@ -94,21 +87,24 @@ export const getPageRole = (collections, page, sources) => {
 	return collection ? { collection, isBroken: !isCollectionPageOf(collection, page, sources) } : null;
 };
 
-/** Makes `pageName` the template page and opens it. An empty page also gets bound blocks, and a preview. */
-export const useCollectionPage = async (collection, pageName) => {
-	const { source, fields } = await setCollectionPage(collection, pageName);
+/**
+ * Makes `pageName` the collection page, opens it and previews the newest entry.
+ * The page gets new blocks for `fields`, or with `guess`, its own blocks bound
+ * to the fields they seem to show. Returns how many blocks the guess bound.
+ */
+export const useCollectionPage = async (collection, pageName, { fields, guess = false } = {}) => {
+	const { source, fields: all } = await setCollectionPage(collection, pageName);
 	await openPage(pageName);
-	// a designed page keeps its blocks. "Bind to data" binds any block to a field
-	if (await isPageEmpty()) await insertBlocks(source, collection.getDisplayFields(fields), collection.label);
+	const bound = guess ? await bindGuessedBlocks(source, all) : 0;
+	if (!guess) await insertBlocks(source, fields ?? collection.getDisplayFields(all), collection.label);
 	const newest = await collection.getNewestPublished();
 	if (newest) await setRouteVariables({ slug: newest.slug });
+	return bound;
 };
 
-/** A new draft page, made the template page. */
+/** A new draft page with the display fields, made the collection page. */
 export const createCollectionPage = async (collection) => {
-	const page = await insertDocument("Builder Page", {
-		page_title: `${collection.label} template`,
-	});
+	const page = await insertDocument("Builder Page", { page_title: `${collection.label} page` });
 	await useCollectionPage(collection, page.name);
 };
 
@@ -122,12 +118,9 @@ const getFreeName = (base, sources) => {
 
 /**
  * Adds a list of a collection to the open page. The data source behind it
- * takes the collection's defaults: published entries, links to the template page.
+ * takes the collection's defaults: published entries, links to the collection page.
  */
-export const getCollectionListSource = async (
-	collection,
-	{ orderBy = SORT_OPTIONS[0].value, limit = 20 } = {},
-) => {
+export const getCollectionListSource = async (collection, { orderBy = SORT_OPTIONS[0].value, limit = 20 } = {}) => {
 	const page = await getWritablePage();
 	const fields = await collection.getFields();
 	const pageData = new PageData(page.name);
@@ -148,7 +141,7 @@ export const isCollectionPageOf = (collection, page, sources) =>
 	SLUG_ROUTE.test(page.route || "") &&
 	sources.some((source) => source.name === ENTRY_SOURCE && source.doctype === collection.doctype);
 
-/** A page is the template of one collection. */
+/** A page is the collection page of one collection. */
 const assignCollectionPage = async (collection, pageName) => {
 	for (const other of await Collection.all()) {
 		if (other.doctype !== collection.doctype && other.collectionPage === pageName)
@@ -162,11 +155,11 @@ export const addCollectionList = async (collection, { fields, ...options }) => {
 	return insertBlocks(source, fields, collection.label, options.layout);
 };
 
-/** Inserts blocks bound to the entry of the template page. Each call adds a new set. */
+/** Inserts blocks bound to the entry of the collection page. Each call adds a new set. */
 export const addEntryContent = async (collection, fields) => {
 	const page = await getWritablePage();
 	const source = (await new PageData(page.name).load()).find((each) => each.name === ENTRY_SOURCE);
-	if (!source) throw new Error("Make this page the template page first.");
+	if (!source) throw new Error("Make this page the collection page first.");
 	return insertBlocks(source, fields, collection.label);
 };
 
@@ -186,9 +179,25 @@ export const selectCollectionList = (source) => {
 	return Boolean(block);
 };
 
-export const changeCollectionList = async (source, { orderBy, limit }) => {
-	const page = await getWritablePage();
-	const pageData = new PageData(page.name);
+/** Each page with a list of the collection, and that list's data source. A page need not be open. */
+export const getCollectionLists = async (collection) => {
+	const pages = await getDocuments("Builder Page", {
+		fields: ["name", "page_title", "route", "page_data_script"],
+		filters: [["page_data_script", "like", `%${collection.doctype}%`]],
+		orderBy: "modified desc",
+		pageLength: 100,
+	});
+	return pages.flatMap((page) =>
+		readSections(page.page_data_script || "")
+			.map((definition) => new DataSource(definition))
+			.filter((source) => source.isList && source.doctype === collection.doctype)
+			.map((source) => ({ page, source })),
+	);
+};
+
+/** Changes the list on `pageName`, open or not. */
+export const changeCollectionList = async (pageName, source, { orderBy, limit }) => {
+	const pageData = new PageData(pageName);
 	await pageData.load();
 	await pageData.save(new DataSource({ ...source.toJSON(), orderBy, limit }));
 };
