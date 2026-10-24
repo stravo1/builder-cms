@@ -10,7 +10,6 @@ const { builder, api } = vi.hoisted(() => ({
 			open: vi.fn(),
 		},
 		block: { get: vi.fn(), update: vi.fn(), insert: vi.fn(), remove: vi.fn(), select: vi.fn() },
-		canvas: { tree: null },
 		data: {
 			getList: vi.fn(),
 			getDoc: vi.fn(),
@@ -44,12 +43,6 @@ vi.mock("../src/editor/canvas.js", () => ({
 	getBlock: builder.block?.get,
 	updateBlock: builder.block?.update,
 	insertBlock: builder.block?.insert,
-	removeBlock: builder.block?.remove,
-	selectBlock: builder.block?.select,
-	findBlocks: (match) => {
-		const walk = (block) => [...(match(block) ? [block] : []), ...(block.children || []).flatMap(walk)];
-		return walk(builder.canvas.tree);
-	},
 }));
 vi.mock("frappe-ui", () => ({ toast: { error: builder.ui?.toast, success: builder.ui?.toast } }));
 vi.mock("../src/data/api.js", () => ({ api }));
@@ -58,11 +51,8 @@ import { Collection } from "../src/cms/collection.js";
 import {
 	addCollectionList,
 	addEntryContent,
-	changeCollectionList,
-	getCollectionLists,
 	createCollectionPage,
 	disconnectCollectionPage,
-	removeCollectionList,
 	setCollectionPage,
 	useCollectionPage,
 } from "../src/cms/pageActions.js";
@@ -186,41 +176,6 @@ describe("collection page", () => {
 		expect(pages.new.route).toBe("posts/:slug");
 		expect(builder.page.open).toHaveBeenCalledWith("new");
 		expect(builder.block.insert).toHaveBeenCalled();
-	});
-});
-
-describe("lists on a page", () => {
-	const posts = new DataSource({ name: "posts", doctype: "CMS Posts", fields: ["title"] });
-
-	beforeEach(() => {
-		builder.context.get.mockResolvedValue({ page, selection: { count: 0 } });
-		page.page_data_script = writeSection(page.page_data_script, "posts", posts.toJSON(), posts.toPython());
-		const root = { blockId: "root", children: [] };
-		const table = { blockId: "table", attributes: { role: "table" }, parentBlock: root };
-		const rows = { blockId: "rows", isRepeaterBlock: true, dataKey: { key: "posts" }, parentBlock: table };
-		const cards = { blockId: "cards", isRepeaterBlock: true, dataKey: { key: "posts" }, parentBlock: root };
-		table.children = [rows];
-		root.children = [table, cards];
-		builder.canvas.tree = root;
-	});
-
-	it("removes each block of the list, with the table around its rows, and then its source", async () => {
-		await removeCollectionList(posts);
-		expect(builder.block.remove.mock.calls.map(([blockId]) => blockId)).toEqual(["table", "cards"]);
-		expect(page.page_data_script).not.toContain("data.posts");
-		expect(page.page_data_script).toContain("data.custom = 'kept'");
-	});
-
-	it("finds each list of a collection on any page, and skips other sources", async () => {
-		builder.data.getList.mockImplementation(async () => [page]);
-		const lists = await getCollectionLists(collectionOf({ ...settings[0], collection: "CMS Posts" }));
-		expect(lists.map(({ page, source }) => [page.name, source.name])).toEqual([["page", "posts"]]);
-	});
-
-	it("changes the order and the number of entries", async () => {
-		await changeCollectionList("page", posts, { orderBy: "modified desc", limit: 5 });
-		expect(page.page_data_script).toContain('"orderBy":"modified desc"');
-		expect(page.page_data_script).toContain('"limit":5');
 	});
 });
 

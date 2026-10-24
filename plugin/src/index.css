@@ -12,8 +12,18 @@
 .cms-form-column {
 	@apply mx-auto w-full max-w-lg;
 }
-.cms-card {
-	@apply rounded-4 border border-outline-gray-1 p-3;
+/* a collection's settings: its fields on the left, everything else on the right. Admin goes
+   right under pages, not on a new row below the fields */
+.cms-settings-grid {
+	@apply grid items-start gap-x-10 gap-y-5;
+	grid-template-areas: "content" "pages" "admin";
+}
+@container (min-width: 560px) {
+	.cms-settings-grid {
+		grid-template-columns: 1fr 1fr;
+		grid-template-rows: auto 1fr;
+		grid-template-areas: "content pages" "content admin";
+	}
 }
 .cms-empty {
 	@apply flex flex-col items-center gap-2 px-4 py-8 text-center text-p-sm text-ink-gray-5;

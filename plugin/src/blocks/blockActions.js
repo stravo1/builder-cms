@@ -1,4 +1,4 @@
-import { findBlocks, getBlock, getRootBlock, insertBlock, updateBlock } from "../editor/canvas.js";
+import { getBlock, getRootBlock, insertBlock, updateBlock } from "../editor/canvas.js";
 import { getEditorContext } from "../editor/context.js";
 /**
  * What a data source does to blocks: insert blocks that are bound already, and
@@ -30,9 +30,7 @@ export const getSourcesForBlock = async (sources, blockId) => {
 	const nearestList = ancestors.filter((block) => block.isRepeaterBlock).at(-1)?.dataKey?.key;
 	const row = sources.find((source) => source.isList && source.name === nearestList);
 	if (nearestList) return row ? [{ source: row, prefix: "" }] : [];
-	return [
-		...sources.filter((source) => !source.isList).map((source) => ({ source, prefix: `${source.name}.` })),
-	];
+	return [...sources.filter((source) => !source.isList).map((source) => ({ source, prefix: `${source.name}.` }))];
 };
 
 export const getBindingTargets = (selection) => [
@@ -124,9 +122,3 @@ export const insertBlocks = async (source, fields, label, layout = "cards") => {
 	const tree = source.isList ? listBlock(source, chosen, label) : getDocumentBlock(source, chosen, label);
 	return insertBlock(await getParentId(), tree);
 };
-
-/** The outer block of each list of `sourceName`: the repeated block, or the table around it. */
-export const getListBlocks = (sourceName) =>
-	findBlocks((block) => block.isRepeaterBlock && block.dataKey?.key === sourceName).map((block) =>
-		block.parentBlock?.attributes?.role === "table" ? block.parentBlock : block,
-	);

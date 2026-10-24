@@ -1,8 +1,7 @@
 <template>
-	<div class="flex flex-col gap-5 px-3 py-6">
-		<!-- auto-fit: two columns where the drawer is wide, one where it is narrow -->
-		<div class="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] items-start gap-x-10 gap-y-5">
-			<div v-if="access.can_manage" class="flex flex-col gap-5">
+	<div class="flex flex-col gap-5 px-3 py-6 [container-type:inline-size]">
+		<div class="cms-settings-grid">
+			<div v-if="access.can_manage" class="flex flex-col gap-5 [grid-area:content]">
 				<section v-if="collection.isOwned" class="flex flex-col gap-1">
 					<div class="flex items-center justify-between gap-2">
 						<span class="cms-section-label">Fields</span>
@@ -47,7 +46,7 @@
 						@click="run(() => openUrl(`/app/${slugify(collection.doctype)}`))" />
 				</div>
 			</div>
-			<div class="flex flex-col gap-5">
+			<div class="flex flex-col gap-5 [grid-area:pages]">
 				<form v-if="access.can_manage" class="flex flex-col gap-1.5" @submit.prevent="saveUrl">
 					<FormLabel label="URL" />
 					<div class="flex gap-2">
@@ -64,14 +63,16 @@
 					<p class="cms-hint">Entries live at {{ normalizeUrl(url || "/") }}/:slug.</p>
 				</form>
 				<CollectionPageSetup :collection="collection" @open="(name) => emit('open', name)" />
-				<CollectionLists :collection="collection" />
+				<AddList :collection="collection" />
+			</div>
+			<div v-if="access.can_manage" class="flex flex-col gap-5 [grid-area:admin]">
 				<section v-if="collection.isOwned && access.is_manager" class="border-t border-outline-gray-1 pt-4">
 					<RoleAccess
 						:saved="collection.roles"
 						:on-save="saveRoles"
 						hint="Roles that can read and change its entries only. The CMS roles reach every collection." />
 				</section>
-				<section v-if="access.can_manage" class="flex flex-col gap-2 border-t border-outline-gray-1 pt-4">
+				<section class="flex flex-col gap-2 border-t border-outline-gray-1 pt-4">
 					<span class="cms-section-label">
 						{{ collection.isOwned ? "Delete collection" : "Disconnect DocType" }}
 					</span>
@@ -108,7 +109,7 @@ import { useAccess } from "../useAccess.js";
 import { useArmedClick } from "../useArmedClick.js";
 import { useTask } from "../useTask.js";
 import RoleAccess from "../RoleAccess.vue";
-import CollectionLists from "../page/CollectionLists.vue";
+import AddList from "./AddList.vue";
 import CollectionPageSetup from "./CollectionPageSetup.vue";
 import FieldList from "./FieldList.vue";
 import FieldRows from "./FieldRows.vue";

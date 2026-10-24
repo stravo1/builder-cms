@@ -1,5 +1,5 @@
 <template>
-	<section class="flex flex-col gap-3 border-t border-outline-gray-1 pt-4">
+	<section class="flex flex-col gap-3 border-t border-outline-gray-1 pt-4 first:border-t-0 first:pt-0">
 		<div class="flex items-start justify-between gap-2">
 			<div>
 				<span class="cms-section-label">Collection page</span>
@@ -13,38 +13,34 @@
 				@click="isConfiguring = true" />
 		</div>
 		<template v-if="page">
-			<SidebarItem :label="page.page_title" :suffix="`/${page.route}`" @click="emit('open', page.name)">
-				<template #prefix>
-					<span class="lucide-file-text size-4 text-ink-gray-6" aria-hidden="true" />
-				</template>
-			</SidebarItem>
+			<div class="flex h-7 items-center gap-2 px-2">
+				<span class="lucide-file-text size-4 shrink-0 text-ink-gray-6" aria-hidden="true" />
+				<span class="min-w-0 flex-1 truncate text-sm text-ink-gray-8">{{ page.page_title }}</span>
+				<span class="max-w-40 shrink-0 truncate text-sm text-ink-gray-5">/{{ page.route }}</span>
+				<Button
+					v-if="!isOpen"
+					variant="ghost"
+					size="sm"
+					icon="lucide-arrow-up-right"
+					tooltip="Open page"
+					aria-label="Open page"
+					@click="emit('open', page.name)" />
+			</div>
 			<p v-if="isBroken" role="alert" class="cms-error">
 				This page lost its /:slug URL or its entry content. Disconnect it and set up the collection page again.
 			</p>
 			<p v-if="notice" class="cms-hint">{{ notice }}</p>
 			<Combobox
-				v-if="!isBroken && entries.length"
-				:model-value="isOpen ? context.routeVariables?.slug || '' : ''"
+				v-if="isOpen && !isBroken && entries.length"
+				:model-value="context.routeVariables?.slug || ''"
 				label="Preview"
 				placeholder="Choose an entry…"
 				:options="entryOptions"
 				@update:model-value="preview" />
-			<AddToPage
-				v-if="isInserting"
-				kind="detail"
-				:collections="[collection]"
-				@changed="isInserting = false"
-				@cancel="isInserting = false" />
-			<div class="flex gap-2">
-				<Button variant="solid" label="Open page" @click="emit('open', page.name)" />
+			<AddToPageDialog v-model:open="isInserting" kind="detail" :collection="collection" />
+			<div v-if="isOpen && access.can_manage" class="flex flex-wrap gap-2">
+				<Button v-if="!isBroken" variant="subtle" label="Insert fields" @click="isInserting = true" />
 				<Button
-					v-if="access.can_manage && !isBroken && !isInserting"
-					variant="subtle"
-					label="Insert fields"
-					:loading="isRunning"
-					@click="startInsert" />
-				<Button
-					v-if="access.can_manage"
 					variant="subtle"
 					:theme="armed ? 'red' : 'gray'"
 					:label="armed ? 'Click again to confirm' : 'Disconnect page'"
@@ -58,17 +54,17 @@
 </template>
 
 <script setup>
-import { Button, Combobox, SidebarItem } from "frappe-ui";
+import { Button, Combobox } from "frappe-ui";
 import { computed, ref, shallowRef, watch } from "vue";
 import { disconnectCollectionPage, isCollectionPageOf } from "../../cms/pageActions.js";
 import { getDocument } from "../../data/documents.js";
 import { PageData } from "../../data/pageData.js";
 import { useEditorContext } from "../../editor/context.js";
-import { openPage } from "../../editor/page.js";
+import { setRouteVariables } from "../../editor/page.js";
 import { useAccess } from "../useAccess.js";
 import { useArmedClick } from "../useArmedClick.js";
 import { useTask } from "../useTask.js";
-import AddToPage from "./AddToPage.vue";
+import AddToPageDialog from "./AddToPageDialog.vue";
 import CollectionPageDialog from "./CollectionPageDialog.vue";
 
 const props = defineProps({ collection: { type: Object, required: true } });
@@ -102,13 +98,8 @@ const load = () =>
 	});
 watch(() => props.collection.collectionPage, load, { immediate: true });
 
-// both act on the collection page, so it opens first
-const preview = (slug) => slug && run(() => props.collection.openEntry(slug));
-const startInsert = () =>
-	run(async () => {
-		await openPage(page.value.name);
-		isInserting.value = true;
-	});
+// Preview, Insert fields and Disconnect act on the collection page, so they show only while it is open
+const preview = (slug) => slug && run(() => setRouteVariables({ slug }));
 
 const configured = ({ bound, isGuess }) => {
 	notice.value = isGuess && !bound ? "No blocks matched a field. Bind them with Bind to data." : "";
