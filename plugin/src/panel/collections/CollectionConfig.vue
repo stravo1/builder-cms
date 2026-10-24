@@ -10,9 +10,11 @@
 							v-if="hasNewFields"
 							type="submit"
 							form="cms-new-fields"
-							variant="solid"
+							variant="ghost"
 							size="sm"
-							label="Save"
+							icon="lucide-check"
+							label="Save fields"
+							tooltip="Save fields"
 							:loading="isRunning" />
 						<Button
 							variant="ghost"
