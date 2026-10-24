@@ -3,7 +3,7 @@
 		<div class="flex items-start justify-between gap-2">
 			<div>
 				<span class="cms-section-label">Collection page</span>
-				<p class="cms-hint mt-1">One design that shows each entry.</p>
+				<p class="cms-hint mt-1">One design, used for every entry.</p>
 			</div>
 			<Button
 				v-if="!page && access.can_manage"
@@ -27,7 +27,7 @@
 					@click="emit('open', page.name)" />
 			</div>
 			<p v-if="isBroken" role="alert" class="cms-error">
-				This page lost its /:slug URL or its entry content. Disconnect it and set up the collection page again.
+				This page lost its /:slug URL or its entry data. Disconnect it, then configure again.
 			</p>
 			<p v-if="notice" class="cms-hint">{{ notice }}</p>
 			<Combobox
@@ -102,7 +102,7 @@ watch(() => props.collection.collectionPage, load, { immediate: true });
 const preview = (slug) => slug && run(() => setRouteVariables({ slug }));
 
 const configured = ({ bound, isGuess }) => {
-	notice.value = isGuess && !bound ? "No blocks matched a field. Bind them with Bind to data." : "";
+	notice.value = isGuess && !bound ? "No blocks matched. Use Bind to data." : "";
 	return load();
 };
 

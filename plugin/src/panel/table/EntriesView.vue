@@ -22,7 +22,7 @@
 				:max-dimension="800"
 				@resize="(width) => (paneWidths.entry = width)" />
 			<p v-if="hasUnsavedWarning" role="status" class="cms-hint px-3 py-2">
-				Save or cancel your changes before opening another entry.
+				Save or cancel your changes first.
 			</p>
 			<EntryEditor
 				:key="selection.name"

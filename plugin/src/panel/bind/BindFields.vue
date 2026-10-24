@@ -5,8 +5,8 @@
 		<p v-else-if="!fitting.length" class="cms-hint">
 			{{
 				sources.length
-					? "Select a block inside a collection list to connect the fields of each item."
-					: "Add a list from a collection's Settings, or repeat a container for each entry."
+					? "Select a block inside an index."
+					: "Add an index first, or repeat a container."
 			}}
 		</p>
 		<template v-else>
@@ -44,7 +44,7 @@
 					</template>
 				</ItemListRow>
 				<p v-if="!shownFields.length" class="cms-hint col-span-full p-2">
-					No matching fields for this property.
+					No fields fit this property.
 				</p>
 			</div>
 			<Button

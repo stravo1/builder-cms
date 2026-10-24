@@ -26,7 +26,7 @@
 				:key="view.collection.doctype"
 				:collection="view.collection"
 				@deleted="deleted" />
-			<div v-else class="cms-empty"><p>Pick a collection to see its entries.</p></div>
+			<div v-else class="cms-empty"><p>Choose a collection.</p></div>
 		</main>
 	</div>
 </template>

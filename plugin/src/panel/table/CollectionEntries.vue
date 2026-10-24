@@ -11,7 +11,7 @@
 				{{ query ? `${shownRows.length} of ${rows.length}` : rows.length }} entries
 			</span>
 			<span v-if="!collection.isOwned" class="cms-hint truncate">
-				Edit the simple fields here. Open a row in Desk for the rest.
+				Simple fields edit here. Use Desk for the rest.
 			</span>
 			<Button
 				class="ml-auto shrink-0"

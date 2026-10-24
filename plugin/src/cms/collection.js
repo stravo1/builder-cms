@@ -358,7 +358,7 @@ export class Collection {
 	}
 
 	deleteEntry(name) {
-		if (!this.isOwned) throw new Error("Manage deletion of existing DocType entries in Desk.");
+		if (!this.isOwned) throw new Error("Delete these entries in Desk.");
 		return refreshAfterEntryWrite(api.deleteEntry(this.doctype, name));
 	}
 }

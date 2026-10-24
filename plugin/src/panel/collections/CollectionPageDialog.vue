@@ -5,11 +5,11 @@
 				<Radio
 					value="new"
 					label="Create a new page"
-					:description="`A draft page at /${collection.collectionPageRoute}, with the collection's fields.`" />
+					:description="`A draft at /${collection.collectionPageRoute}, with blocks for its fields.`" />
 				<Radio
 					value="existing"
 					label="Use an existing page"
-					description="A page you designed moves to this URL and shows each entry." />
+					:description="`It moves to /${collection.collectionPageRoute}.`" />
 			</RadioGroup>
 			<div v-if="isNew && moveLines.length" class="flex flex-col gap-1">
 				<p v-for="line in moveLines" :key="line" class="cms-hint">{{ line }}</p>
@@ -36,7 +36,7 @@
 				<MultiSelect v-model="chosen" class="w-full" :options="fieldOptions" placeholder="Choose fields…" />
 			</div>
 			<p v-else class="cms-hint">
-				Binds each block whose name or text matches a field, such as a heading "Title".
+				Binds blocks named after a field, such as "Title".
 			</p>
 			<div v-if="moveLines.length" class="flex flex-col gap-1">
 				<p v-for="line in moveLines" :key="line" class="cms-hint">{{ line }}</p>
@@ -69,7 +69,7 @@ import { getDocuments } from "../../data/documents.js";
 import { useEditorContext } from "../../editor/context.js";
 import { useTask } from "../useTask.js";
 
-const TITLES = { source: "Set up the collection page", content: "Choose the page and its content" };
+const TITLES = { source: "Collection page", content: "Choose a page" };
 const CONTENT_OPTIONS = [
 	{ label: "Insert fields", value: "fields" },
 	{ label: "Match blocks", value: "guess" },

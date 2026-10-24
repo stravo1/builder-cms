@@ -36,7 +36,7 @@ import { addCollectionList, addEntryContent } from "../../cms/pageActions.js";
 import { useTask } from "../useTask.js";
 
 const COPY = {
-	index: { title: "Add a list", inserted: "List inserted" },
+	index: { title: "Add an index", inserted: "Index inserted" },
 	detail: { title: "Insert fields", inserted: "Fields inserted" },
 };
 /** `kind` is "index" for a list of the collection's entries, or "detail" for the fields of one entry. */

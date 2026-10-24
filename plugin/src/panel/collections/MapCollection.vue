@@ -6,14 +6,14 @@
 			<FormControl v-model="url" label="URL" :placeholder="normalizeUrl(label || doctype)" />
 			<FormControl v-model="slugField" type="select" label="Slug field" :options="slugOptions" />
 			<p class="cms-hint">
-				It names each entry in its URL, such as {{ normalizeUrl(url || label || doctype) }}/my-entry.
+				URLs look like {{ normalizeUrl(url || label || doctype) }}/my-entry.
 			</p>
 			<FormControl v-model="publishedField" type="select" label="Published field" :options="publishedOptions" />
 			<Alert
 				v-if="!publishedField"
 				theme="amber"
 				:dismissible="false"
-				title="All entries are considered Published"
+				title="All entries are public."
 			/>
 		</template>
 		<p v-if="error" role="alert" class="cms-error">{{ error }}</p>

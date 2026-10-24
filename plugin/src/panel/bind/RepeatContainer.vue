@@ -28,7 +28,7 @@ const repeat = async () => {
 	const collection = props.collections.find((each) => each.doctype === chosen.value);
 	const source = await run(
 		() => connectCollectionList(collection, context.selection.blockId),
-		"The container repeats for each entry. Connect its child blocks to fields.",
+		"The container repeats for each entry.",
 	);
 	if (source) emit("changed");
 };

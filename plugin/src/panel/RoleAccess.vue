@@ -1,6 +1,15 @@
 <template>
 	<div class="flex flex-col gap-2">
-		<span class="cms-section-label">Access</span>
+		<div class="flex items-center justify-between gap-2">
+			<span class="cms-section-label">Access</span>
+			<Button
+				variant="ghost"
+				size="sm"
+				icon="lucide-external-link"
+				tooltip="Manage roles in Desk"
+				aria-label="Manage roles in Desk"
+				@click="openUrl('/app/role')" />
+		</div>
 		<p class="cms-hint">{{ hint }}</p>
 		<MultiSelect
 			v-model="roles"
@@ -8,14 +17,13 @@
 			:options="options"
 			placeholder="Choose roles…"
 			:disabled="isRunning" />
-		<div class="flex items-center gap-2">
-			<Button v-if="isChanged" variant="solid" label="Save" :loading="isRunning" @click="save" />
-			<Button
-				variant="ghost"
-				icon-left="lucide-external-link"
-				label="Manage roles in Desk"
-				@click="openUrl('/app/role')" />
-		</div>
+		<Button
+			v-if="isChanged"
+			class="self-start"
+			variant="solid"
+			label="Save"
+			:loading="isRunning"
+			@click="save" />
 		<p v-if="error" role="alert" class="cms-error">{{ error }}</p>
 	</div>
 </template>

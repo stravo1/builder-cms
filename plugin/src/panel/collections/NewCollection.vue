@@ -16,7 +16,7 @@
 					<span class="cms-section-label">Fields</span>
 					<Button variant="ghost" size="sm" icon="lucide-plus" label="Add field" @click="fields.push(blankField())" />
 				</div>
-				<p class="cms-hint">Every collection has a title, a slug, and a published flag.</p>
+				<p class="cms-hint">It gets title, slug and published fields.</p>
 				<FieldRows v-model="fields" />
 			</div>
 			<div class="flex justify-end gap-2">

@@ -12,7 +12,7 @@
 			<SectionLoader v-if="!isLoaded && !error" label="Loading entry" />
 			<div v-if="isLoaded" class="flex flex-col gap-4">
 				<p v-if="!collection.isOwned" class="cms-hint">
-					Saved to {{ collection.doctype }}. Use Desk for child tables and advanced fields.
+					Saved to {{ collection.doctype }}. Use Desk for child tables and other complex fields.
 				</p>
 				<fieldset :disabled="isRunning" class="flex min-w-0 flex-col gap-4">
 					<EntryField

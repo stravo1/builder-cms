@@ -25,26 +25,27 @@
 							:loading="isRunning" />
 					</form>
 				</section>
-				<div v-if="!collection.isOwned" class="flex flex-col gap-1">
-					<span class="cms-section-label">Mapping</span>
-					<p class="text-p-sm text-ink-gray-7">
-						Entries from {{ collection.doctype }} use
-						<i>
-							<code>{{ collection.slugField }}</code>
-						</i>
-						as slug.
-						{{
-							collection.publishedField
-								? `Only entries with "${collection.publishedField}" checked are public.`
-								: "All entries are public (No publish field selected)."
-						}}
-					</p>
-					<Button
-						class="self-start"
-						variant="ghost"
-						label="Open in Desk"
-						@click="run(() => openUrl(`/app/${slugify(collection.doctype)}`))" />
-				</div>
+				<section v-if="!collection.isOwned" class="flex flex-col gap-1">
+					<div class="flex items-center justify-between gap-2">
+						<span class="cms-section-label">{{ collection.doctype }}</span>
+						<Button
+							variant="ghost"
+							size="sm"
+							icon="lucide-external-link"
+							tooltip="Open in Desk"
+							aria-label="Open in Desk"
+							@click="run(() => openUrl(`/app/${slugify(collection.doctype)}`))" />
+					</div>
+					<div class="flex h-7 items-center justify-between gap-2 text-sm">
+						<span class="text-ink-gray-8">Slug field</span>
+						<span class="truncate text-ink-gray-5">{{ collection.slugField }}</span>
+					</div>
+					<div class="flex h-7 items-center justify-between gap-2 text-sm">
+						<span class="text-ink-gray-8">Published field</span>
+						<span class="truncate text-ink-gray-5">{{ collection.publishedField || "None" }}</span>
+					</div>
+					<p v-if="!collection.publishedField" class="cms-hint">All entries are public.</p>
+				</section>
 			</div>
 			<div class="flex flex-col gap-5 [grid-area:pages]">
 				<form v-if="access.can_manage" class="flex flex-col gap-1.5" @submit.prevent="saveUrl">
@@ -70,7 +71,7 @@
 					<RoleAccess
 						:saved="collection.roles"
 						:on-save="saveRoles"
-						hint="Roles that can read and change its entries only. The CMS roles reach every collection." />
+						hint="Extra roles that can edit its entries. CMS roles always can." />
 				</section>
 				<section class="flex flex-col gap-2 border-t border-outline-gray-1 pt-4">
 					<span class="cms-section-label">
@@ -79,8 +80,8 @@
 					<p class="cms-hint">
 						{{
 							collection.isOwned
-								? "Pages stop showing its entries."
-								: `Pages stop showing its entries. ${collection.doctype} and its records stay.`
+								? "Its entries cannot be restored. Blocks that show them go empty."
+								: `${collection.doctype} and its records stay. Blocks that show them go empty.`
 						}}
 					</p>
 					<Button

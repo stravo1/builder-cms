@@ -4,7 +4,7 @@
 		<RoleAccess
 			:saved="access.cms_roles"
 			:on-save="saveCmsRoles"
-			hint="Roles that can use the CMS. They create and manage every collection."
+			hint="These roles create and manage every collection."
 		/>
 	</div>
 	<p v-if="error" role="alert" class="cms-error p-3">{{ error }}</p>
