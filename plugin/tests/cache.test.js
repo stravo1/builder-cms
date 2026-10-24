@@ -130,4 +130,17 @@ describe("the read cache", () => {
 		await refresh;
 		expect(shown).toEqual(["first", "second"]);
 	});
+
+	// frappe-ui puts the method and exception type in `message`, and what the server said in `messages`
+	it("shows what the server said when a task fails", async () => {
+		const task = useTask();
+		const cause = Object.assign(new Error("builder_cms.api.collections.create_collection ValidationError"), {
+			messages: ['Pick another name for the field <strong>"Title"</strong>.'],
+		});
+
+		await task.run(() => Promise.reject(cause));
+
+		expect(task.error.value).toBe('Pick another name for the field "Title".');
+		expect(builder.ui.toast).toHaveBeenCalledWith('Pick another name for the field "Title".');
+	});
 });

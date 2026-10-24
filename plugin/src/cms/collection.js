@@ -9,6 +9,7 @@ import { toast } from "frappe-ui";
  */
 
 import { api } from "../data/api.js";
+import { getErrorMessage } from "../data/errors.js";
 import { cached, forget } from "../data/cache.js";
 import { PageData } from "../data/pageData.js";
 import { assertRouteFree, claimRoute } from "./routes.js";
@@ -69,7 +70,7 @@ const refreshAfterEntryWrite = async (write) => {
 		await refreshPageData();
 	} catch (error) {
 		toast.error(
-			`The entry changed, but page data could not refresh: ${error.message || String(error)}`,
+			`The entry changed, but page data could not refresh: ${getErrorMessage(error)}`,
 		);
 	}
 	return entry;
