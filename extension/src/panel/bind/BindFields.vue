@@ -1,9 +1,6 @@
 <template>
 	<div class="flex min-h-0 flex-col gap-3 p-3">
-		<p v-if="context.selection.count !== 1" class="cms-hint">
-			Select one text, image, link, or container block.
-		</p>
-		<p v-else-if="context.readOnly" class="cms-hint">This page is read-only.</p>
+		<p v-if="context.readOnly" class="cms-hint">This page is read-only.</p>
 		<SectionLoader v-else-if="isRunning && !source" label="Loading fields" />
 		<p v-else-if="!fitting.length" class="cms-hint">
 			{{

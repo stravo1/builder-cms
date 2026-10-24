@@ -29,3 +29,17 @@ export const insertBlock = (parentId, tree) => {
 	if (!parent.canHaveChildren()) throw new Error("Select a container to insert content.");
 	return parent.addChild(tree);
 };
+
+/** Selects the block, and scrolls the canvas and the layers to it. */
+export const selectBlock = (blockId) => useCanvasStore().selectBlock(getBlock(blockId), null, true, true);
+
+export const removeBlock = (blockId) => {
+	assertWritable();
+	useCanvasStore().activeCanvas.removeBlock(getBlock(blockId), true);
+};
+
+/** Each block in the tree that `match` accepts. */
+export const findBlocks = (match, block = getRootBlock()) => [
+	...(match(block) ? [block] : []),
+	...(block.children || []).flatMap((child) => findBlocks(match, child)),
+];

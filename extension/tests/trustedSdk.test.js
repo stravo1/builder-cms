@@ -37,6 +37,7 @@ const block = (id) => ({
 	isImage: () => false,
 	isLink: () => false,
 	isRoot: () => id === "root",
+	getBlockDescription: () => `${id} block`,
 	addChild: vi.fn((tree) => tree),
 });
 
@@ -65,7 +66,7 @@ describe("trusted editor integration", () => {
 	it("derives live page, read-only and selection state without a bridge", () => {
 		const context = useEditorContext();
 		runtime.selected.push(block("root"));
-		expect(context.selection).toMatchObject({ count: 1, isRoot: true, blockId: "root" });
+		expect(context.selection).toMatchObject({ count: 1, isRoot: true, blockId: "root", label: "root block" });
 		runtime.builder.readOnlyMode = true;
 		expect(context.readOnly).toBe(true);
 		runtime.page.activePage = { name: "other" };

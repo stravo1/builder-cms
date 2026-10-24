@@ -1,55 +1,59 @@
 <template>
 	<section class="flex flex-col gap-2 border-t border-outline-gray-1 p-3">
-		<span class="cms-section-label">Lists on this page</span>
-		<p v-for="list in lists" :key="list.name" class="text-p-sm text-ink-gray-7">
-			{{ list.label }}
-		</p>
-		<p v-if="!lists.length" class="cms-hint">No lists yet.</p>
-		<FormControl
-			v-if="collections.length"
-			v-model="chosen"
-			type="combobox"
-			label="Add a list of"
-			:options="collections.map((each) => ({ label: each.title, value: each.doctype }))"
-			placeholder="Choose a collection…"
-		/>
-		<div v-else class="cms-card">
+		<div class="flex items-center justify-between gap-2">
+			<span class="cms-section-label">On this page</span>
+			<Dropdown
+				v-if="addOptions.length && !adding"
+				:options="addOptions"
+				:button="{ label: 'Add', iconLeft: 'lucide-plus', variant: 'ghost', size: 'sm' }" />
+		</div>
+		<ListRow
+			v-for="source in lists"
+			:key="`${source.name}:${revision}`"
+			:source="source"
+			:collection="collections.find((each) => each.doctype === source.doctype)"
+			@changed="emit('changed')" />
+		<p v-if="!lists.length && !adding" class="cms-hint">No lists yet.</p>
+		<AddToPage
+			v-if="adding"
+			:kind="adding"
+			:collections="adding === 'detail' ? [template] : collections"
+			@changed="added"
+			@cancel="adding = null" />
+		<div v-if="!collections.length" class="cms-card">
 			<p class="cms-hint mb-3">Create a collection or connect an existing DocType to get started.</p>
 			<Button label="Go to collections" @click="emit('collections')" />
 		</div>
 	</section>
-	<AddToPage
-		v-if="collection"
-		:key="collection.doctype"
-		kind="index"
-		:collection="collection"
-		@changed="emit('changed')"
-	/>
 </template>
 
 <script setup>
-import { Button, FormControl } from "frappe-ui";
+import { Button, Dropdown } from "frappe-ui";
 import { computed, ref } from "vue";
-import { SORT_OPTIONS } from "../../cms/pageActions.js";
 import AddToPage from "../collections/AddToPage.vue";
+import ListRow from "./ListRow.vue";
 
+/** `template` is the collection this page is the template of, or null. */
 const props = defineProps({
 	collections: { type: Array, required: true },
 	sources: { type: Array, required: true },
+	template: { type: Object, default: null },
+	revision: { type: Number, default: 0 },
 });
 const emit = defineEmits(["changed", "collections"]);
-const chosen = ref("");
-const collection = computed(() => props.collections.find((each) => each.doctype === chosen.value));
-const lists = computed(() =>
-	props.sources
-		.filter((source) => source.isList)
-		.map((source) => {
-			const title = props.collections.find((each) => each.doctype === source.doctype)?.title || source.doctype;
-			const order = SORT_OPTIONS.find((option) => option.value === source.orderBy)?.label;
-			return {
-				name: source.name,
-				label: [title, order, `${source.limit} entries`].filter(Boolean).join(" · "),
-			};
-		}),
-);
+// the form that is open: "index" for a list, "detail" for entry fields
+const adding = ref(null);
+const lists = computed(() => props.sources.filter((source) => source.isList));
+const addOptions = computed(() => [
+	...(props.collections.length
+		? [{ label: "List of a collection", icon: "lucide-list", onClick: () => (adding.value = "index") }]
+		: []),
+	...(props.template
+		? [{ label: "Entry fields", icon: "lucide-text-cursor-input", onClick: () => (adding.value = "detail") }]
+		: []),
+]);
+const added = () => {
+	adding.value = null;
+	emit("changed");
+};
 </script>

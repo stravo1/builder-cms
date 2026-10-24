@@ -20,6 +20,8 @@ export const getEditorContext = () => {
 			isImage: block?.isImage(),
 			isLink: block?.isLink(),
 			isRoot: block?.isRoot(),
+			isRepeater: Boolean(block?.isRepeaterBlock),
+			label: block?.getBlockDescription(),
 		},
 	};
 };

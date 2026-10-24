@@ -1,4 +1,4 @@
-import { getRootBlock, updateBlock } from "../editor/canvas.js";
+import { getRootBlock, removeBlock, selectBlock, updateBlock } from "../editor/canvas.js";
 import { openPage, setRouteVariables } from "../editor/page.js";
 import { getEditorContext } from "../editor/context.js";
 /**
@@ -6,7 +6,7 @@ import { getEditorContext } from "../editor/context.js";
  * and entry content on the open page.
  */
 
-import { insertBlocks } from "../blocks/blockActions.js";
+import { getListBlocks, insertBlocks } from "../blocks/blockActions.js";
 import { DataSource } from "../data/dataSource.js";
 import { insertDocument } from "../data/documents.js";
 import { PageData } from "../data/pageData.js";
@@ -177,4 +177,25 @@ export const connectCollectionList = async (collection, blockId, options = {}) =
 		dataKey: { key: source.name, comesFrom: "dataScript" },
 	});
 	return source;
+};
+
+/** Selects the first block of the list. False when no block on the page shows it. */
+export const selectCollectionList = (source) => {
+	const [block] = getListBlocks(source.name);
+	if (block) selectBlock(block.blockId);
+	return Boolean(block);
+};
+
+export const changeCollectionList = async (source, { orderBy, limit }) => {
+	const page = await getWritablePage();
+	const pageData = new PageData(page.name);
+	await pageData.load();
+	await pageData.save(new DataSource({ ...source.toJSON(), orderBy, limit }));
+};
+
+/** Removes the blocks of the list, then its data source, so no block reads a missing source. */
+export const removeCollectionList = async (source) => {
+	const page = await getWritablePage();
+	for (const block of getListBlocks(source.name)) removeBlock(block.blockId);
+	await new PageData(page.name).remove(source.name);
 };
