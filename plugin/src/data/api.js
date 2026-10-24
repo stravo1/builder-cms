@@ -30,8 +30,8 @@ export const api = {
 	getDoctypeNames: () => call(`${COLLECTIONS}.get_doctype_names`),
 
 	getEntries: (collection, start) => call(`${ENTRIES}.get_entries`, { collection, start }),
-	getRows: (collection, fieldnames, start) =>
-		call(`${ENTRIES}.get_rows`, { collection, fieldnames, start }),
+	getRows: (collection, fieldnames, start, pageLength) =>
+		call(`${ENTRIES}.get_rows`, { collection, fieldnames, start, page_length: pageLength }),
 	getEntry: (collection, name) => call(`${ENTRIES}.get_entry`, { collection, name }),
 	getNewestPublished: (collection) => call(`${ENTRIES}.get_newest_published`, { collection }),
 	saveEntry: (collection, entry) => call(`${ENTRIES}.save_entry`, { collection, entry }),

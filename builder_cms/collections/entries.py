@@ -9,6 +9,8 @@ from frappe import _
 
 from builder_cms.collections.schema import CollectionSchema, slugify
 
+# the most rows one request may ask for; the table asks for fewer
+MAX_ROWS_PER_PAGE = 200
 EDITABLE_TYPES = frozenset(
 	{
 		"Data",
@@ -77,12 +79,18 @@ class CollectionEntries:
 			"published": row.get(published_field) if published_field else 1,
 		}
 
-	def get_rows(self, fieldnames: list[str], start: int = 0) -> list[dict]:
+	def get_rows(self, fieldnames: list[str], start: int = 0, page_length: int = 20) -> list[dict]:
 		unknown = set(fieldnames) - set(self.fieldnames)
 		if unknown:
 			frappe.throw(_("{0} has no fields {1}.").format(self.doctype, ", ".join(sorted(unknown))))
+		if not 0 < page_length <= MAX_ROWS_PER_PAGE:
+			frappe.throw(_("Ask for 1 to {0} rows at a time.").format(MAX_ROWS_PER_PAGE))
 		return frappe.get_list(
-			self.doctype, fields=["name", *fieldnames], order_by="modified desc", start=start, page_length=200
+			self.doctype,
+			fields=["name", *fieldnames],
+			order_by="modified desc",
+			start=start,
+			page_length=page_length,
 		)
 
 	def get(self, name: str) -> dict:

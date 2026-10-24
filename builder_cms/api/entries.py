@@ -16,8 +16,8 @@ def get_entries(collection: str, start: int = 0) -> list[dict]:
 
 
 @frappe.whitelist()
-def get_rows(collection: str, fieldnames: list[str], start: int = 0) -> list[dict]:
-	return get_entries_of(collection).get_rows(fieldnames, start)
+def get_rows(collection: str, fieldnames: list[str], start: int = 0, page_length: int = 20) -> list[dict]:
+	return get_entries_of(collection).get_rows(fieldnames, start, page_length)
 
 
 @frappe.whitelist()

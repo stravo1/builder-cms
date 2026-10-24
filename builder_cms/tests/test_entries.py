@@ -3,7 +3,14 @@
 
 import frappe
 
-from builder_cms.api.entries import delete_entry, get_entries, get_entry, get_newest_published, save_entry
+from builder_cms.api.entries import (
+	delete_entry,
+	get_entries,
+	get_entry,
+	get_newest_published,
+	get_rows,
+	save_entry,
+)
 from builder_cms.tests.fixtures import AUTHOR, AUTHOR_ROLE, OUTSIDER, CMSTestCase
 
 
@@ -49,6 +56,19 @@ class TestEntries(CMSTestCase):
 		delete_entry(self.doctype, entry["name"])
 
 		self.assertFalse(frappe.db.exists(self.doctype, entry["name"]))
+
+	def test_rows_come_one_page_at_a_time(self):
+		for title in ("One", "Two", "Three"):
+			save_entry(self.doctype, {"title": title})
+
+		first = get_rows(self.doctype, ["title"], page_length=2)
+		rest = get_rows(self.doctype, ["title"], start=2, page_length=2)
+
+		self.assertEqual([row["title"] for row in first + rest], ["Three", "Two", "One"])
+
+	def test_a_page_larger_than_the_limit_is_refused(self):
+		with self.assertRaises(frappe.ValidationError):
+			get_rows(self.doctype, ["title"], page_length=500)
 
 	def test_an_outsider_is_refused(self):
 		frappe.set_user(OUTSIDER)

@@ -1,44 +1,29 @@
 <template>
-	<EntryEditor
-		v-if="panelEntry"
-		:collection="collection"
-		:entry-name="panelEntry.name"
-		:field-name="panelEntry.fieldName || ''"
-		@back="panelEntry = null"
-		@saved="finishPanelEntry" />
-	<div v-else class="flex min-h-0 flex-1 flex-col">
-		<header
-			class="flex shrink-0 flex-col gap-2 border-b border-outline-gray-1"
-			:class="isPanel ? 'p-3' : 'pb-3'">
-			<div class="flex items-center justify-between gap-2">
-				<!-- invisible, not removed, so the buttons keep their place while the rows load -->
-				<span class="text-p-sm text-ink-gray-5" :class="{ invisible: !fields.length }">
-					{{ query ? `${shownRows.length} of ${rows.length}` : rows.length }} entries
-				</span>
-				<div class="flex items-center gap-1">
-					<Button
-						size="sm"
-						icon-left="lucide-plus"
-						label="New entry"
-						:disabled="isRunning"
-						@click="createEntry" />
-					<Button
-						v-if="isPanel"
-						size="sm"
-						variant="ghost"
-						icon="lucide-maximize-2"
-						label="View in dialog"
-						@click="openDialog()" />
-				</div>
-			</div>
-			<FormControl v-model="query" placeholder="Search entries…" aria-label="Search entries" />
+	<div class="flex min-h-0 flex-1 flex-col">
+		<header class="flex shrink-0 items-center gap-3 border-b border-outline-gray-1 px-4 py-2">
+			<FormControl
+				v-model="query"
+				class="w-64"
+				placeholder="Search entries…"
+				aria-label="Search entries" />
+			<!-- invisible, not removed, so the toolbar keeps its place while the rows load -->
+			<span class="shrink-0 text-p-sm text-ink-gray-5" :class="{ invisible: !fields.length }">
+				{{ query ? `${shownRows.length} of ${rows.length}` : rows.length }} entries
+			</span>
+			<span v-if="!collection.isOwned" class="cms-hint truncate">
+				Edit the simple fields here. Open a row in Desk for the rest.
+			</span>
+			<Button
+				class="ml-auto shrink-0"
+				size="sm"
+				icon-left="lucide-plus"
+				label="New entry"
+				:disabled="isRunning"
+				@click="emit('create')" />
 		</header>
 		<p v-if="error" role="alert" class="cms-error p-3">{{ error }}</p>
 		<SectionLoader v-if="isRunning && !fields.length" label="Loading entries" />
 		<template v-else>
-			<p v-if="!collection.isOwned" class="cms-hint px-3 py-2">
-				Edit the simple fields here. Open a row in Desk for the rest.
-			</p>
 			<CollectionTable
 				:collection="collection"
 				:fields="fields"
@@ -46,8 +31,8 @@
 				:selected-entry-name="selectedEntryName"
 				:empty-message="emptyMessage"
 				@save="saveCell"
-				@open-field="openField"
-				@edit="editEntry"
+				@open-field="(row, field) => emit('edit', row, field.fieldname)"
+				@edit="(row) => emit('edit', row)"
 				@preview="preview"
 				@delete="deleteRow" />
 			<Button
@@ -63,24 +48,20 @@
 
 <script setup>
 import { subscribeDocuments } from "../../data/documents.js";
-import { closeCollectionDialog, openCollectionDialog } from "../../editor/windows.js";
 
 import { Button, FormControl } from "frappe-ui";
-import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, ref, shallowRef } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import CollectionTable from "./CollectionTable.vue";
 import { useCollectionRows } from "./useCollectionRows.js";
 import SectionLoader from "../SectionLoader.vue";
 
-const EntryEditor = defineAsyncComponent(() => import("../entries/EntryEditor.vue"));
 const props = defineProps({
 	collection: { type: Object, required: true },
-	isPanel: Boolean,
 	selectedEntryName: { type: String, default: "" },
 });
 const emit = defineEmits(["create", "edit"]);
 const { fields, rows, hasMore, isRunning, error, run, reload, loadMore, saveCell, deleteRow } =
 	useCollectionRows(props.collection);
-const panelEntry = shallowRef(null);
 const emptyMessage = computed(() => (query.value ? "No entries match your search." : "No entries yet."));
 defineExpose({ reload });
 const query = ref("");
@@ -94,31 +75,7 @@ const shownRows = computed(() => {
 		),
 	);
 });
-const openDialog = () =>
-	run(async () => {
-		await openCollectionDialog({
-			title: props.collection.label,
-			size: "5xl",
-			height: 600,
-			props: { doctype: props.collection.doctype },
-		});
-		await reload();
-	});
-const openField = (row, field) =>
-	props.isPanel
-		? (panelEntry.value = { name: row.name, fieldName: field.fieldname })
-		: emit("edit", row, field.fieldname);
-const createEntry = () => (props.isPanel ? (panelEntry.value = { name: "" }) : emit("create"));
-const editEntry = (row) => (props.isPanel ? (panelEntry.value = { name: row.name }) : emit("edit", row));
-const finishPanelEntry = async () => {
-	panelEntry.value = null;
-	await reload();
-};
-const preview = (row) =>
-	run(async () => {
-		await props.collection.openEntry(row[props.collection.slugField]);
-		if (!props.isPanel) await closeCollectionDialog();
-	});
+const preview = (row) => run(() => props.collection.openEntry(row[props.collection.slugField]));
 let unsubscribe;
 onMounted(() => {
 	unsubscribe = subscribeDocuments(props.collection.doctype, reload);

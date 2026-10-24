@@ -34,6 +34,7 @@ export const FIELD_TYPES = [
 	{ label: "Number", value: "Int" },
 	{ label: "Yes or no", value: "Check" },
 ];
+export const blankField = () => ({ label: "", fieldtype: "Data" });
 
 /** Every collection the app makes has these. The page bindings and the entry route need them. */
 export const STANDARD_FIELDNAMES = ["title", "slug", "published"];
@@ -67,7 +68,9 @@ const refreshAfterEntryWrite = async (write) => {
 	try {
 		await refreshPageData();
 	} catch (error) {
-		toast.error(`The entry changed, but page data could not refresh: ${error.message || String(error)}`);
+		toast.error(
+			`The entry changed, but page data could not refresh: ${error.message || String(error)}`,
+		);
 	}
 	return entry;
 };
@@ -164,7 +167,7 @@ export class Collection {
 		return this.settings.entry_page || null;
 	}
 
-	/** The route of the template page. Builder stores a route with no leading slash. */
+	/** The route of the collection page. Builder stores a route with no leading slash. */
 	get collectionPageRoute() {
 		return `${this.url.slice(1)}/:slug`;
 	}
@@ -183,7 +186,7 @@ export class Collection {
 		forget("collections");
 	}
 
-	/** The template page follows the URL. Lists read its route on each request, so their links follow too. */
+	/** The collection page follows the URL. Lists read its route on each request, so their links follow too. */
 	async changeUrl(url) {
 		const previous = this.settings;
 		this.settings = { ...previous, url: normalizeUrl(url) };
@@ -200,9 +203,9 @@ export class Collection {
 		await this.saveSettings({ url: this.settings.url });
 	}
 
-	/** Shows one entry on the template page: previewed in the editor, or live in a new tab. */
+	/** Shows one entry on the collection page: previewed in the editor, or live in a new tab. */
 	async openEntry(slug, live = false) {
-		if (!this.collectionPage) throw new Error("Set up a template page first.");
+		if (!this.collectionPage) throw new Error("Set up a collection page first.");
 		if (!live) {
 			await openPage(this.collectionPage);
 			return setRouteVariables({ slug });
@@ -242,7 +245,8 @@ export class Collection {
 	}
 
 	async refreshPageFields(fieldname) {
-		for (const name of await Collection.getCmsPageNames()) await this.removePageField(name, fieldname);
+		for (const name of await Collection.getCmsPageNames())
+			await this.removePageField(name, fieldname);
 	}
 
 	/**
@@ -279,7 +283,7 @@ export class Collection {
 
 	/**
 	 * A complete data source of this collection: the content fields, newest
-	 * first, published entries only, and a link through the template page.
+	 * first, published entries only, and a link through the collection page.
 	 */
 	getSourceDefaults(fields) {
 		return {
@@ -289,7 +293,7 @@ export class Collection {
 			fields: [...new Set(["name", ...fields.map((field) => field.fieldname)])],
 			orderBy: "creation desc",
 			publishedField: this.publishedField || null,
-			// the slug field gives the value. The template page route names it `:slug`
+			// the slug field gives the value. The collection page route names it `:slug`
 			link: { collection: this.doctype, field: this.slugField, variable: "slug" },
 		};
 	}
@@ -300,7 +304,9 @@ export class Collection {
 		const display = fields.filter(
 			(field) => !steering.includes(field.fieldname) && field.fieldtype !== "Check",
 		);
-		return display.length ? display : [{ fieldname: "name", label: "Name", fieldtype: "Data" }];
+		return display.length
+			? display
+			: [{ fieldname: "name", label: "Name", fieldtype: "Data" }];
 	}
 
 	/**
@@ -327,12 +333,13 @@ export class Collection {
 		return [...fields].sort((first, second) => rank(first) - rank(second));
 	}
 
-	/** Every row, with the fields the table shows. */
-	getRows(fields, { start = 0 } = {}) {
+	/** One page of rows, newest first, with the fields the table shows. */
+	getRows(fields, { start = 0, pageLength }) {
 		return api.getRows(
 			this.doctype,
 			fields.map((field) => field.fieldname),
 			start,
+			pageLength,
 		);
 	}
 
