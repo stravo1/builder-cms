@@ -1,6 +1,6 @@
 <template>
 	<form aria-label="Entry editor" class="flex h-full min-h-0 flex-col" @submit.prevent="save">
-		<header class="shrink-0 px-3 py-3" :class="{ 'border-b border-outline-gray-1': !isDrawer }">
+		<header class="shrink-0 px-3 py-3">
 			<h3 class="truncate text-base font-semibold text-ink-gray-9">
 				{{ entryName ? "Edit entry" : "New entry" }}
 			</h3>
@@ -32,9 +32,7 @@
 			</div>
 			<p v-if="error" role="alert" class="cms-error mt-3">{{ error }}</p>
 		</div>
-		<footer
-			class="flex shrink-0 justify-end gap-2 p-3"
-			:class="{ 'border-t border-outline-gray-1': !isDrawer }">
+		<footer class="flex shrink-0 justify-end gap-2 p-3">
 			<Button label="Cancel" :disabled="isRunning" @click="emit('back')" />
 			<Button type="submit" variant="solid" label="Save" :loading="isRunning" :disabled="!isLoaded" />
 		</footer>
@@ -42,21 +40,19 @@
 </template>
 
 <script setup>
-import { openUrl } from "../../editor/windows.js";
-
 import { Button } from "frappe-ui";
 import { computed, onMounted, ref, shallowRef, watch } from "vue";
-import { slugify } from "../../cms/collection.js";
+import { slugify } from "../../cms/routes.js";
 import { getWritableFields } from "../../data/doctypes.js";
+import { openUrl } from "../../editor/windows.js";
+import SectionLoader from "../SectionLoader.vue";
 import { useTask } from "../useTask.js";
 import EntryField from "./EntryField.vue";
-import SectionLoader from "../SectionLoader.vue";
 
 const props = defineProps({
 	collection: { type: Object, required: true },
 	entryName: { type: String, default: "" },
 	fieldName: { type: String, default: "" },
-	isDrawer: Boolean,
 });
 const emit = defineEmits(["back", "saved"]);
 const fields = shallowRef([]);

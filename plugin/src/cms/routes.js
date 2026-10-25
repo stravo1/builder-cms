@@ -1,10 +1,25 @@
-import { getDocuments, updateDocument } from "../data/documents.js";
 /**
  * Keeps one page on a collection page route. Builder does not refuse two pages on
  * one route, so the plugin checks before it writes one.
  */
 
+import { getDocuments, updateDocument } from "../data/documents.js";
+
 const PAGE = "Builder Page";
+
+export const slugify = (text) =>
+	text
+		.toLowerCase()
+		.normalize("NFKD")
+		.replace(/[\u0300-\u036f]/g, "")
+		.replace(/[^a-z0-9]+/g, "-")
+		.replace(/^-+|-+$/g, "");
+
+/** `blog`, `/blog/`, and ` /Blog ` all become `/blog`. Each segment is a slug: `/blog/news` stays. */
+export const normalizeUrl = (url) => `/${url.split("/").map(slugify).filter(Boolean).join("/")}`;
+
+/** The route variable that names an entry: `:slug`, or `<slug>` in Frappe's form. */
+export const SLUG_ROUTE = /:slug\b|<slug>/;
 
 /** Builder gives a new page this route. A page that leaves a collection page route goes back to it. */
 export const getDefaultRoute = (pageName) => `pages/${pageName}`;

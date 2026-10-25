@@ -37,14 +37,14 @@
 </template>
 
 <script setup>
-import NativeButton from "../NativeButton.js";
 import { Button, FormControl, ItemListRow } from "frappe-ui";
 import { computed, onMounted, ref } from "vue";
 import { Collection } from "../../cms/collection.js";
+import NativeButton from "../NativeButton.js";
 import PanelHeader from "../PanelHeader.vue";
+import SectionLoader from "../SectionLoader.vue";
 import { useAccess } from "../useAccess.js";
 import { useTask } from "../useTask.js";
-import SectionLoader from "../SectionLoader.vue";
 
 defineProps({ selected: { type: String, default: "" } });
 const emit = defineEmits(["open", "create"]);

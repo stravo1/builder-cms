@@ -64,7 +64,7 @@ describe("trusted editor integration", () => {
 	it("derives live page, read-only and selection state without a bridge", () => {
 		const context = useEditorContext();
 		runtime.selected.push(block("root"));
-		expect(context.selection).toMatchObject({ count: 1, isRoot: true, blockId: "root", label: "root block" });
+		expect(getEditorContext().selection).toEqual({ count: 1, blockId: "root", isContainer: true });
 		runtime.builder.readOnlyMode = true;
 		expect(context.readOnly).toBe(true);
 		runtime.page.activePage = { name: "other" };

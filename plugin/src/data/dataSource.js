@@ -9,8 +9,8 @@
 
 import { isIdentifier, PythonExpression, toPython } from "./python.js";
 
-export const SOURCE_TYPES = ["Document List", "Document"];
-export const OPERATORS = ["=", "!=", "like", "not like", ">", ">=", "<", "<=", "is"];
+/** The fields a data source reads. `name` always comes, so a row has a key. */
+export const getSourceFieldnames = (fields) => [...new Set(["name", ...fields.map((field) => field.fieldname)])];
 
 /** A filter value of `{{ route.slug }}` reads the route variable of the page. */
 const ROUTE_VALUE = /^\{\{\s*route\.([A-Za-z_][A-Za-z0-9_]*)\s*\}\}$/;

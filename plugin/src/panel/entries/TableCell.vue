@@ -3,14 +3,14 @@
 		v-if="field.fieldtype === 'Check'"
 		:model-value="Boolean(value)"
 		:disabled="readOnly"
-		:aria-label="field.label || field.fieldname"
+		:aria-label="label"
 		@update:model-value="(checked) => emit('save', checked ? 1 : 0)"
 	/>
 	<button
 		v-else-if="isMultilineField(field)"
 		class="line-clamp-2 w-full rounded-1 px-2 text-left text-sm text-ink-gray-7 hover:bg-surface-gray-2"
 		:disabled="readOnly"
-		:aria-label="field.label || field.fieldname"
+		:aria-label="label"
 		@click="emit('open')"
 	>
 		{{ preview || "Empty" }}
@@ -23,7 +23,7 @@
 		:model-value="value ?? ''"
 		:options="selectOptions"
 		:disabled="readOnly"
-		:aria-label="field.label || field.fieldname"
+		:aria-label="label"
 		@update:model-value="(chosen) => emit('save', chosen)"
 	/>
 	<FormControl
@@ -33,7 +33,7 @@
 		variant="ghost"
 		:model-value="value ?? ''"
 		:disabled="readOnly"
-		:aria-label="field.label || field.fieldname"
+		:aria-label="label"
 		@update:model-value="(picked) => picked !== value && emit('save', picked || null)"
 	/>
 	<div v-else class="flex items-center gap-2">
@@ -46,7 +46,7 @@
 			:type="isNumber ? 'number' : 'text'"
 			:placeholder="isImage ? 'Image URL' : ''"
 			:disabled="readOnly"
-			:aria-label="field.label || field.fieldname"
+			:aria-label="label"
 			@keydown.enter="($event) => $event.target.blur()"
 			@keydown.esc="cancel"
 			@blur="commit"
@@ -58,18 +58,17 @@
 <script setup>
 import { Checkbox, FormControl, TextInput } from "frappe-ui";
 import { computed, ref, watch } from "vue";
-import { isMultilineField } from "../../data/doctypes.js";
-import ImageThumbnail from "../entries/ImageThumbnail.vue";
-import ImageUploader from "../entries/ImageUploader.vue";
-
-const NUMBER_TYPES = ["Int", "Float", "Currency", "Percent"];
+import { getFieldLabel, getSelectOptions, isMultilineField, isNumberField } from "../../data/doctypes.js";
+import ImageThumbnail from "./ImageThumbnail.vue";
+import ImageUploader from "./ImageUploader.vue";
 
 const props = defineProps({ field: { type: Object, required: true }, value: null, readOnly: Boolean });
 const emit = defineEmits(["save", "open"]);
 
-const isNumber = computed(() => NUMBER_TYPES.includes(props.field.fieldtype));
+const label = computed(() => getFieldLabel(props.field));
+const isNumber = computed(() => isNumberField(props.field));
 const isImage = computed(() => props.field.fieldtype === "Attach Image");
-const selectOptions = computed(() => ["", ...(props.field.options || "").split("\n").filter(Boolean)]);
+const selectOptions = computed(() => getSelectOptions(props.field));
 const preview = computed(() => {
 	if (props.field.fieldtype !== "Text Editor") return String(props.value ?? "");
 	return props.value ? new DOMParser().parseFromString(String(props.value), "text/html").body.textContent : "";

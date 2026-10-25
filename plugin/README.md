@@ -2,45 +2,25 @@
 
 Create content in Frappe and connect it to Builder pages. A collection can be a CMS content type or an existing DocType.
 
-## Manage content
+## Use
 
-Open **CMS → Collections**, then choose a collection.
+The plugin adds a **CMS** tab to the editor. [DESCRIPTION.md](DESCRIPTION.md) describes the features for users. In short:
 
-- **Entries** shows an editable table in the panel. Search the loaded rows, edit a cell, or choose **New entry**. The edit button opens the entry form in the panel. Click rich text or another multiline field to open the same form and focus that field. **Save** returns to the table; **Cancel** discards the draft. Leave a new CMS entry's slug empty to generate it from its title.
-- **View in dialog** expands the table into a large dialog. The edit button and multiline cells open an entry drawer over its right side. The table keeps its width and columns. The clicked field receives focus. **Save** closes the drawer and updates both tables immediately; **Cancel** discards the draft. A failed save keeps it open. The drawer has only a left divider, with no shadow or animation. Save or cancel pending changes before switching entries. Simple text cells save on Enter or blur; Escape cancels the edit.
-- **Pages** opens the collection's index and detail pages, or takes you to page setup.
-- **Settings** manages the URL and CMS fields. Fields show ten at a time; **Load more fields** reveals the next ten. Custom CMS fields can be removed after confirmation. Title, Slug, and Published are required by the CMS. **Delete collection** removes the DocType and its entries, and removes the collection from every page. For an existing DocType, **Disconnect** removes only the CMS link, and the DocType and its records stay.
+- The left list shows the collections. **New** makes a content type, or connects an existing DocType.
+- **Entries** shows an editable table. Text cells save on Enter or blur, and Escape cancels the edit. The edit button and multiline cells open the entry form at the right. Save or cancel the form before you open another entry.
+- **Settings** holds the fields, the URL, the collection page, the index, the roles and **Delete collection**. For an existing DocType, **Disconnect** removes only the CMS link. The DocType and its records stay.
+- Builder's **Set Dynamic Value** picker shows a **CMS fields** group for text, image and link properties.
+- Builder's **Settings → CMS** holds the roles that can use the whole CMS.
 
-Existing DocTypes support simple entry fields in the same editor. Use **Open in Desk** for child tables, naming rules, and advanced fields. The plugin offers no schema removal or entry deletion for these collections.
-
-## Connect a page
-
-Open a Builder page and select **CMS → This page**. Choose a collection, select a page type, then click **Connect page**.
-
-| Page type | Content                        | URL           |
-| --------- | ------------------------------ | ------------- |
-| Index     | A repeating collection list    | `/blog`       |
-| Detail    | One entry selected by its slug | `/blog/:slug` |
-
-Each collection has one index page and one detail page. Assigning a replacement moves the previous page to a `previous-<page>` URL. Route conflicts with unrelated pages stop the change.
-
-An empty page gets bound starter blocks. A designed page keeps its layout. On an index page, insert a **Cards** or **Table** list, or select a container and choose **Use selected container as list**. Its children repeat for each entry.
-
-To map content, select a block on the canvas and choose a field under **Connect a field**. The CMS panel stays open while you select blocks. Text, image source, link URL, and visibility bindings are available for compatible blocks. Text and container blocks can also bind a **Link URL**. Binding a URL turns the block into a link and keeps its text and visibility bindings. Right-click **Bind to data** for the same field picker.
-
-Inside a list, fields come from the current item. On a detail page, they come from the page entry. **Disconnect field** removes that property's binding. The detail page's **Preview content** picker switches between published entries.
-
-## Connect an existing DocType
-
-Choose **Collections → New → Existing doctype**. Select a DocType, a slug field, and an optional published checkbox field. Use a unique text field that fits in one URL segment. With no published field, all entries can appear on the page. Child tables and Single DocTypes are not independent collections.
+Existing DocTypes support simple fields in the entry form. Use **Open in Desk** for child tables, naming rules and other fields.
 
 ## Storage and rendering
 
-The `cms` app owns the collections. Each one is a `CMS Collection` row and a custom `CMS <name>` DocType in the CMS module. The row stores the settings, the page assignments, and the roles of that collection. The app writes the DocPerms of each DocType, so Frappe applies its normal permissions and document validation when you edit entries.
+The `cms` app owns the collections. Each one is a `CMS Collection` row and a custom `CMS <name>` DocType in the CMS module. The row stores the settings, the collection page and the roles of that collection. The app writes the DocPerms of each DocType, so Frappe applies its normal permissions and validation when you edit entries.
 
-Each page data source has a marked section in `page_data_script`. The plugin updates its own sections and keeps other script content. Public rendering reads the configured fields with `frappe.db.get_all`; a configured published field excludes drafts. Removing or adding a CMS field updates these generated sources. After an entry changes, the plugin calls `builder.page.refreshData()` to update the canvas with the current page data.
+Each data source of a page is a marked section in `page_data_script`. The plugin changes only its own sections, and keeps the rest of the script. A published page reads the fields with `frappe.db.get_all`, and a published field leaves out drafts. When you add or remove a CMS field, the plugin updates these sections on every page. After an entry changes, the plugin reads the page data again, so the canvas shows the new content.
 
-Content edits appear on published pages without republishing their layouts. A detail page answers 404 for a draft or unknown slug. In the editor, **Preview content** also lists drafts. This needs a Builder version that gives page scripts `in_preview`. A page connected with version 0.1.0 gets this after you connect it again. Image fields take a URL or an upload. An upload is public and lands in Builder's upload folder. The panel shows an image icon for an image on another site, because a frame may load images only from the site.
+A collection page answers 404 for a draft or an unknown slug. In the editor, the entry preview also lists drafts. Image fields take a URL or an upload. An upload is public. The panel shows an image icon for an image on another site, because a frame may load images only from the site.
 
 ## Development
 
@@ -51,24 +31,21 @@ npm test
 npm run build
 ```
 
-Load the dev server through Builder's **Plugins → Load dev plugin**. The SDK origin in `vite.config.js` must match the editor origin. Restart the dev server after changing dependencies.
+Load the dev server through Builder's **Plugins → Load dev plugin**. The SDK origin in `vite.config.js` must match the editor origin. Restart the dev server after you change dependencies.
 
-The plugin uses the trusted SDK from `stravo1/frappe-builder-extension-sdk` on the `trusted-extensions-api` branch.
-Its entry exports a Vue plugin. The plugin registers the CMS panel, block menu, and overlay component.
-Builder supplies the plugin's Vue, stores, and frappe-ui through shared imports.
+The plugin uses the trusted SDK from `stravo1/frappe-builder-extension-sdk` on the `trusted-extensions-api` branch. Its entry, `src/main.js`, registers the CMS drawer tab, the CMS settings pane and the **CMS fields** group of **Set Dynamic Value**. Builder supplies Vue, its stores and frappe-ui through shared imports.
 
-`src/editor/` reads the editor state, changes canvas blocks, and opens dialogs and the binding popup.
-`src/data/documents.js` uses Frappe's document APIs and the editor's realtime connection.
-It keeps page data scripts in sync with the active page after a write.
-The rich text editor remains a lazy-loaded dependency of the entry form.
+| Folder | What it holds |
+| --- | --- |
+| `src/blocks/` | The block trees that the plugin inserts, and the bindings of a block. |
+| `src/cms/` | Collections, collection pages, routes and access. |
+| `src/data/` | Calls to the `cms` app and to Frappe, the read cache, and the data sources in a page script. |
+| `src/editor/` | The editor state, the canvas and the open page. |
+| `src/panel/` | The Vue views of the drawer and the settings pane. |
 
-The plugin calls `cms.api.*` through frappe-ui's `call()` in `src/data/api.js`.
-Each request uses the current user's session. The CMS app checks permissions.
-The manifest has no bridge capabilities. Removing a field still drops its column.
+The plugin calls `builder_cms.api.*` through frappe-ui's `call()` in `src/data/api.js`. Each request uses the session of the user, and the app checks permissions. Removing a field drops its column.
 
-Component edits use Vite hot reload with a development Vue build of Builder.
-With a production Vue build, the SDK automatically reloads Builder and restores the dev plugin.
-Registration changes can also trigger a full reload.
+Component edits use Vite hot reload with a development Vue build of Builder. With a production Vue build, the SDK reloads Builder and restores the dev plugin. A change to a registration can also reload Builder.
 
 ### Browser checks
 

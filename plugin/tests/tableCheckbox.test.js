@@ -7,7 +7,7 @@ vi.mock("frappe-ui", async () => ({
 	TextInput: { render: () => null },
 }));
 
-import TableCell from "../src/panel/table/TableCell.vue";
+import TableCell from "../src/panel/entries/TableCell.vue";
 
 const mountCheckbox = (value, onSave) => {
 	let input;

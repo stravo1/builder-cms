@@ -1,8 +1,8 @@
-import { getMetadata } from "./documents.js";
-/** The doctypes and fields a data source can read. */
+/** The doctypes and fields a data source can read, and how the panel shows a field. */
 
 import { api } from "./api.js";
 import { cached } from "./cache.js";
+import { getMetadata } from "./documents.js";
 
 /**
  * Fields with no database column, as `frappe.model.no_value_fields` lists them.
@@ -55,6 +55,18 @@ const MULTILINE_TYPES = new Set([
 ]);
 
 export const isMultilineField = (field) => MULTILINE_TYPES.has(field.fieldtype);
+
+const NUMBER_TYPES = new Set(["Int", "Float", "Currency", "Percent"]);
+
+export const isNumberField = (field) => NUMBER_TYPES.has(field.fieldtype);
+
+export const getFieldLabel = (field) => field.label || field.fieldname;
+
+/** A field as an option of a picker. */
+export const toFieldOption = (field) => ({ label: getFieldLabel(field), value: field.fieldname });
+
+/** The choices of a Select field, with an empty choice first. */
+export const getSelectOptions = (field) => ["", ...(field.options || "").split("\n").filter(Boolean)];
 
 const EDITABLE_TYPES = new Set([
 	"Data",

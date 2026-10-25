@@ -168,7 +168,7 @@ describe("collection page", () => {
 	it("creates a draft page and opens it as the collection page", async () => {
 		builder.data.insert.mockImplementation(async () => addPage("new", "pages/new"));
 		builder.page.getBlocks.mockResolvedValue([{ blockId: "root", children: [] }]);
-		builder.context.get.mockResolvedValue({ selection: { count: 0 } });
+		builder.context.get.mockReturnValue({ selection: { count: 0 } });
 		await createCollectionPage(collectionOf(settings[0]));
 		expect(builder.data.insert).toHaveBeenCalledWith("Builder Page", {
 			page_title: "Posts page",
@@ -199,16 +199,16 @@ describe("field connections", () => {
 		expect(await getSourcesForBlock([posts, entry], "title")).toEqual([{ source: posts, prefix: "" }]);
 	});
 
-	it("changes a legacy text binding without leaving it active after disconnect", async () => {
+	it("replaces a legacy text binding when a guess binds the text", async () => {
 		builder.block.get.mockResolvedValue({
 			dataKey: { key: "entry.title", type: "key", property: "innerHTML" },
 			dynamicValues: [],
 		});
-		await bindBlock("title", "", false);
-		expect(builder.block.update).toHaveBeenCalledWith(
-			"title",
-			expect.objectContaining({ dataKey: null, dynamicValues: [] }),
-		);
+		await bindBlock("title", "entry.title", "text");
+		expect(builder.block.update).toHaveBeenCalledWith("title", {
+			dataKey: null,
+			dynamicValues: [{ key: "entry.title", type: "key", property: "innerHTML", comesFrom: "dataScript" }],
+		});
 	});
 });
 
@@ -223,7 +223,7 @@ describe("inserted blocks", () => {
 	const blockNames = (block) => [block.blockName, ...(block.children || []).flatMap(blockNames)];
 
 	beforeEach(() => {
-		builder.context.get.mockResolvedValue({ page, selection: { count: 0 } });
+		builder.context.get.mockReturnValue({ page, selection: { count: 0 } });
 		builder.page.getBlocks.mockResolvedValue([{ blockId: "root", children: [] }]);
 	});
 

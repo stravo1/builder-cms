@@ -1,3 +1,5 @@
+import { getFieldTarget } from "./pageBlocks.js";
+
 /**
  * Guesses which blocks of a designed page show which fields: a block whose
  * name or text is the field's label or fieldname. A stub until an LLM guesses.
@@ -11,7 +13,7 @@ export const guessBindings = (blocks, fields) => {
 	return fields.flatMap((field) => {
 		if (field.fieldtype === "Check") return [];
 		const names = [field.fieldname, field.label].map(normalize).filter(Boolean);
-		const target = field.fieldtype === "Attach Image" ? "image" : "text";
+		const target = getFieldTarget(field);
 		const index = free.findIndex(
 			(block) =>
 				block.isImage === (target === "image") &&

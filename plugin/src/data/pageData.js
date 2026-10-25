@@ -1,4 +1,3 @@
-import { getDocument, updateDocument } from "./documents.js";
 /**
  * The data sources of one page, read from and written to its data script.
  *
@@ -7,9 +6,26 @@ import { getDocument, updateDocument } from "./documents.js";
  */
 
 import { DataSource } from "./dataSource.js";
+import { getDocument, getDocuments, updateDocument } from "./documents.js";
 import { readSections, removeSection, writeSection } from "./scriptSections.js";
 
 const PAGE = "Builder Page";
+const PAGE_LENGTH = 100;
+
+/** Every page with a CMS section. It reads every name before a caller writes, because a write can take a page out of the filter and shift the paging. */
+export const getCmsPageNames = async () => {
+	const names = [];
+	for (;;) {
+		const pages = await getDocuments(PAGE, {
+			fields: ["name"],
+			filters: [["page_data_script", "like", "%builder-cms:start%"]],
+			pageLength: PAGE_LENGTH,
+			start: names.length,
+		});
+		names.push(...pages.map((page) => page.name));
+		if (pages.length < PAGE_LENGTH) return names;
+	}
+};
 
 export class PageData {
 	constructor(pageName) {

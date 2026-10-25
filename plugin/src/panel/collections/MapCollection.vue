@@ -33,8 +33,9 @@
 <script setup>
 import { Alert, Button, FormControl } from "frappe-ui";
 import { computed, onMounted, ref, shallowRef, watch } from "vue";
-import { Collection, normalizeUrl } from "../../cms/collection.js";
-import { getDoctypeFields, getDoctypeNames } from "../../data/doctypes.js";
+import { Collection, SETTINGS_DOCTYPE } from "../../cms/collection.js";
+import { normalizeUrl } from "../../cms/routes.js";
+import { getDoctypeFields, getDoctypeNames, toFieldOption } from "../../data/doctypes.js";
 import { useTask } from "../useTask.js";
 
 const emit = defineEmits(["created", "cancel"]);
@@ -52,14 +53,14 @@ const slugOptions = computed(() => [
 	{ label: "Name", value: "name" },
 	...fields.value
 		.filter((field) => ["Data", "Read Only"].includes(field.fieldtype))
-		.map((field) => ({ label: field.label || field.fieldname, value: field.fieldname })),
+		.map(toFieldOption),
 ]);
 
 const publishedOptions = computed(() => [
 	{ label: "None, every row is public", value: "" },
 	...fields.value
 		.filter((field) => field.fieldtype === "Check")
-		.map((field) => ({ label: field.label || field.fieldname, value: field.fieldname })),
+		.map(toFieldOption),
 ]);
 
 /** A field named like the role is the likely pick. The user can change it. */
@@ -88,7 +89,7 @@ const map = async () => {
 onMounted(() =>
 	run(async () => {
 		const [names, existing] = await Promise.all([getDoctypeNames(), Collection.all()]);
-		const taken = new Set(["CMS Collection", ...existing.map((collection) => collection.doctype)]);
+		const taken = new Set([SETTINGS_DOCTYPE, ...existing.map((collection) => collection.doctype)]);
 		doctypeNames.value = names.filter((name) => !taken.has(name));
 	}),
 );

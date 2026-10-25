@@ -17,7 +17,8 @@ vi.mock("../src/data/documents.js", () => ({
 	}),
 }));
 
-const { Collection, markSameLabels, normalizeUrl } = await import("../src/cms/collection.js");
+const { Collection, markSameLabels } = await import("../src/cms/collection.js");
+const { normalizeUrl } = await import("../src/cms/routes.js");
 const { getDoctypeFields, isMultilineField } = await import("../src/data/doctypes.js");
 const { getCardListBlock, getDocumentBlock, getListBlock } = await import("../src/blocks/pageBlocks.js");
 const { getPageRole, isCollectionPageOf } = await import("../src/cms/pageActions.js");
@@ -404,7 +405,8 @@ describe("collections", () => {
 
 		it("opens its rows in Desk", () => {
 			expect(posts.getDeskUrl("my post")).toBe("/app/blog-post/my%20post");
-			expect(pages.getDeskUrl()).toBe("/app/web-page/new-web-page-1");
+			expect(pages.getDeskUrl("new")).toBe("/app/web-page/new-web-page-1");
+			expect(pages.getDeskUrl()).toBe("/app/web-page");
 		});
 	});
 

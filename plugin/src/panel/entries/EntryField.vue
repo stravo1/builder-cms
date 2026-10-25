@@ -19,8 +19,8 @@
 <script setup>
 import { FormControl } from "frappe-ui";
 import { computed, ref } from "vue";
-import { isMultilineField } from "../../data/doctypes.js";
-import RichTextField from "../collections/RichTextField.vue";
+import { getFieldLabel, getSelectOptions, isMultilineField, isNumberField } from "../../data/doctypes.js";
+import RichTextField from "./RichTextField.vue";
 import ImageUploader from "./ImageUploader.vue";
 
 const props = defineProps({ field: { type: Object, required: true } });
@@ -34,13 +34,13 @@ defineExpose({
 		else container.value.querySelector("input, textarea, button")?.focus();
 	},
 });
-const label = computed(() => props.field.label || props.field.fieldname);
+const label = computed(() => getFieldLabel(props.field));
 const isImage = computed(() => props.field.fieldtype === "Attach Image");
-const options = computed(() => ["", ...(props.field.options || "").split("\n").filter(Boolean)]);
+const options = computed(() => getSelectOptions(props.field));
 const type = computed(() => {
 	const fieldtype = props.field.fieldtype;
 	if (fieldtype === "Check") return "checkbox";
-	if (["Int", "Float", "Currency", "Percent"].includes(fieldtype)) return "number";
+	if (isNumberField(props.field)) return "number";
 	if (isMultilineField(props.field)) return "textarea";
 	return { Date: "date", Datetime: "datetime", Time: "time", Select: "select" }[fieldtype] || "text";
 });

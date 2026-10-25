@@ -30,7 +30,8 @@
 <script setup>
 import { Button, FormControl, TabButtons } from "frappe-ui";
 import { ref } from "vue";
-import { blankField, Collection, normalizeUrl } from "../../cms/collection.js";
+import { blankField, Collection } from "../../cms/collection.js";
+import { normalizeUrl } from "../../cms/routes.js";
 import { useAccess } from "../useAccess.js";
 import { useTask } from "../useTask.js";
 import FieldRows from "./FieldRows.vue";

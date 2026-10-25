@@ -19,13 +19,12 @@
 </template>
 
 <script setup>
-import { openPage } from "../../editor/page.js";
-
 import { TabButtons } from "frappe-ui";
 import { ref } from "vue";
-import EntriesView from "../table/EntriesView.vue";
-import CollectionConfig from "./CollectionConfig.vue";
+import { openPage } from "../../editor/page.js";
+import EntriesView from "../entries/EntriesView.vue";
 import { useTask } from "../useTask.js";
+import CollectionConfig from "./CollectionConfig.vue";
 
 defineProps({
 	collection: { type: Object, required: true },

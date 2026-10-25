@@ -29,11 +29,10 @@
 </template>
 
 <script setup>
-import { openUrl } from "../editor/windows.js";
-
 import { Button, MultiSelect } from "frappe-ui";
 import { computed, onMounted, onUnmounted, ref, shallowRef } from "vue";
 import { forgetAccess, getAccess } from "../cms/access.js";
+import { openUrl } from "../editor/windows.js";
 import { useTask } from "./useTask.js";
 
 /**

@@ -13,7 +13,7 @@
 					class="cell head"
 					role="columnheader"
 					:class="{ first: index === 0 }">
-					{{ field.label || field.fieldname }}
+					{{ getFieldLabel(field) }}
 				</div>
 				<div class="cell head" role="columnheader"><span class="sr-only">Actions</span></div>
 			</div>
@@ -77,11 +77,10 @@
 </template>
 
 <script setup>
-import { openUrl } from "../../editor/windows.js";
-
 import { Button } from "frappe-ui";
 import { computed } from "vue";
-import { isMultilineField } from "../../data/doctypes.js";
+import { getFieldLabel, isMultilineField } from "../../data/doctypes.js";
+import { openUrl } from "../../editor/windows.js";
 import { useArmedClick } from "../useArmedClick.js";
 import TableCell from "./TableCell.vue";
 

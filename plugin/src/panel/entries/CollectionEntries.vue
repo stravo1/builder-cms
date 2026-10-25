@@ -47,13 +47,12 @@
 </template>
 
 <script setup>
-import { subscribeDocuments } from "../../data/documents.js";
-
 import { Button, FormControl } from "frappe-ui";
 import { computed, onBeforeUnmount, onMounted, ref } from "vue";
+import { subscribeDocuments } from "../../data/documents.js";
+import SectionLoader from "../SectionLoader.vue";
 import CollectionTable from "./CollectionTable.vue";
 import { useCollectionRows } from "./useCollectionRows.js";
-import SectionLoader from "../SectionLoader.vue";
 
 const props = defineProps({
 	collection: { type: Object, required: true },
@@ -62,9 +61,9 @@ const props = defineProps({
 const emit = defineEmits(["create", "edit"]);
 const { fields, rows, hasMore, isRunning, error, run, reload, loadMore, saveCell, deleteRow } =
 	useCollectionRows(props.collection);
-const emptyMessage = computed(() => (query.value ? "No entries match your search." : "No entries yet."));
 defineExpose({ reload });
 const query = ref("");
+const emptyMessage = computed(() => (query.value ? "No entries match your search." : "No entries yet."));
 const shownRows = computed(() => {
 	const search = query.value.trim().toLowerCase();
 	return rows.value.filter((row) =>

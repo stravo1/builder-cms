@@ -38,7 +38,7 @@
 							icon="lucide-external-link"
 							tooltip="Open in Desk"
 							aria-label="Open in Desk"
-							@click="run(() => openUrl(`/app/${slugify(collection.doctype)}`))" />
+							@click="openUrl(collection.getDeskUrl())" />
 					</div>
 					<div class="flex h-7 items-center justify-between gap-2 text-sm">
 						<span class="text-ink-gray-8">Slug field</span>
@@ -68,7 +68,7 @@
 					<p class="cms-hint">Entries live at {{ normalizeUrl(url || "/") }}/:slug.</p>
 				</form>
 				<CollectionPageSetup :collection="collection" @open="(name) => emit('open', name)" />
-				<AddList :collection="collection" />
+				<IndexSetup :collection="collection" />
 			</div>
 			<div v-if="access.can_manage" class="flex flex-col gap-5 [grid-area:admin]">
 				<section v-if="collection.isOwned && access.is_manager" class="border-t border-outline-gray-1 pt-4">
@@ -105,16 +105,16 @@
 </template>
 
 <script setup>
-import { openUrl } from "../../editor/windows.js";
-
 import { Button, FormControl, FormLabel } from "frappe-ui";
 import { computed, ref, shallowRef, watch } from "vue";
-import { blankField, normalizeUrl, slugify } from "../../cms/collection.js";
+import { blankField } from "../../cms/collection.js";
+import { normalizeUrl } from "../../cms/routes.js";
+import { openUrl } from "../../editor/windows.js";
 import { useAccess } from "../useAccess.js";
 import { useArmedClick } from "../useArmedClick.js";
 import { useTask } from "../useTask.js";
 import RoleAccess from "../RoleAccess.vue";
-import AddList from "./AddList.vue";
+import IndexSetup from "./IndexSetup.vue";
 import CollectionPageSetup from "./CollectionPageSetup.vue";
 import FieldList from "./FieldList.vue";
 import FieldRows from "./FieldRows.vue";

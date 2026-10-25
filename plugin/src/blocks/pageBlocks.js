@@ -14,29 +14,34 @@ const column = { display: "flex", flexDirection: "column" };
  */
 const richText = { element: "span", baseStyles: { display: "block" } };
 
-/** How a field shows: an image sets `src`, every other field sets the text. */
-const getBinding = (field, key) =>
-	field.fieldtype === "Attach Image"
-		? { key, type: "attribute", property: "src", comesFrom: "dataScript" }
-		: { key, type: "key", property: "innerHTML", comesFrom: "dataScript" };
+/** The block properties a field can set, by binding target. */
+export const BOUND_PROPERTIES = {
+	text: { type: "key", property: "innerHTML" },
+	image: { type: "attribute", property: "src" },
+	link: { type: "attribute", property: "href" },
+};
+
+/** An image field sets `src`, and every other field sets the text. */
+export const getFieldTarget = (field) => (field.fieldtype === "Attach Image" ? "image" : "text");
+
+export const getBinding = (key, target) => ({ key, ...BOUND_PROPERTIES[target], comesFrom: "dataScript" });
+
+/** Shows the value of `key`, and hides when it is empty. */
+const boundBlock = (field, key) => ({
+	blockName: field.label,
+	dynamicValues: [getBinding(key, getFieldTarget(field))],
+	visibilityCondition: { key, comesFrom: "dataScript" },
+});
+
+const imageBlock = (baseStyles) => ({ element: "img", attributes: { alt: "" }, baseStyles });
+
+const linkBinding = getBinding("url", "link");
 
 const fieldBlock = (field, key, isFirst) => {
-	const binding = getBinding(field, key);
-	const shared = {
-		blockName: field.label,
-		dynamicValues: [binding],
-		visibilityCondition: { key, comesFrom: "dataScript" },
-	};
-	if (binding.type === "attribute") {
-		return {
-			...shared,
-			element: "img",
-			attributes: { alt: "" },
-			baseStyles: { width: "100%", objectFit: "cover" },
-		};
-	}
-	if (field.fieldtype === "Text Editor") return { ...shared, ...richText };
-	return { ...shared, element: isFirst ? "h3" : "p" };
+	const bound = boundBlock(field, key);
+	if (getFieldTarget(field) === "image") return { ...bound, ...imageBlock({ width: "100%", objectFit: "cover" }) };
+	if (field.fieldtype === "Text Editor") return { ...bound, ...richText };
+	return { ...bound, element: isFirst ? "h3" : "p" };
 };
 
 const fieldBlocks = (fields, keyOf) =>
@@ -71,23 +76,13 @@ const headerCell = { ...cell, fontWeight: "600", whiteSpace: "nowrap" };
 
 /** Text, an image thumbnail, or rich text kept to two lines. */
 const valueBlock = (field, key) => {
-	const binding = getBinding(field, key);
-	const shared = {
-		blockName: field.label,
-		dynamicValues: [binding],
-		visibilityCondition: { key, comesFrom: "dataScript" },
-	};
-	if (binding.type === "attribute") {
-		return {
-			...shared,
-			element: "img",
-			attributes: { alt: "" },
-			baseStyles: { width: "40px", height: "40px", objectFit: "cover", display: "block" },
-		};
+	const bound = boundBlock(field, key);
+	if (getFieldTarget(field) === "image") {
+		return { ...bound, ...imageBlock({ width: "40px", height: "40px", objectFit: "cover", display: "block" }) };
 	}
 	if (field.fieldtype === "Text Editor") {
 		return {
-			...shared,
+			...bound,
 			element: richText.element,
 			baseStyles: {
 				display: "-webkit-box",
@@ -97,7 +92,7 @@ const valueBlock = (field, key) => {
 			},
 		};
 	}
-	return { ...shared, element: "span" };
+	return { ...bound, element: "span" };
 };
 
 /** The first cell holds the link to the row's page. */
@@ -106,7 +101,7 @@ const linked = (source, block) =>
 		? {
 				element: "a",
 				blockName: "Link",
-				dynamicValues: [{ key: "url", type: "attribute", property: "href", comesFrom: "dataScript" }],
+				dynamicValues: [linkBinding],
 				children: [block],
 			}
 		: block;
@@ -206,7 +201,7 @@ export const getCardListBlock = (source, fields, label = source.name) => ({
 							{
 								element: "a",
 								innerHTML: "Read more →",
-								dynamicValues: [{ key: "url", type: "attribute", property: "href", comesFrom: "dataScript" }],
+								dynamicValues: [linkBinding],
 								visibilityCondition: { key: "url" },
 							},
 						]

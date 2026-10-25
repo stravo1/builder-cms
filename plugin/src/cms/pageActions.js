@@ -1,16 +1,16 @@
-import { openPage, setRouteVariables } from "../editor/page.js";
-import { getEditorContext } from "../editor/context.js";
 /**
  * What the CMS does to pages: the collection page of a collection, and lists
  * and entry content on the open page.
  */
 
 import { bindGuessedBlocks, insertBlocks } from "../blocks/blockActions.js";
-import { DataSource } from "../data/dataSource.js";
+import { DataSource, getSourceFieldnames } from "../data/dataSource.js";
 import { insertDocument } from "../data/documents.js";
 import { PageData } from "../data/pageData.js";
-import { claimRoute, getDefaultRoute, getRouteHolders, releaseRoute } from "./routes.js";
+import { getEditorContext } from "../editor/context.js";
+import { openPage, setRouteVariables } from "../editor/page.js";
 import { Collection } from "./collection.js";
+import { claimRoute, getDefaultRoute, getRouteHolders, releaseRoute, SLUG_ROUTE } from "./routes.js";
 
 export const SORT_OPTIONS = [
 	{ label: "Newest first", value: "creation desc" },
@@ -21,8 +21,8 @@ export const SORT_OPTIONS = [
 /** The name of the data source on a collection page. Bindings read `entry.title`. */
 export const ENTRY_SOURCE = "entry";
 
-const getWritablePage = async () => {
-	const context = await getEditorContext();
+const getWritablePage = () => {
+	const context = getEditorContext();
 	if (!context.page) throw new Error("Open a page first.");
 	if (context.readOnly) throw new Error("This page is read-only.");
 	if (context.editingMode && context.editingMode !== "page")
@@ -58,7 +58,7 @@ export const setCollectionPage = async (collection, pageName) => {
 		name: ENTRY_SOURCE,
 		type: "Document",
 		doctype: collection.doctype,
-		fields: [...new Set(["name", ...fields.map((field) => field.fieldname)])],
+		fields: getSourceFieldnames(fields),
 		// the route always names it `:slug`. The mapping says which field holds it
 		filters: [[collection.slugField, "=", "{{ route.slug }}"]],
 		publishedField: collection.publishedField || null,
@@ -118,8 +118,8 @@ const getFreeName = (base, sources) => {
  * Adds a list of a collection to the open page. The data source behind it
  * takes the collection's defaults: published entries, links to the collection page.
  */
-export const getCollectionListSource = async (collection, { orderBy = SORT_OPTIONS[0].value, limit = 20 } = {}) => {
-	const page = await getWritablePage();
+const getCollectionListSource = async (collection, { orderBy = SORT_OPTIONS[0].value, limit = 20 } = {}) => {
+	const page = getWritablePage();
 	const fields = await collection.getFields();
 	const pageData = new PageData(page.name);
 	const sources = await pageData.load();
@@ -130,8 +130,6 @@ export const getCollectionListSource = async (collection, { orderBy = SORT_OPTIO
 	await pageData.save(source);
 	return source;
 };
-
-const SLUG_ROUTE = /:slug\b|<slug>/;
 
 /** The settings point at the page, and the page still has a `:slug` route and the `entry` source of the collection. */
 export const isCollectionPageOf = (collection, page, sources) =>
@@ -155,7 +153,7 @@ export const addCollectionList = async (collection, { fields, ...options }) => {
 
 /** Inserts blocks bound to the entry of the collection page. Each call adds a new set. */
 export const addEntryContent = async (collection, fields) => {
-	const page = await getWritablePage();
+	const page = getWritablePage();
 	const source = (await new PageData(page.name).load()).find((each) => each.name === ENTRY_SOURCE);
 	if (!source) throw new Error("Make this page the collection page first.");
 	return insertBlocks(source, fields, collection.label);

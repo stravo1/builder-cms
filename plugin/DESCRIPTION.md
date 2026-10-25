@@ -4,44 +4,36 @@ Keep your content in Frappe and show it on your Builder pages. A collection can 
 
 ## Collections
 
-Open **CMS → Collections** to make or open a collection.
+Open the **CMS** tab to see your collections. Click **New** to add one:
 
-- **New collection** makes a content type with a title, a slug, and a published flag. Add your own fields in **Settings**.
-- **Existing doctype** connects a DocType that you already have. Pick the field that gives each entry its URL, and an optional published checkbox.
-- **Show entries** opens a table. Edit a cell in place, or open an entry to edit all of its fields.
+- **New content type** makes a content type with a title, a slug and a published flag. You can add more fields when you make it, or later in **Settings**.
+- **Existing doctype** connects a DocType that you already have. Pick the field that gives each entry its URL, and an optional published checkbox. Only a System Manager or a Website Manager can connect a DocType.
+
+Open a collection to see its **Entries**. Edit a cell in the table, or open an entry to edit all of its fields.
 
 ## Pages
 
-Make a page, then open **CMS → This page** and pick a collection.
+Each collection has one collection page, a single design for every entry. In the collection's **Settings**, click **Configure** under **Collection page**. Then make a new page with blocks for the fields, or use a page that you already have. A page that you already have can get new blocks, or the CMS can bind the blocks that have the name of a field, such as "Title".
 
-| Page type | What it shows | Example URL |
-|---|---|---|
-| Index | A list of entries, as cards or a table | `/blog` |
-| Detail | One entry, found by its slug | `/blog/:slug` |
+The collection page gets a URL such as `/blog/:slug`, so each entry has its own address.
 
-The CMS sets the page URL and the data for you. An empty page gets starter blocks. A designed page keeps its layout.
+To list the entries on any page, open that page and click **Insert** under **Index**. Choose cards or a table. Each card or row links to its entry. If you change the collection URL later, the links change with it.
 
-Each card or row on an index page links to its entry, such as `/blog/my-first-post`. The link follows the collection URL. If you change the URL later, the links change with it.
+## Bind a block to a field
 
-## Bind blocks to content
-
-Select a block, then choose **Bind to data** in the toolbar or the context menu. Pick a field for the text, the image, the link, or the visibility of the block. Inside a list, each item reads its own entry.
+Select a block and click **Set Dynamic Value** next to its content, image or link in the properties panel. The **CMS fields** group shows the fields that fit. Inside a list, each item shows its own entry.
 
 ## Drafts and publishing
 
-A published page shows only published entries. A draft or an unknown slug shows a 404 page. In the editor, **Preview content** also shows drafts, so you can check an entry before you publish it.
+A published page shows only published entries. A draft or an unknown slug shows a 404 page. In the editor, the preview of a collection page also shows drafts, so you can check an entry before you publish it.
 
 You do not have to publish the page again after you edit content.
 
-## Permissions
+## Access
 
-The CMS needs the `cms` app on the site. It asks for these permissions:
-
-- **Edit pages**, to set the URL, the data, and the blocks of a page.
-- **Read and write data**, to read pages and upload images.
-- **Run actions**, to call the `cms` app. The app makes the content types and keeps their entries.
+The CMS needs the `cms` app on the site. Every request runs with the permissions of the user.
 
 A System Manager or a Website Manager chooses who uses the CMS:
 
-- In **CMS → Settings**, choose the roles that can use the whole CMS. These roles create collections and manage every collection.
-- In a collection's **Settings**, choose the roles that can use only that collection's entries.
+- In Builder's **Settings → CMS**, choose the roles that can use the whole CMS. These roles create collections and manage every collection.
+- In a collection's **Settings**, choose the roles that can use only the entries of that collection.

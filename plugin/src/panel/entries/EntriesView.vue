@@ -30,7 +30,6 @@
 				:collection="collection"
 				:entry-name="selection.name"
 				:field-name="selection.fieldName"
-				is-drawer
 				@back="closeEntry"
 				@saved="entrySaved"
 			/>
@@ -42,7 +41,7 @@
 import PanelResizer from "builder/internal/components/PanelResizer.vue";
 import { ref, shallowRef } from "vue";
 import { paneWidths } from "../paneWidths.js";
-import EntryEditor from "../entries/EntryEditor.vue";
+import EntryEditor from "./EntryEditor.vue";
 import CollectionEntries from "./CollectionEntries.vue";
 
 defineProps({ collection: { type: Object, required: true } });

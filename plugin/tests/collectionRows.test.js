@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { useCollectionRows } from "../src/panel/table/useCollectionRows.js";
+import { useCollectionRows } from "../src/panel/entries/useCollectionRows.js";
 
 const createCollection = () => ({
 	getTableFields: vi

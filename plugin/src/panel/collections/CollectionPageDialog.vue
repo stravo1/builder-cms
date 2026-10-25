@@ -65,6 +65,7 @@
 import { Button, Combobox, Dialog, FormLabel, MultiSelect, Radio, RadioGroup, TabButtons } from "frappe-ui";
 import { computed, ref, shallowRef, watch } from "vue";
 import { createCollectionPage, getCollectionPageChange, useCollectionPage } from "../../cms/pageActions.js";
+import { toFieldOption } from "../../data/doctypes.js";
 import { getDocuments } from "../../data/documents.js";
 import { useEditorContext } from "../../editor/context.js";
 import { useTask } from "../useTask.js";
@@ -113,7 +114,7 @@ const pageOptions = computed(() =>
 	pages.value.map((each) => ({ label: each.page_title, route: `/${each.route}`, value: each.name })),
 );
 const fieldOptions = computed(() =>
-	fields.value.map((field) => ({ label: field.label || field.fieldname, value: field.fieldname })),
+	fields.value.map(toFieldOption),
 );
 
 watch(open, (isOpen) => {
@@ -133,17 +134,17 @@ const finish = async (action, isGuess = false) => {
 };
 
 const loadPages = async () => {
-	const [list, all] = await Promise.all([
+	const [list, choice] = await Promise.all([
 		getDocuments("Builder Page", {
 			fields: ["name", "page_title", "route"],
 			orderBy: "modified desc",
 			pageLength: 500,
 		}),
-		props.collection.getFields(),
+		props.collection.getInsertableFields(),
 	]);
 	pages.value = list;
-	fields.value = all.filter((field) => field.fieldtype !== "Check");
-	chosen.value = props.collection.getDisplayFields(all).map((field) => field.fieldname);
+	fields.value = choice.fields;
+	chosen.value = choice.chosen;
 	pageName.value = context.page?.name || "";
 	step.value = "content";
 };

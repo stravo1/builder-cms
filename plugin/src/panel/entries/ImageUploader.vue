@@ -10,9 +10,7 @@
 </template>
 
 <script setup>
-import { upload } from "frappe-ui";
-
-import { Button } from "frappe-ui";
+import { Button, upload } from "frappe-ui";
 import { ref } from "vue";
 import { useTask } from "../useTask.js";
 

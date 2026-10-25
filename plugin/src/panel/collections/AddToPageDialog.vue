@@ -33,6 +33,7 @@
 import { Button, Dialog, FormLabel, MultiSelect, TabButtons } from "frappe-ui";
 import { computed, ref, shallowRef, watch } from "vue";
 import { addCollectionList, addEntryContent } from "../../cms/pageActions.js";
+import { toFieldOption } from "../../data/doctypes.js";
 import { useTask } from "../useTask.js";
 
 const COPY = {
@@ -51,15 +52,15 @@ const chosen = ref([]);
 const { isRunning, run, error } = useTask();
 const copy = computed(() => COPY[props.kind]);
 const fieldOptions = computed(() =>
-	fields.value.map((field) => ({ label: field.label || field.fieldname, value: field.fieldname })),
+	fields.value.map(toFieldOption),
 );
 watch(open, (isOpen) => {
 	if (!isOpen) return;
 	error.value = "";
 	run(async () => {
-		const all = await props.collection.getFields();
-		fields.value = all.filter((field) => field.fieldtype !== "Check");
-		chosen.value = props.collection.getDisplayFields(all).map((field) => field.fieldname);
+		const choice = await props.collection.getInsertableFields();
+		fields.value = choice.fields;
+		chosen.value = choice.chosen;
 	});
 });
 const insert = async () => {
