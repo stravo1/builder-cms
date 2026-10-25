@@ -1,37 +1,9 @@
 <template>
 	<div data-cms-panel class="flex h-full flex-col bg-surface-base text-ink-gray-8">
-		<Tabs v-model="activeTab" class="flex h-full flex-col">
-			<DrawerHeader>
-				<TabList class="shrink-0 self-stretch !border-b-0">
-					<TabTrigger v-for="tab in tabs" :key="tab.value" :value="tab.value" :label="tab.label" />
-				</TabList>
-			</DrawerHeader>
-			<TabPanel v-for="tab in tabs" :key="tab.value" :value="tab.value" class="min-h-0 flex-1 overflow-y-auto">
-				<div class="flex h-full flex-col">
-					<CollectionsTab v-if="tab.value === 0" />
-					<SettingsTab v-else />
-				</div>
-			</TabPanel>
-		</Tabs>
+		<CollectionsTab />
 	</div>
 </template>
 
 <script setup>
-import { DrawerHeader } from "builder";
-import { TabList, TabPanel, Tabs, TabTrigger } from "frappe-ui";
-import { computed, onMounted, ref, shallowRef } from "vue";
-import { getAccess } from "../cms/access.js";
-import SettingsTab from "./SettingsTab.vue";
 import CollectionsTab from "./collections/CollectionsTab.vue";
-
-const TABS = [
-	{ value: 0, label: "Collections" },
-	{ value: 1, label: "Settings" },
-];
-const activeTab = ref(0);
-const access = shallowRef(null);
-// the CMS-wide roles are a manager's to choose
-const tabs = computed(() => (access.value?.is_manager ? TABS : TABS.slice(0, 1)));
-
-onMounted(async () => (access.value = await getAccess()));
 </script>
