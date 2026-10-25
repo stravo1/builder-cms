@@ -102,7 +102,7 @@ watch(() => props.collection.collectionPage, load, { immediate: true });
 const preview = (slug) => slug && run(() => setRouteVariables({ slug }));
 
 const configured = ({ bound, isGuess }) => {
-	notice.value = isGuess && !bound ? "No blocks matched. Use Bind to data." : "";
+	notice.value = isGuess && !bound ? "No blocks matched. Select a block and choose Set Dynamic Value in its properties." : "";
 	return load();
 };
 

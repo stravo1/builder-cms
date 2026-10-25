@@ -35,15 +35,6 @@ export const getSourcesForBlock = async (sources, blockId) => {
 	return [...sources.filter((source) => !source.isList).map((source) => ({ source, prefix: `${source.name}.` }))];
 };
 
-export const getBindingTargets = (selection) => [
-	...(selection.isText || selection.isHTML ? [{ label: "Text content", value: "text" }] : []),
-	...(selection.isImage ? [{ label: "Image source", value: "image" }] : []),
-	...(selection.isLink || selection.isText || selection.isHTML || selection.isContainer
-		? [{ label: "Link URL", value: "link" }]
-		: []),
-	{ label: "Visibility", value: "visibility" },
-];
-
 export const getBoundProperty = (target) => {
 	if (target === "link") return { type: "attribute", property: "href" };
 	return target === true || target === "image"
@@ -87,17 +78,6 @@ export const getFieldItems = async ({ block, property, type }) => {
 		),
 	);
 	return items.flat();
-};
-
-export const getBoundKey = async (selection, target = selection.isImage ? "image" : "text") => {
-	const block = await getBlock(selection.blockId);
-	if (target === "visibility") return block.visibilityCondition?.key || "";
-	const property = getBoundProperty(target);
-	const bound = (block.dynamicValues || []).find(
-		(value) => value.property === property.property && value.type === property.type,
-	);
-	const legacy = block.dataKey?.property === property.property ? block.dataKey : null;
-	return (bound || legacy)?.key || "";
 };
 
 export const bindBlock = async (blockId, key, target) => {

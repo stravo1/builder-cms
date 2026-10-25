@@ -1,4 +1,3 @@
-import { updateBlock } from "../editor/canvas.js";
 import { openPage, setRouteVariables } from "../editor/page.js";
 import { getEditorContext } from "../editor/context.js";
 /**
@@ -160,13 +159,4 @@ export const addEntryContent = async (collection, fields) => {
 	const source = (await new PageData(page.name).load()).find((each) => each.name === ENTRY_SOURCE);
 	if (!source) throw new Error("Make this page the collection page first.");
 	return insertBlocks(source, fields, collection.label);
-};
-
-export const connectCollectionList = async (collection, blockId, options = {}) => {
-	const source = await getCollectionListSource(collection, options);
-	await updateBlock(blockId, {
-		isRepeaterBlock: true,
-		dataKey: { key: source.name, comesFrom: "dataScript" },
-	});
-	return source;
 };

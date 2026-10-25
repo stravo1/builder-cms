@@ -31,7 +31,7 @@ vi.mock("../src/editor/canvas.js", () => ({
 }));
 vi.mock("frappe-ui", () => ({ toast: { error: builder.ui?.toast, success: builder.ui?.toast } }));
 
-import { bindBlock, getBindingTargets, getFieldItems } from "../src/blocks/blockActions.js";
+import { bindBlock, getFieldItems } from "../src/blocks/blockActions.js";
 
 beforeEach(() => vi.resetAllMocks());
 
@@ -63,21 +63,6 @@ describe("fields for Set Dynamic Value", () => {
 });
 
 describe("block link bindings", () => {
-	it.each([{ isText: true }, { isHTML: true }])("offers text, link, and visibility for %o", (selection) => {
-		expect(getBindingTargets(selection).map(({ value }) => value)).toEqual(["text", "link", "visibility"]);
-	});
-
-	it("offers a link for containers without treating them as text", () => {
-		expect(getBindingTargets({ isContainer: true }).map(({ value }) => value)).toEqual([
-			"link",
-			"visibility",
-		]);
-	});
-
-	it("keeps image source and visibility options for images", () => {
-		expect(getBindingTargets({ isImage: true }).map(({ value }) => value)).toEqual(["image", "visibility"]);
-	});
-
 	it.each(["p", "div", "a"])("binds a URL to a <%s> alongside text and visibility", async (element) => {
 		const text = { key: "entry.title", type: "key", property: "innerHTML", comesFrom: "dataScript" };
 		const visibility = { key: "entry.published", comesFrom: "dataScript" };
