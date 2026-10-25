@@ -5,8 +5,9 @@
  * Page Script editor since the last load is kept, not overwritten.
  */
 
+import { updatePageDocument } from "../editor/page.js";
 import { DataSource } from "./dataSource.js";
-import { getDocument, getDocuments, updateDocument } from "./documents.js";
+import { getDocument, getDocuments } from "./documents.js";
 import { readSections, removeSection, writeSection } from "./scriptSections.js";
 
 const PAGE = "Builder Page";
@@ -45,7 +46,7 @@ export class PageData {
 
 	async writeScript(change) {
 		const script = change(await this.getScript());
-		await updateDocument(PAGE, this.pageName, { page_data_script: script });
+		await updatePageDocument(this.pageName, { page_data_script: script });
 		return this.load();
 	}
 

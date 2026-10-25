@@ -1,6 +1,5 @@
 import { useBuilderStore } from "builder";
 import { call, frappeRequest } from "frappe-ui";
-import { updatePageDocument } from "../editor/page.js";
 
 export const getDocument = (doctype, name) => call("frappe.client.get", { doctype, name });
 export const getDocuments = (doctype, options = {}) => {
@@ -14,10 +13,6 @@ export const getDocuments = (doctype, options = {}) => {
 	});
 };
 export const insertDocument = (doctype, values) => call("frappe.client.insert", { doc: { doctype, ...values } });
-export const updateDocument = (doctype, name, values) =>
-	doctype === "Builder Page"
-		? updatePageDocument(name, values)
-		: call("frappe.client.set_value", { doctype, name, fieldname: values });
 
 export const getMetadata = async (doctype) => {
 	const response = await frappeRequest({

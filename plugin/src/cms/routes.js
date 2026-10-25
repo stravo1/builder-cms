@@ -3,7 +3,8 @@
  * one route, so the plugin checks before it writes one.
  */
 
-import { getDocuments, updateDocument } from "../data/documents.js";
+import { getDocuments } from "../data/documents.js";
+import { updatePageDocument } from "../editor/page.js";
 
 const PAGE = "Builder Page";
 
@@ -40,10 +41,10 @@ export const assertRouteFree = async (route, pageName) => {
 };
 
 /** Moves a page back to the route Builder gave it. */
-export const releaseRoute = (pageName) => updateDocument(PAGE, pageName, { route: getDefaultRoute(pageName) });
+export const releaseRoute = (pageName) => updatePageDocument(pageName, { route: getDefaultRoute(pageName) });
 
 /** Gives `route` to `pageName`. The user confirmed the move of each other page on it. */
 export const claimRoute = async (route, pageName) => {
 	for (const holder of await getRouteHolders(route, pageName)) await releaseRoute(holder.name);
-	await updateDocument(PAGE, pageName, { route });
+	await updatePageDocument(pageName, { route });
 };

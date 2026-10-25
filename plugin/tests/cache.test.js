@@ -7,12 +7,12 @@ const { builder, api } = vi.hoisted(() => ({
 vi.mock("../src/data/documents.js", () => ({
 	getDocuments: builder.data?.getList,
 	getDocument: builder.data?.getDoc,
-	updateDocument: builder.data?.update,
 	subscribeDocuments: builder.data?.subscribe,
 }));
 vi.mock("../src/editor/context.js", () => ({ getEditorContext: builder.context?.get }));
 vi.mock("../src/editor/page.js", () => ({
 	refreshPageData: builder.page?.refreshData,
+	updatePageDocument: builder.page?.update,
 	setRouteVariables: builder.page?.setRouteVariables,
 }));
 vi.mock("../src/editor/canvas.js", () => ({

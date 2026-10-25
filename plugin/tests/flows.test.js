@@ -8,12 +8,12 @@ const { builder, api } = vi.hoisted(() => ({
 			setRouteVariables: vi.fn(),
 			refreshData: vi.fn(),
 			open: vi.fn(),
+			update: vi.fn(),
 		},
 		block: { get: vi.fn(), update: vi.fn(), insert: vi.fn(), remove: vi.fn(), select: vi.fn() },
 		data: {
 			getList: vi.fn(),
 			getDoc: vi.fn(),
-			update: vi.fn(),
 			insert: vi.fn(),
 			subscribe: vi.fn(),
 		},
@@ -28,13 +28,13 @@ const { builder, api } = vi.hoisted(() => ({
 vi.mock("../src/data/documents.js", () => ({
 	getDocuments: builder.data?.getList,
 	getDocument: builder.data?.getDoc,
-	updateDocument: builder.data?.update,
 	insertDocument: builder.data?.insert,
 	subscribeDocuments: builder.data?.subscribe,
 }));
 vi.mock("../src/editor/context.js", () => ({ getEditorContext: builder.context?.get }));
 vi.mock("../src/editor/page.js", () => ({
 	refreshPageData: builder.page?.refreshData,
+	updatePageDocument: builder.page?.update,
 	setRouteVariables: builder.page?.setRouteVariables,
 	openPage: builder.page?.open,
 }));
@@ -100,7 +100,7 @@ beforeEach(() => {
 		Object.values(pages).filter((each) => each.route === filters.route),
 	);
 	builder.data.getDoc.mockImplementation(async (doctype, name) => ({ ...pages[name] }));
-	builder.data.update.mockImplementation(async (doctype, name, patch) => Object.assign(pages[name], patch));
+	builder.page.update.mockImplementation(async (name, patch) => Object.assign(pages[name], patch));
 });
 
 const collectionOf = (row) => new Collection({ ...row });
