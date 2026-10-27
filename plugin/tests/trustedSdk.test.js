@@ -17,11 +17,16 @@ vi.mock("builder", () => ({
 }));
 vi.mock("builder/internal/router", () => ({ default: runtime.router }));
 
-import { getBlock, insertBlock } from "../src/editor/canvas.js";
+import { getBlock, insertBlock, setChildren } from "../src/editor/canvas.js";
 import { getEditorContext, useEditorContext } from "../src/editor/context.js";
-import { openPage, refreshPageData, setRouteVariables, updatePageDocument } from "../src/editor/page.js";
+import {
+	openPage,
+	refreshPageData,
+	setRouteVariables,
+	updatePageDocument,
+} from "../src/editor/page.js";
 import { getDocuments, getMetadata, subscribeDocuments } from "../src/data/documents.js";
-import { bindBlock, insertBlocks } from "../src/blocks/blockActions.js";
+import { bindField, fillCard } from "../src/blocks/blockActions.js";
 import { DataSource } from "../src/data/dataSource.js";
 
 const block = (id) => ({
@@ -36,13 +41,18 @@ const block = (id) => ({
 	isImage: () => false,
 	isLink: () => false,
 	isRoot: () => id === "root",
+	children: [],
+	removeChild: vi.fn(),
 	getBlockDescription: () => `${id} block`,
 	addChild: vi.fn((tree) => tree),
 });
 
 beforeEach(() => {
 	vi.clearAllMocks();
-	runtime.builder = reactive({ readOnlyMode: false, realtime: { emit: vi.fn(), on: vi.fn(), off: vi.fn() } });
+	runtime.builder = reactive({
+		readOnlyMode: false,
+		realtime: { emit: vi.fn(), on: vi.fn(), off: vi.fn() },
+	});
 	runtime.page = reactive({
 		activePage: { name: "page", route: "posts", page_data_script: "data.old = 1" },
 		routeVariables: {},
@@ -53,7 +63,11 @@ beforeEach(() => {
 	});
 	const root = block("root");
 	runtime.canvas = {
-		activeCanvas: { getRootBlock: () => root, findBlock: (id) => (id === "root" ? root : null) },
+		activeCanvas: {
+			getRootBlock: () => root,
+			findBlock: (id) => (id === "root" ? root : null),
+			isSelected: (block) => runtime.selected.includes(block),
+		},
 		editingMode: "page",
 	};
 	runtime.selected = [];
@@ -64,7 +78,11 @@ describe("trusted editor integration", () => {
 	it("derives live page, read-only and selection state without a bridge", () => {
 		const context = useEditorContext();
 		runtime.selected.push(block("root"));
-		expect(getEditorContext().selection).toEqual({ count: 1, blockId: "root", isContainer: true });
+		expect(getEditorContext().selection).toEqual({
+			count: 1,
+			blockId: "root",
+			isContainer: true,
+		});
 		runtime.builder.readOnlyMode = true;
 		expect(context.readOnly).toBe(true);
 		runtime.page.activePage = { name: "other" };
@@ -73,26 +91,45 @@ describe("trusted editor integration", () => {
 		expect(getEditorContext().selection.blockId).toBeUndefined();
 	});
 
-	it("inserts native Block options with styles and source discriminators", async () => {
+	it("fills a card with native Block options with styles and source discriminators", () => {
 		const source = new DataSource({ name: "posts", fields: ["title"] });
-		const tree = await insertBlocks(
+		const [tree] = fillCard(
+			"root",
 			source,
 			[{ fieldname: "title", label: "Title", fieldtype: "Data" }],
-			"Posts",
+			"Posts"
 		);
-		expect(tree.baseStyles).toMatchObject({ display: "grid" });
+		expect(tree.baseStyles).toMatchObject({ display: "flex" });
 		const descendants = (node) => [node, ...(node.children || []).flatMap(descendants)];
 		for (const node of descendants(tree)) {
 			expect(node.styles).toBeUndefined();
-			for (const binding of node.dynamicValues || []) expect(binding.comesFrom).toBe("dataScript");
+			for (const binding of node.dynamicValues || [])
+				expect(binding.comesFrom).toBe("dataScript");
 		}
 	});
 
 	it("prevents native block mutations in read-only mode", async () => {
 		runtime.builder.readOnlyMode = true;
 		expect(() => insertBlock("root", { element: "div" })).toThrow("read-only");
-		await expect(bindBlock("root", "entry.title", "text")).rejects.toThrow("read-only");
+		expect(() =>
+			bindField("root", "entry.title", { fieldname: "title", fieldtype: "Data" })
+		).toThrow("read-only");
 		expect(getBlock("root").dynamicValues).toEqual([]);
+	});
+
+	// Builder makes an added text block editable, which selects it
+	it("keeps the selection on a block when it gets new children", () => {
+		const root = getBlock("root");
+		root.selectBlock = vi.fn();
+		root.addChild = vi.fn((tree) => {
+			const child = { ...tree, blockId: "text" };
+			runtime.canvas.editableBlock = child;
+			return child;
+		});
+		runtime.selected.push(root);
+		setChildren("root", [{ element: "p" }]);
+		expect(runtime.canvas.editableBlock).toBe(null);
+		expect(root.selectBlock).toHaveBeenCalled();
 	});
 
 	it("fails clearly when a target block has disappeared", () => {
@@ -116,13 +153,17 @@ describe("trusted editor integration", () => {
 		runtime.page.savingPage = true;
 		await updatePageDocument("page", { route: "news" });
 		expect(runtime.page.waitTillPageIsSaved.mock.invocationCallOrder[0]).toBeLessThan(
-			call.mock.invocationCallOrder[0],
+			call.mock.invocationCallOrder[0]
 		);
 		expect(runtime.page.route).toBe("news");
 	});
 
 	it("refreshes page data from the current server script", async () => {
-		call.mockResolvedValue({ name: "page", route: "posts", page_data_script: "data.updated = 1" });
+		call.mockResolvedValue({
+			name: "page",
+			route: "posts",
+			page_data_script: "data.updated = 1",
+		});
 		await refreshPageData();
 		expect(runtime.page.activePage.page_data_script).toBe("data.updated = 1");
 		expect(runtime.page.setPageData).toHaveBeenCalledOnce();
@@ -140,7 +181,10 @@ describe("trusted editor integration", () => {
 
 	it("persists preview route variables and waits for the data refresh", async () => {
 		await setRouteVariables({ slug: "first" });
-		expect(localStorage.setItem).toHaveBeenCalledWith("page:routeVariables", '{"slug":"first"}');
+		expect(localStorage.setItem).toHaveBeenCalledWith(
+			"page:routeVariables",
+			'{"slug":"first"}'
+		);
 		expect(runtime.page.setPageData).toHaveBeenCalledOnce();
 	});
 
@@ -157,7 +201,7 @@ describe("trusted editor integration", () => {
 			params: { pageId: "other" },
 		});
 		expect(runtime.page.setPage.mock.invocationCallOrder[0]).toBeLessThan(
-			runtime.router.push.mock.invocationCallOrder[0],
+			runtime.router.push.mock.invocationCallOrder[0]
 		);
 	});
 });
@@ -179,7 +223,9 @@ describe("Frappe data integration", () => {
 		});
 	});
 	it("reads metadata from Frappe's document bundle", async () => {
-		frappeRequest.mockResolvedValue({ docs: [{ doctype: "DocType", name: "CMS Posts", fields: [] }] });
+		frappeRequest.mockResolvedValue({
+			docs: [{ doctype: "DocType", name: "CMS Posts", fields: [] }],
+		});
 		expect(await getMetadata("CMS Posts")).toMatchObject({ name: "CMS Posts", fields: [] });
 	});
 	it("rejects incomplete metadata instead of hiding the failure", async () => {

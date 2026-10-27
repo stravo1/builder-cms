@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const builder = vi.hoisted(() => ({
 	context: { get: vi.fn() },
-	page: { getBlocks: vi.fn(), loadSources: vi.fn() },
+	page: { loadSources: vi.fn() },
 	fields: vi.fn(),
 }));
 vi.mock("../src/data/doctypes.js", async (importOriginal) => ({
@@ -16,22 +16,24 @@ vi.mock("../src/data/pageData.js", () => ({
 	},
 }));
 vi.mock("../src/editor/context.js", () => ({ getEditorContext: builder.context.get }));
-vi.mock("../src/editor/canvas.js", () => ({
-	getRootBlock: async () => (await builder.page.getBlocks())[0],
-}));
+vi.mock("../src/editor/canvas.js", () => ({}));
 
 import { getFieldItems } from "../src/blocks/blockActions.js";
 
 beforeEach(() => vi.resetAllMocks());
 
 describe("fields for Set Dynamic Value", () => {
-	const block = { blockId: "heading" };
+	const block = { blockId: "heading", getRepeaterParent: () => null };
 
 	beforeEach(() => {
 		builder.context.get.mockReturnValue({ page: { name: "blog-post" } });
-		builder.page.getBlocks.mockResolvedValue([{ blockId: "root", children: [block] }]);
 		builder.page.loadSources.mockResolvedValue([
-			{ name: "entry", isList: false, doctype: "Post", readFields: ["title", "cover", "published"] },
+			{
+				name: "entry",
+				isList: false,
+				doctype: "Post",
+				readFields: ["title", "cover", "published"],
+			},
 		]);
 		builder.fields.mockResolvedValue([
 			{ fieldname: "title", label: "Title", fieldtype: "Data" },

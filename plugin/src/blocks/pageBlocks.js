@@ -24,7 +24,11 @@ export const BOUND_PROPERTIES = {
 /** An image field sets `src`, and every other field sets the text. */
 export const getFieldTarget = (field) => (field.fieldtype === "Attach Image" ? "image" : "text");
 
-export const getBinding = (key, target) => ({ key, ...BOUND_PROPERTIES[target], comesFrom: "dataScript" });
+export const getBinding = (key, target) => ({
+	key,
+	...BOUND_PROPERTIES[target],
+	comesFrom: "dataScript",
+});
 
 /** Shows the value of `key`, and hides when it is empty. */
 const boundBlock = (field, key) => ({
@@ -39,7 +43,8 @@ const linkBinding = getBinding("url", "link");
 
 const fieldBlock = (field, key, isFirst) => {
 	const bound = boundBlock(field, key);
-	if (getFieldTarget(field) === "image") return { ...bound, ...imageBlock({ width: "100%", objectFit: "cover" }) };
+	if (getFieldTarget(field) === "image")
+		return { ...bound, ...imageBlock({ width: "100%", objectFit: "cover" }) };
 	if (field.fieldtype === "Text Editor") return { ...bound, ...richText };
 	return { ...bound, element: isFirst ? "h3" : "p" };
 };
@@ -78,7 +83,10 @@ const headerCell = { ...cell, fontWeight: "600", whiteSpace: "nowrap" };
 const valueBlock = (field, key) => {
 	const bound = boundBlock(field, key);
 	if (getFieldTarget(field) === "image") {
-		return { ...bound, ...imageBlock({ width: "40px", height: "40px", objectFit: "cover", display: "block" }) };
+		return {
+			...bound,
+			...imageBlock({ width: "40px", height: "40px", objectFit: "cover", display: "block" }),
+		};
 	}
 	if (field.fieldtype === "Text Editor") {
 		return {
@@ -103,7 +111,7 @@ const linked = (source, block) =>
 				blockName: "Link",
 				dynamicValues: [linkBinding],
 				children: [block],
-			}
+		  }
 		: block;
 
 /**
@@ -111,7 +119,7 @@ const linked = (source, block) =>
  * and a repeater with one row per entry. ARIA roles give screen readers the
  * table structure that the tags no longer carry.
  */
-export const getListBlock = (source, fields, label = source.name) => ({
+export const getTableBlock = (source, fields, label = source.name) => ({
 	element: "div",
 	blockName: `${label} table`,
 	attributes: { role: "table" },
@@ -133,7 +141,13 @@ export const getListBlock = (source, fields, label = source.name) => ({
 				element: "div",
 				attributes: { role: "columnheader" },
 				baseStyles: headerCell,
-				children: [{ element: "span", blockName: `${field.label} heading`, innerHTML: field.label }],
+				children: [
+					{
+						element: "span",
+						blockName: `${field.label} heading`,
+						innerHTML: field.label,
+					},
+				],
 			})),
 		},
 		{
@@ -164,19 +178,47 @@ export const getListBlock = (source, fields, label = source.name) => ({
 	],
 });
 
-export const getDocumentBlock = (source, fields, label = source.name) => ({
+/** Marks the block that shows one entry, so the CMS section finds it before it shows anything. */
+export const DETAILS_ATTRIBUTES = { "data-cms": "details" };
+
+const getDetails = (blockName, children) => ({
 	element: "div",
-	blockName: label,
+	blockName,
+	attributes: { ...DETAILS_ATTRIBUTES },
 	baseStyles: { ...column, gap: "16px", width: "100%" },
-	children: fieldBlocks(fields, (fieldname) => `${source.name}.${fieldname}`),
+	children,
 });
 
-/** The container repeats one editable card. All its children remain normal Builder blocks. */
-export const getCardListBlock = (source, fields, label = source.name) => ({
+export const getDocumentBlock = (source, fields, label = source.name) =>
+	getDetails(
+		label,
+		fieldBlocks(fields, (fieldname) => `${source.name}.${fieldname}`)
+	);
+
+/** The Blocks tab tile on a page that shows no entry yet. The user chooses the collection in the CMS section. */
+export const getCollectionDetailsTemplate = () =>
+	getDetails("Collection details", [
+		{ element: "p", innerHTML: "Choose a collection in the CMS section." },
+	]);
+
+const getCard = (blockName, children) => ({
 	element: "div",
-	blockName: `${label} list`,
+	blockName,
+	baseStyles: {
+		...column,
+		gap: "12px",
+		padding: "20px",
+		border: "1px solid #e5e7eb",
+		borderRadius: "12px",
+	},
+	children,
+});
+
+/** The Blocks tab tile: a repeater with a placeholder card, until the user chooses a collection. */
+export const getCollectionListTemplate = () => ({
+	element: "div",
+	blockName: "Collection list",
 	isRepeaterBlock: true,
-	dataKey: { key: source.name, comesFrom: "dataScript" },
 	baseStyles: {
 		display: "grid",
 		gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
@@ -184,29 +226,42 @@ export const getCardListBlock = (source, fields, label = source.name) => ({
 		width: "100%",
 	},
 	children: [
-		{
-			element: "div",
-			blockName: `${label} item`,
-			baseStyles: {
-				...column,
-				gap: "12px",
-				padding: "20px",
-				border: "1px solid #e5e7eb",
-				borderRadius: "12px",
-			},
-			children: [
-				...fieldBlocks(fields.filter((field) => field.fieldtype !== "Check").slice(0, 4), (name) => name),
-				...(source.link
-					? [
-							{
-								element: "a",
-								innerHTML: "Read more →",
-								dynamicValues: [linkBinding],
-								visibilityCondition: { key: "url" },
-							},
-						]
-					: []),
-			],
-		},
+		getCard("Item", [{ element: "p", innerHTML: "Choose a collection in the CMS section." }]),
 	],
 });
+
+/** The card a list repeats: the fields, and a link to the collection page. */
+export const getCardBlock = (source, fields, label) =>
+	getCard(`${label} item`, [
+		...fieldBlocks(fields, (name) => name),
+		...(source.link
+			? [
+					{
+						element: "a",
+						innerHTML: "Read more →",
+						dynamicValues: [linkBinding],
+						visibilityCondition: { key: "url" },
+					},
+			  ]
+			: []),
+	]);
+
+/** A list of cards: the repeater repeats one card. */
+export const getCardListBlock = (source, fields, label) => ({
+	...getCollectionListTemplate(),
+	blockName: `${label} list`,
+	dataKey: { key: source.name, comesFrom: "dataScript" },
+	children: [getCardBlock(source, fields, label)],
+});
+
+/** What `block` changes to show `field`: an image, rich text, or the text tag it has. */
+export const getFieldShape = (field, block) => {
+	if (getFieldTarget(field) === "image") return { element: "img" };
+	if (field.fieldtype === "Text Editor") {
+		return {
+			element: richText.element,
+			baseStyles: { ...block.baseStyles, ...richText.baseStyles },
+		};
+	}
+	return block.isImage() ? { element: "p" } : {};
+};

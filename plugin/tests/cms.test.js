@@ -20,11 +20,15 @@ vi.mock("../src/data/documents.js", () => ({
 const { Collection, markSameLabels } = await import("../src/cms/collection.js");
 const { normalizeUrl } = await import("../src/cms/routes.js");
 const { getDoctypeFields, isMultilineField } = await import("../src/data/doctypes.js");
-const { getCardListBlock, getDocumentBlock, getListBlock } = await import("../src/blocks/pageBlocks.js");
-const { getPageRole, isCollectionPageOf } = await import("../src/cms/pageActions.js");
-const { DataSource } = await import("../src/data/dataSource.js");
+const { getCardBlock, getCollectionListTemplate, getDocumentBlock, getFieldShape, getTableBlock } =
+	await import("../src/blocks/pageBlocks.js");
+const { CURRENT_ENTRY, DataSource } = await import("../src/data/dataSource.js");
+const { ENTRY_FIELD, getStartValue, getValueInput, toControlFilters, toSourceFilters } =
+	await import("../src/cms/filters.js");
 const { isIdentifier, toPython } = await import("../src/data/python.js");
-const { readSections, removeSection, writeSection } = await import("../src/data/scriptSections.js");
+const { readSections, removeSection, writeSection } = await import(
+	"../src/data/scriptSections.js"
+);
 
 const posts = new DataSource({
 	name: "posts",
@@ -41,18 +45,21 @@ describe("getDoctypeFields", () => {
 	// a read that names a field with no column fails, and takes the whole page data down
 	// a list publishes what it binds, so a reset key or an API key would reach every visitor
 	it("keeps only fields that have a column and are safe to publish", async () => {
-		expect((await getDoctypeFields("User")).map((field) => field.fieldname)).toEqual(["email", "user_image"]);
+		expect((await getDoctypeFields("User")).map((field) => field.fieldname)).toEqual([
+			"email",
+			"user_image",
+		]);
 	});
 });
 
-describe("getListBlock", () => {
+describe("getTableBlock", () => {
 	const fields = [
 		{ fieldname: "title", label: "Title", fieldtype: "Data" },
 		{ fieldname: "cover", label: "Cover", fieldtype: "Attach Image" },
 	];
-	const table = getListBlock(
+	const table = getTableBlock(
 		new DataSource({ name: "posts", link: { collection: "CMS Post", field: "slug" } }),
-		fields,
+		fields
 	);
 	const [header, rows] = table.children;
 	const elements = (block) => [block.element, ...(block.children || []).flatMap(elements)];
@@ -61,23 +68,11 @@ describe("getListBlock", () => {
 		expect(new Set(elements(table))).toEqual(new Set(["div", "span", "a", "img"]));
 	});
 
-	it.each([
-		["table", getListBlock],
-		["cards", getCardListBlock],
-		["detail page", getDocumentBlock],
-	])("shows rich text in a block span in the %s, a text block that can hold a heading or a list", (_, getBlock) => {
-		const body = { fieldname: "body", label: "Body", fieldtype: "Text Editor" };
-		const find = (block) => (block.blockName === "Body" ? block : (block.children || []).map(find).find(Boolean));
-		const richText = find(getBlock(new DataSource({ name: "posts" }), [{ ...fields[0] }, body]));
-
-			expect(richText.element).toBe("span");
-			expect(richText.baseStyles.display).toMatch(/block|box/);
-		},
-	);
-
 	it("reads as a table, with a heading for each field", () => {
 		expect(table.attributes.role).toBe("table");
-		expect(header.children.map((cell) => [cell.attributes.role, cell.children[0].innerHTML])).toEqual([
+		expect(
+			header.children.map((cell) => [cell.attributes.role, cell.children[0].innerHTML])
+		).toEqual([
 			["columnheader", "Title"],
 			["columnheader", "Cover"],
 		]);
@@ -99,21 +94,38 @@ describe("getListBlock", () => {
 	});
 
 	it("hugs its columns, and scrolls when wider than the page", () => {
-		expect(table.baseStyles).toMatchObject({ width: "max-content", maxWidth: "100%", overflowX: "auto" });
+		expect(table.baseStyles).toMatchObject({
+			width: "max-content",
+			maxWidth: "100%",
+			overflowX: "auto",
+		});
 	});
 
 	// the user styles the table in Builder. It starts with no colors, borders, or hover
 	it("has no decorative styles", () => {
-		const styles = (block) => [block.baseStyles || {}, ...(block.children || []).flatMap(styles)];
+		const styles = (block) => [
+			block.baseStyles || {},
+			...(block.children || []).flatMap(styles),
+		];
 		const names = styles(table).flatMap(Object.keys);
-		for (const name of ["color", "backgroundColor", "border", "borderBottom", "borderRadius", "boxShadow"]) {
+		for (const name of [
+			"color",
+			"backgroundColor",
+			"border",
+			"borderBottom",
+			"borderRadius",
+			"boxShadow",
+		]) {
 			expect(names).not.toContain(name);
 		}
 		expect(names.filter((name) => name.startsWith("hover:"))).toEqual([]);
 	});
 
 	it("repeats one row per entry", () => {
-		expect(rows).toMatchObject({ isRepeaterBlock: true, dataKey: { key: "posts", comesFrom: "dataScript" } });
+		expect(rows).toMatchObject({
+			isRepeaterBlock: true,
+			dataKey: { key: "posts", comesFrom: "dataScript" },
+		});
 		expect(rows.children[0].attributes.role).toBe("row");
 	});
 
@@ -130,10 +142,64 @@ describe("getListBlock", () => {
 	});
 });
 
+describe("CMS blocks", () => {
+	const title = { fieldname: "title", label: "Title", fieldtype: "Data" };
+	const body = { fieldname: "body", label: "Body", fieldtype: "Text Editor" };
+	const cover = { fieldname: "cover", label: "Cover", fieldtype: "Attach Image" };
+	const textBlock = { baseStyles: { color: "red" }, isImage: () => false };
+
+	it("starts a collection list as a repeater with one card and no data", () => {
+		const list = getCollectionListTemplate();
+		expect(list).toMatchObject({ isRepeaterBlock: true, children: [{ blockName: "Item" }] });
+		expect(list.dataKey).toBeUndefined();
+	});
+
+	it.each([
+		["table", getTableBlock],
+		["card", getCardBlock],
+		["collection page", getDocumentBlock],
+	])(
+		"shows rich text in a block span in the %s, a text block that can hold a heading or a list",
+		(_, getBlock) => {
+			const find = (block) =>
+				block.blockName === "Body"
+					? block
+					: (block.children || []).map(find).find(Boolean);
+			const richText = find(
+				getBlock(new DataSource({ name: "posts" }), [title, body], "Posts")
+			);
+			expect(richText.element).toBe("span");
+			expect(richText.baseStyles.display).toMatch(/block|box/);
+		}
+	);
+
+	it("links a card to the collection page when its source has a link", () => {
+		const card = getCardBlock(
+			new DataSource({ name: "posts", link: { field: "slug" } }),
+			[title],
+			"Posts"
+		);
+		expect(card.children.at(-1)).toMatchObject({
+			element: "a",
+			dynamicValues: [{ key: "url", property: "href" }],
+		});
+	});
+
+	it("shapes a block to its field: an image, rich text with its styles, or the text tag it has", () => {
+		expect(getFieldShape(cover, textBlock)).toEqual({ element: "img" });
+		expect(getFieldShape(body, textBlock)).toEqual({
+			element: "span",
+			baseStyles: { color: "red", display: "block" },
+		});
+		expect(getFieldShape(title, textBlock)).toEqual({});
+		expect(getFieldShape(title, { isImage: () => true })).toEqual({ element: "p" });
+	});
+});
+
 describe("toPython", () => {
 	it("writes Python literals, not JSON", () => {
 		expect(toPython({ a: true, b: null, c: [1, "x", false] })).toBe(
-			'{"a": True, "b": None, "c": [1, "x", False]}',
+			'{"a": True, "b": None, "c": [1, "x", False]}'
 		);
 	});
 
@@ -143,7 +209,9 @@ describe("toPython", () => {
 		["2posts", false],
 		["my-posts", false],
 		["class", false],
-	])("knows that %s is a name: %s", (name, expected) => expect(isIdentifier(name)).toBe(expected));
+	])("knows that %s is a name: %s", (name, expected) =>
+		expect(isIdentifier(name)).toBe(expected)
+	);
 });
 
 describe("DataSource", () => {
@@ -152,12 +220,12 @@ describe("DataSource", () => {
 			[
 				"data.posts = frappe.db.get_all(",
 				'    "Blog Post",',
-				'    filters={"published": 1, "category": ["!=", "News"]},',
+				'    filters=[["published", "=", 1], ["category", "!=", "News"]],',
 				'    fields=["name", "title", "slug"],',
 				'    order_by="creation desc",',
 				"    limit_page_length=5,",
 				")",
-			].join("\n"),
+			].join("\n")
 		);
 	});
 
@@ -173,9 +241,9 @@ describe("DataSource", () => {
 
 		expect(post.toPython()).toBe(
 			[
-				'cms_post_filters = {"slug": frappe.form_dict.get("slug")}',
+				'cms_post_filters = [["slug", "=", frappe.form_dict.get("slug")]]',
 				"if not in_preview:",
-				'    cms_post_filters["published"] = 1',
+				'    cms_post_filters.append(["published", "=", 1])',
 				"cms_post_rows = frappe.db.get_all(",
 				'    "Blog Post",',
 				"    filters=cms_post_filters,",
@@ -186,49 +254,89 @@ describe("DataSource", () => {
 				"if not cms_post_rows and not in_preview:",
 				'    raise frappe.PageDoesNotExistError("No entry at this address.")',
 				"data.post = (cms_post_rows or [{}])[0]",
-			].join("\n"),
+			].join("\n")
 		);
-		expect(post.getPreviewOptions().filters).toEqual({});
+		expect(post.getPreviewOptions().filters).toEqual([]);
 	});
 
 	it("reads a fixed single entry without a 404", () => {
-		const post = new DataSource({ ...posts.toJSON(), name: "post", type: "Document", filters: [] });
+		const post = new DataSource({
+			...posts.toJSON(),
+			name: "post",
+			type: "Document",
+			filters: [],
+		});
 
 		expect(post.toPython()).not.toContain("PageDoesNotExistError");
 		expect(post.toPython()).toMatch(/\ndata\.post = \(cms_post_rows or \[\{\}\]\)\[0\]$/);
 	});
 
 	it("keeps drafts out with a setting, not a filter row", () => {
-		const published = new DataSource({ ...posts.toJSON(), filters: [], publishedField: "published" });
+		const published = new DataSource({
+			...posts.toJSON(),
+			filters: [],
+			publishedField: "published",
+		});
 
-		expect(published.toPython()).toContain('filters={"published": 1}');
-		expect(published.getPreviewOptions().filters).toEqual({ published: 1 });
+		expect(published.toPython()).toContain('filters=[["published", "=", 1]]');
+		expect(published.getPreviewOptions().filters).toEqual([["published", "=", 1]]);
+	});
+
+	it("matches any filter through or_filters, and still keeps drafts out", () => {
+		const either = new DataSource({
+			...posts.toJSON(),
+			publishedField: "published",
+			matchAny: true,
+		});
+		expect(either.toPython()).toContain(
+			'    filters=[["published", "=", 1]],\n    or_filters=[["published", "=", 1], ["category", "!=", "News"]],'
+		);
+	});
+
+	it("reads the entry that the collection page shows, from the entry section", () => {
+		const others = new DataSource({
+			...posts.toJSON(),
+			filters: [["name", "!=", CURRENT_ENTRY]],
+		});
+		expect(others.toPython()).toContain(
+			'filters=[["name", "!=", (data.get("entry") or {}).get("name")]]'
+		);
 	});
 
 	it("reads a route variable on the server, and leaves it out of the preview", () => {
-		const post = new DataSource({ ...posts.toJSON(), filters: [["slug", "=", "{{ route.slug }}"]] });
+		const post = new DataSource({
+			...posts.toJSON(),
+			filters: [["slug", "=", "{{ route.slug }}"]],
+		});
 
-		expect(post.toPython()).toContain('filters={"slug": frappe.form_dict.get("slug")}');
-		expect(post.getPreviewOptions().filters).toEqual({});
+		expect(post.toPython()).toContain('filters=[["slug", "=", frappe.form_dict.get("slug")]]');
+		expect(post.getPreviewOptions().filters).toEqual([]);
 	});
 
 	it("links each row through the route of the collection page, read on each request", () => {
-		const linked = new DataSource({ ...posts.toJSON(), link: { page: "page-1", field: "slug" } });
+		const linked = new DataSource({
+			...posts.toJSON(),
+			link: { page: "page-1", field: "slug" },
+		});
 		const python = linked.toPython();
 
 		expect(python).toContain(
-			'cms_posts_route = (frappe.db.get_all("Builder Page", filters={"name": "page-1"}, fields=["route"]) or [{}])[0].get("route") or ""',
+			'cms_posts_route = (frappe.db.get_all("Builder Page", filters={"name": "page-1"}, fields=["route"]) or [{}])[0].get("route") or ""'
 		);
 		expect(python).toContain(
-			'url=("/" + cms_posts_route.lstrip("/").replace(":slug", str(row.get("slug") or ""))',
+			'url=("/" + cms_posts_route.lstrip("/").replace(":slug", str(row.get("slug") or ""))'
 		);
-		expect(python).toContain(') if ":slug" in cms_posts_route or "<slug>" in cms_posts_route else "")');
+		expect(python).toContain(
+			') if ":slug" in cms_posts_route or "<slug>" in cms_posts_route else "")'
+		);
 		expect(python).toContain('.replace("<slug>", str(row.get("slug") or ""))');
 		expect(python).toContain("    for row in frappe.db.get_all(");
 	});
 
 	it("reads a source saved with the old publishedOnly flag", () => {
-		expect(new DataSource({ ...posts.toJSON(), publishedOnly: true }).publishedField).toBe("published");
+		expect(new DataSource({ ...posts.toJSON(), publishedOnly: true }).publishedField).toBe(
+			"published"
+		);
 	});
 
 	it("fills the route variable it names, from the field it names", () => {
@@ -247,9 +355,11 @@ describe("DataSource", () => {
 		});
 
 		expect(linked.toPython()).toContain(
-			'cms_posts_collection = (frappe.db.get_all("CMS Collection", filters={"collection": "CMS Blog Post"}, fields=["entry_page", "url"]) or [{}])[0]',
+			'cms_posts_collection = (frappe.db.get_all("CMS Collection", filters={"collection": "CMS Blog Post"}, fields=["entry_page", "url"]) or [{}])[0]'
 		);
-		expect(linked.toPython()).toContain('cms_posts_page = cms_posts_collection.get("entry_page") or ""');
+		expect(linked.toPython()).toContain(
+			'cms_posts_page = cms_posts_collection.get("entry_page") or ""'
+		);
 		expect(linked.toPython()).toContain('filters={"name": cms_posts_page}');
 	});
 
@@ -260,7 +370,7 @@ describe("DataSource", () => {
 		});
 
 		expect(linked.toPython()).toContain(
-			'.get("route") or ((cms_posts_collection.get("url") or "").rstrip("/") + "/:slug" if cms_posts_collection.get("url") else "")',
+			'.get("route") or ((cms_posts_collection.get("url") or "").rstrip("/") + "/:slug" if cms_posts_collection.get("url") else "")'
 		);
 	});
 
@@ -274,14 +384,53 @@ describe("DataSource", () => {
 	});
 });
 
+describe("list filters", () => {
+	it("shows a filter on the current entry as the Entry field, and keeps it as a filter on the name", () => {
+		const source = [
+			["title", "LIKE", "%news%"],
+			["name", "!=", CURRENT_ENTRY],
+		];
+		const control = [
+			["title", "LIKE", "%news%"],
+			[ENTRY_FIELD.fieldname, "!=", "Current entry"],
+		];
+		expect(toControlFilters(source)).toEqual(control);
+		expect(toSourceFilters(control)).toEqual(source);
+	});
+
+	it("gives each value the control that fits its field and operator, and starts it on the first choice", () => {
+		const status = { fieldtype: "Select", options: "Draft\nLive" };
+		expect(getValueInput(status, "equals").options.map((option) => option.value)).toEqual([
+			"Draft",
+			"Live",
+		]);
+		expect(getValueInput({ fieldtype: "Check" }, "equals").options[0].value).toBe("Yes");
+		expect(getValueInput({ fieldtype: "Data" }, "is").options[0].value).toBe("set");
+		expect(getValueInput({ fieldtype: "Int" }, ">")).toEqual({ type: "number" });
+		expect(getValueInput({ fieldtype: "Data" }, "like")).toEqual({ type: "text" });
+		expect(getStartValue(ENTRY_FIELD, "equals")).toBe("Current entry");
+		expect(getStartValue({ fieldtype: "Data" }, "like")).toBe("");
+	});
+});
+
 describe("script sections", () => {
-	const write = (script, source) => writeSection(script, source.name, source.toJSON(), source.toPython());
+	const write = (script, source) =>
+		writeSection(script, source.name, source.toJSON(), source.toPython());
 
 	it("keeps the definition, so it can read the source back", () => {
 		const script = write("data.title = 'Hi'", posts);
 
 		expect(readSections(script)).toEqual([posts.toJSON()]);
 		expect(script.startsWith("data.title = 'Hi'\n\n# builder-cms:start posts ")).toBe(true);
+	});
+
+	it("puts a section first when asked, and moves it there on a rewrite", () => {
+		const entry = new DataSource({ ...posts.toJSON(), name: "entry", type: "Document" });
+		const first = (script) =>
+			writeSection(script, "entry", entry.toJSON(), entry.toPython(), { first: true });
+		const script = first(first(write("data.title = 'Hi'", posts)));
+		expect(readSections(script).map((section) => section.name)).toEqual(["entry", "posts"]);
+		expect(script.startsWith("data.title = 'Hi'\n")).toBe(true);
 	});
 
 	it("replaces only its own section", () => {
@@ -303,7 +452,9 @@ describe("script sections", () => {
 	});
 
 	it("fails loudly on a broken definition", () => {
-		expect(() => readSections("# builder-cms:start posts {broken\n")).toThrow('broken CMS section: "posts"');
+		expect(() => readSections("# builder-cms:start posts {broken\n")).toThrow(
+			'broken CMS section: "posts"'
+		);
 	});
 });
 
@@ -319,7 +470,13 @@ const owned = (label, settings = {}) =>
 
 /** An existing doctype, mapped. */
 const mapped = (doctype, settings = {}) =>
-	new Collection({ collection: doctype, is_mapped: 1, label: doctype, slug_field: "name", ...settings });
+	new Collection({
+		collection: doctype,
+		is_mapped: 1,
+		label: doctype,
+		slug_field: "name",
+		...settings,
+	});
 
 describe("collections", () => {
 	it("starts a data source with published entries only, linked through the collection page", () => {
@@ -352,7 +509,12 @@ describe("collections", () => {
 			mapped("Web Page", { label: "Sample" }),
 		]).map((collection) => collection.title);
 
-		expect(titles).toEqual(["Sample - CMS", "Blog Post - CMS", "Blog Post - doctype", "Sample - Web Page"]);
+		expect(titles).toEqual([
+			"Sample - CMS",
+			"Blog Post - CMS",
+			"Blog Post - doctype",
+			"Sample - Web Page",
+		]);
 	});
 
 	it("lets a slug follow the title until the user types one", () => {
@@ -400,47 +562,15 @@ describe("collections", () => {
 				{ fieldname: "route", fieldtype: "Data" },
 				{ fieldname: "published", fieldtype: "Check" },
 			];
-			expect(posts.getDisplayFields(fields).map((field) => field.fieldname)).toEqual(["title"]);
+			expect(posts.getDisplayFields(fields).map((field) => field.fieldname)).toEqual([
+				"title",
+			]);
 		});
 
 		it("opens its rows in Desk", () => {
 			expect(posts.getDeskUrl("my post")).toBe("/app/blog-post/my%20post");
 			expect(pages.getDeskUrl("new")).toBe("/app/web-page/new-web-page-1");
 			expect(pages.getDeskUrl()).toBe("/app/web-page");
-		});
-	});
-
-	describe("isCollectionPageOf", () => {
-		const blog = { doctype: "CMS Blog Post", collectionPage: "page-1" };
-		const entry = { name: "entry", doctype: "CMS Blog Post" };
-		const page = { name: "page-1", route: "blog/:slug" };
-
-		it("needs the pointer, a :slug route, and the entry source", () => {
-			expect(isCollectionPageOf(blog, page, [entry])).toBe(true);
-		});
-
-		it.each([
-			["the settings point at another page", { ...blog, collectionPage: "page-2" }, page, [entry]],
-			["the user removed :slug from the route", blog, { ...page, route: "scrap" }, [entry]],
-			["the user removed the entry source", blog, page, []],
-			["the entry source reads another collection", blog, page, [{ ...entry, doctype: "CMS Other" }]],
-		])("is false when %s", (_case, collection, testPage, sources) => {
-			expect(isCollectionPageOf(collection, testPage, sources)).toBe(false);
-		});
-	});
-
-	describe("page roles", () => {
-		const blog = owned("Blog Post", { url: "/blog", entry_page: "page-detail" });
-		const entry = { name: "entry", doctype: "CMS Blog Post" };
-
-		it("finds the collection page by the setting, and flags one the user changed by hand", () => {
-			expect(getPageRole([blog], { name: "page-detail", route: "blog/:slug" }, [entry])).toMatchObject({
-				isBroken: false,
-			});
-			expect(getPageRole([blog], { name: "page-detail", route: "blog" }, [entry])).toMatchObject({
-				isBroken: true,
-			});
-			expect(getPageRole([blog], { name: "page-other", route: "about" }, [])).toBe(null);
 		});
 	});
 
@@ -473,9 +603,12 @@ describe("multiline fields", () => {
 		"opens %s in the entry editor",
 		(fieldtype) => {
 			expect(isMultilineField({ fieldtype })).toBe(true);
-		},
+		}
 	);
-	it.each(["Data", "Check", "Date", "Select", "Attach Image"])("keeps %s inline", (fieldtype) => {
-		expect(isMultilineField({ fieldtype })).toBe(false);
-	});
+	it.each(["Data", "Check", "Date", "Select", "Attach Image"])(
+		"keeps %s inline",
+		(fieldtype) => {
+			expect(isMultilineField({ fieldtype })).toBe(false);
+		}
+	);
 });

@@ -29,16 +29,23 @@ export const readSections = (script) =>
 			try {
 				return JSON.parse(rest.slice(space + 1));
 			} catch {
-				throw new Error(`The data script has a broken CMS section: "${rest.slice(0, space)}".`);
+				throw new Error(
+					`The data script has a broken CMS section: "${rest.slice(0, space)}".`
+				);
 			}
 		});
 
-/** Replaces the section of `name`, or adds it at the end. */
-export const writeSection = (script, name, definition, body) => {
+/**
+ * Replaces the section of `name`, or adds it at the end. With `first`, the
+ * section goes before every other section of the plugin, so the others can read it.
+ */
+export const writeSection = (script, name, definition, body, { first = false } = {}) => {
 	const section = `${START}${name} ${JSON.stringify(definition)}\n${body}\n${END}${name}`;
-	const current = script || "";
-	const found = findSection(current, name);
-	if (found) return current.slice(0, found.from) + section + current.slice(found.to);
+	const found = findSection(script || "", name);
+	if (found && !first) return script.slice(0, found.from) + section + script.slice(found.to);
+	const current = found ? removeSection(script, name) : script || "";
+	const at = current.indexOf(START);
+	if (first && at !== -1) return `${current.slice(0, at)}${section}\n\n${current.slice(at)}`;
 	return current.trimEnd() ? `${current.trimEnd()}\n\n${section}\n` : `${section}\n`;
 };
 
@@ -46,5 +53,7 @@ export const removeSection = (script, name) => {
 	const current = script || "";
 	const found = findSection(current, name);
 	if (!found) return current;
-	return `${current.slice(0, found.from).trimEnd()}\n${current.slice(found.to).replace(/^\n+/, "")}`.trimStart();
+	return `${current.slice(0, found.from).trimEnd()}\n${current
+		.slice(found.to)
+		.replace(/^\n+/, "")}`.trimStart();
 };

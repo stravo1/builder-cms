@@ -3,19 +3,38 @@
  * and entry content on the open page.
  */
 
-import { bindGuessedBlocks, insertBlocks } from "../blocks/blockActions.js";
+import { fillCard, getBoundKeys, getRepeatedKeys, hasBoundChild } from "../blocks/blockActions.js";
+import {
+	getCardListBlock,
+	getCollectionDetailsTemplate,
+	getDocumentBlock,
+	getTableBlock,
+} from "../blocks/pageBlocks.js";
 import { DataSource, getSourceFieldnames } from "../data/dataSource.js";
 import { insertDocument } from "../data/documents.js";
 import { PageData } from "../data/pageData.js";
+import {
+	getBlock,
+	getRootBlock,
+	insertBlock,
+	replaceBlock,
+	setChildren,
+	updateBlock,
+} from "../editor/canvas.js";
 import { getEditorContext } from "../editor/context.js";
 import { openPage, setRouteVariables } from "../editor/page.js";
 import { Collection } from "./collection.js";
-import { claimRoute, getDefaultRoute, getRouteHolders, releaseRoute, SLUG_ROUTE } from "./routes.js";
+import { claimRoute, getDefaultRoute, getRouteHolders, releaseRoute } from "./routes.js";
 
 export const SORT_OPTIONS = [
 	{ label: "Newest first", value: "creation desc" },
 	{ label: "Oldest first", value: "creation asc" },
 	{ label: "Recently updated", value: "modified desc" },
+];
+
+export const LAYOUT_OPTIONS = [
+	{ label: "Cards", value: "cards" },
+	{ label: "Table", value: "table" },
 ];
 
 /** The name of the data source on a collection page. Bindings read `entry.title`. */
@@ -77,33 +96,27 @@ export const disconnectCollectionPage = async (collection) => {
 };
 
 /**
- * The collection whose collection page this is. `isBroken` when the user
- * removed its `:slug` route or its `entry` source by hand.
- */
-export const getPageRole = (collections, page, sources) => {
-	const collection = collections.find((each) => each.collectionPage === page.name);
-	return collection ? { collection, isBroken: !isCollectionPageOf(collection, page, sources) } : null;
-};
-
-/**
  * Makes `pageName` the collection page, opens it and previews the newest entry.
- * The page gets new blocks for `fields`, or with `guess`, its own blocks bound
- * to the fields they seem to show. Returns how many blocks the guess bound.
+ * An empty page gets blocks for the display fields.
  */
-export const useCollectionPage = async (collection, pageName, { fields, guess = false } = {}) => {
-	const { source, fields: all } = await setCollectionPage(collection, pageName);
+export const connectCollectionPage = async (collection, pageName) => {
+	const { source, fields } = await setCollectionPage(collection, pageName);
 	await openPage(pageName);
-	const bound = guess ? await bindGuessedBlocks(source, all) : 0;
-	if (!guess) await insertBlocks(source, fields ?? collection.getDisplayFields(all), collection.label);
+	const root = getRootBlock();
+	if (!root.children.length) {
+		insertBlock(
+			root.blockId,
+			getDocumentBlock(source, collection.getDisplayFields(fields), collection.label)
+		);
+	}
 	const newest = await collection.getNewestPublished();
 	if (newest) await setRouteVariables({ slug: newest.slug });
-	return bound;
 };
 
 /** A new draft page with the display fields, made the collection page. */
 export const createCollectionPage = async (collection) => {
 	const page = await insertDocument("Builder Page", { page_title: `${collection.label} page` });
-	await useCollectionPage(collection, page.name);
+	await connectCollectionPage(collection, page.name);
 };
 
 /** A free name such as `blog_post`, then `blog_post_2`, so two lists of one collection can share a page. */
@@ -114,29 +127,6 @@ const getFreeName = (base, sources) => {
 	return name;
 };
 
-/**
- * Adds a list of a collection to the open page. The data source behind it
- * takes the collection's defaults: published entries, links to the collection page.
- */
-const getCollectionListSource = async (collection, { orderBy = SORT_OPTIONS[0].value, limit = 20 } = {}) => {
-	const page = getWritablePage();
-	const fields = await collection.getFields();
-	const pageData = new PageData(page.name);
-	const sources = await pageData.load();
-	const existing = sources.find((source) => source.isList && source.doctype === collection.doctype);
-	if (existing) return existing;
-	const defaults = collection.getSourceDefaults(fields);
-	const source = new DataSource({ ...defaults, name: getFreeName(defaults.name, sources), orderBy, limit });
-	await pageData.save(source);
-	return source;
-};
-
-/** The settings point at the page, and the page still has a `:slug` route and the `entry` source of the collection. */
-export const isCollectionPageOf = (collection, page, sources) =>
-	collection.collectionPage === page.name &&
-	SLUG_ROUTE.test(page.route || "") &&
-	sources.some((source) => source.name === ENTRY_SOURCE && source.doctype === collection.doctype);
-
 /** A page is the collection page of one collection. */
 const assignCollectionPage = async (collection, pageName) => {
 	for (const other of await Collection.all()) {
@@ -146,15 +136,138 @@ const assignCollectionPage = async (collection, pageName) => {
 	await collection.saveSettings({ entry_page: pageName });
 };
 
-export const addCollectionList = async (collection, { fields, ...options }) => {
-	const source = await getCollectionListSource(collection, options);
-	return insertBlocks(source, fields, collection.label, options.layout);
+/** The CMS data source a repeater shows, or null. */
+export const getListSource = (sources, block) =>
+	sources.find((source) => source.isList && source.name === block.dataKey?.key) ?? null;
+
+/** Removes the list sources that no repeater on the page shows any more. */
+const removeUnusedListSources = async (pageData) => {
+	const used = new Set(getRepeatedKeys(getRootBlock()));
+	for (const source of pageData.sources.filter((each) => each.isList && !used.has(each.name))) {
+		await pageData.remove(source.name);
+	}
 };
 
-/** Inserts blocks bound to the entry of the collection page. Each call adds a new set. */
-export const addEntryContent = async (collection, fields) => {
-	const page = getWritablePage();
-	const source = (await new PageData(page.name).load()).find((each) => each.name === ENTRY_SOURCE);
-	if (!source) throw new Error("Make this page the collection page first.");
-	return insertBlocks(source, fields, collection.label);
+/**
+ * Points a repeater at a new data source of `collection`, or at none. The card
+ * gets the display fields when nothing in it shows a value yet.
+ */
+export const setListCollection = async (blockId, collection) => {
+	const pageData = new PageData(getWritablePage().name);
+	await pageData.load();
+	updateBlock(blockId, { dataKey: null });
+	await removeUnusedListSources(pageData);
+	if (!collection) return;
+	const fields = await collection.getFields();
+	const defaults = collection.getSourceDefaults(fields);
+	const source = new DataSource({
+		...defaults,
+		name: getFreeName(defaults.name, pageData.sources),
+	});
+	await pageData.save(source);
+	updateBlock(blockId, { dataKey: { key: source.name, comesFrom: "dataScript" } });
+	// a card holds a few fields. The user can choose more
+	const shown = collection.getDisplayFields(fields).slice(0, 4);
+	if (!hasBoundChild(getBlock(blockId))) fillCard(blockId, source, shown, collection.label);
+};
+
+/** Changes the sort order or the limit of the list a repeater shows. */
+export const updateList = async (blockId, patch) => {
+	const pageData = new PageData(getWritablePage().name);
+	const source = getListSource(await pageData.load(), getBlock(blockId));
+	if (!source) throw new Error("This list shows no collection.");
+	Object.assign(source, patch);
+	await pageData.save(source);
+};
+
+const isTable = (block) => block?.attributes?.role === "table";
+
+/** The repeater of a list. A list of cards is its own repeater. A table repeats its row group. */
+export const getListRepeater = (block) => {
+	if (isTable(block)) return block.children.find((child) => child.isRepeaterBlock) ?? null;
+	return block.isRepeaterBlock && !isTable(block.getParentBlock()) ? block : null;
+};
+
+export const getListLayout = (list) => (isTable(list) ? "table" : "cards");
+
+/** The fields a list shows: the ones its blocks show, in the order of the collection. */
+export const getListFields = (repeater, fields) => {
+	const keys = new Set(getBoundKeys(repeater));
+	return fields.filter((field) => keys.has(field.fieldname));
+};
+
+/**
+ * Builds a list again, as cards or a table, with `fieldnames`. Each one left
+ * out keeps what the list has now. A new layout is a new list block, which
+ * takes the selection. New fields keep the list block and replace what is in
+ * it, so the selection and an open field picker stay.
+ */
+export const rebuildList = async (listId, collection, { layout, fieldnames } = {}) => {
+	const list = getBlock(listId);
+	const repeater = getListRepeater(list);
+	const source = getListSource(await new PageData(getWritablePage().name).load(), repeater);
+	if (!source) throw new Error("Choose a collection first.");
+	if (fieldnames && !fieldnames.length) throw new Error("Choose at least one field.");
+	const all = await collection.getFields();
+	const shown = fieldnames
+		? all.filter((field) => fieldnames.includes(field.fieldname))
+		: getListFields(repeater, all);
+	const fields = shown.length ? shown : collection.getDisplayFields(all);
+	const isNewLayout = layout && layout !== getListLayout(list);
+	const tree = ((layout ?? getListLayout(list)) === "table" ? getTableBlock : getCardListBlock)(
+		source,
+		fields,
+		collection.label
+	);
+	if (isNewLayout) return replaceBlock(listId, tree);
+	setChildren(listId, tree.children);
+	// the columns of a table follow its fields. The other styles of the list are the user's
+	if (isTable(list)) {
+		updateBlock(listId, {
+			baseStyles: {
+				...list.baseStyles,
+				gridTemplateColumns: tree.baseStyles.gridTemplateColumns,
+			},
+		});
+	}
+};
+
+export const isDetailsBlock = (block) => block.attributes?.["data-cms"] === "details";
+
+/** The fields a details block shows: the entry fields that its blocks show, in the order of the collection. */
+export const getDetailsFields = (block, fields) => {
+	const keys = new Set(getBoundKeys(block));
+	return fields.filter((field) => keys.has(`${ENTRY_SOURCE}.${field.fieldname}`));
+};
+
+/**
+ * Shows `fieldnames` of the page's entry in a details block, or the display
+ * fields without them. The block stays, so the selection and an open picker stay.
+ */
+export const fillDetails = async (blockId, collection, fieldnames) => {
+	const pageData = new PageData(getWritablePage().name);
+	const source = (await pageData.load()).find((each) => each.name === ENTRY_SOURCE);
+	if (!source) throw new Error("Choose the collection first.");
+	const all = await collection.getFields();
+	const fields = fieldnames
+		? all.filter((field) => fieldnames.includes(field.fieldname))
+		: collection.getDisplayFields(all);
+	if (!fields.length) throw new Error("Choose at least one field.");
+	setChildren(blockId, getDocumentBlock(source, fields, collection.label).children);
+};
+
+/** The Blocks tab tile. On a collection page it shows the entry's display fields at once. */
+export const getDetailsTemplate = async () => {
+	const { page } = getEditorContext();
+	const collection =
+		page && (await Collection.all()).find((each) => each.collectionPage === page.name);
+	const source =
+		collection &&
+		(await new PageData(page.name).load()).find((each) => each.name === ENTRY_SOURCE);
+	if (!source) return getCollectionDetailsTemplate();
+	return getDocumentBlock(
+		source,
+		collection.getDisplayFields(await collection.getFields()),
+		collection.label
+	);
 };

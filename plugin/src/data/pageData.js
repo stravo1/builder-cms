@@ -40,7 +40,9 @@ export class PageData {
 	}
 
 	async load() {
-		this.sources = readSections(await this.getScript()).map((definition) => new DataSource(definition));
+		this.sources = readSections(await this.getScript()).map(
+			(definition) => new DataSource(definition)
+		);
 		return this.sources;
 	}
 
@@ -53,11 +55,18 @@ export class PageData {
 	/** `previousName` is the name before an edit. A rename moves the section. */
 	save(source, previousName = source.name) {
 		source.validate();
-		const isTaken = this.sources.some((other) => other.name === source.name && other.name !== previousName);
-		if (isTaken) throw new Error(`This page already has a data source named "${source.name}".`);
+		const isTaken = this.sources.some(
+			(other) => other.name === source.name && other.name !== previousName
+		);
+		if (isTaken)
+			throw new Error(`This page already has a data source named "${source.name}".`);
 		return this.writeScript((script) => {
-			const kept = previousName === source.name ? script : removeSection(script, previousName);
-			return writeSection(kept, source.name, source.toJSON(), source.toPython());
+			const kept =
+				previousName === source.name ? script : removeSection(script, previousName);
+			// a single entry goes first, so a list can filter by it
+			return writeSection(kept, source.name, source.toJSON(), source.toPython(), {
+				first: !source.isList,
+			});
 		});
 	}
 

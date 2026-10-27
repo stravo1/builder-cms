@@ -13,11 +13,15 @@ Open a collection to see its **Entries**. Edit a cell in the table, or open an e
 
 ## Pages
 
-Each collection has one collection page, a single design for every entry. In the collection's **Settings**, click **Configure** under **Collection page**. Then make a new page with blocks for the fields, or use a page that you already have. A page that you already have can get new blocks, or the CMS can bind the blocks that have the name of a field, such as "Title".
+Each collection has one collection page, a single design for every entry. To make a page the collection page, select its body. In the **CMS** section of the right panel, choose the collection. An empty page gets blocks for the fields. **Preview** in the same section shows another entry. To make a new page, click **Create page** in the collection's **Settings**.
 
 The collection page gets a URL such as `/blog/:slug`, so each entry has its own address.
 
-To list the entries on any page, open that page and click **Insert** under **Index**. Choose cards or a table. Each card or row links to its entry. If you change the collection URL later, the links change with it.
+To list the entries on any page, drag **Collection list** from the **CMS** group of the Insert panel onto the page. In the right panel, choose the collection, the layout (cards or a table), the fields, the sort order and the limit. Each card or row links to its entry. If you change the collection URL later, the links change with it.
+
+To show one entry, drag **Collection details** onto a page. In the right panel, choose the collection. The page becomes the collection page, and the block shows the entry's fields. Choose others in **Fields**.
+
+To show a field in a block of your own, select a text or image block in a card or on the collection page. Then choose the field in the right panel.
 
 ## Bind a block to a field
 

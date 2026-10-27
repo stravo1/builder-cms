@@ -1,5 +1,7 @@
 import { blockController, useBuilderStore, useCanvasStore, usePageStore } from "builder";
 import { reactive } from "vue";
+import { DataSource } from "../data/dataSource.js";
+import { readSections } from "../data/scriptSections.js";
 
 /** The open page and the selection, read when a caller asks. */
 export const getEditorContext = () => {
@@ -31,3 +33,9 @@ export const useEditorContext = () =>
 			return usePageStore().routeVariables;
 		},
 	});
+
+/** The data sources of the open page, read from the script the editor holds, so a view updates with it. */
+export const getOpenPageSources = () =>
+	readSections(usePageStore().activePage?.page_data_script).map(
+		(definition) => new DataSource(definition)
+	);

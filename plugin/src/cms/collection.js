@@ -38,7 +38,7 @@ const snakeCase = (text) => slugify(text).replace(/-/g, "_");
 export const markSameLabels = (collections) => {
 	for (const collection of collections) {
 		collection.isLabelShared = collections.some(
-			(other) => other !== collection && other.label === collection.label,
+			(other) => other !== collection && other.label === collection.label
 		);
 	}
 	return collections;
@@ -59,7 +59,9 @@ const refreshAfterEntryWrite = async (write) => {
 	try {
 		await refreshPageData();
 	} catch (error) {
-		toast.error(`The entry changed, but page data could not refresh: ${getErrorMessage(error)}`);
+		toast.error(
+			`The entry changed, but page data could not refresh: ${getErrorMessage(error)}`
+		);
 	}
 	return entry;
 };
@@ -200,7 +202,8 @@ export class Collection {
 		for (const name of await getCmsPageNames()) {
 			const page = new PageData(name);
 			const sources = await page.load();
-			for (const source of sources.filter((each) => each.doctype === this.doctype)) await change(page, source);
+			for (const source of sources.filter((each) => each.doctype === this.doctype))
+				await change(page, source);
 		}
 	}
 
@@ -235,24 +238,20 @@ export class Collection {
 	/** The table's columns: the title first, then the content, then the slug and the published flag. */
 	async getTableFields() {
 		const steering = [this.slugField, this.publishedField];
-		const rank = (field) => (field.fieldname === "title" ? 0 : steering.includes(field.fieldname) ? 2 : 1);
+		const rank = (field) =>
+			field.fieldname === "title" ? 0 : steering.includes(field.fieldname) ? 2 : 1;
 		return [...(await this.getFields())].sort((first, second) => rank(first) - rank(second));
 	}
 
 	/** The fields a visitor reads. The slug and the flags only steer the page. */
 	getDisplayFields(fields) {
 		const steering = [this.slugField, this.publishedField];
-		const display = fields.filter((field) => !steering.includes(field.fieldname) && field.fieldtype !== "Check");
-		return display.length ? display : [{ fieldname: "name", label: "Name", fieldtype: "Data" }];
-	}
-
-	/** The fields a user can insert on a page, and the ones chosen at first. */
-	async getInsertableFields() {
-		const all = await this.getFields();
-		return {
-			fields: all.filter((field) => field.fieldtype !== "Check"),
-			chosen: this.getDisplayFields(all).map((field) => field.fieldname),
-		};
+		const display = fields.filter(
+			(field) => !steering.includes(field.fieldname) && field.fieldtype !== "Check"
+		);
+		return display.length
+			? display
+			: [{ fieldname: "name", label: "Name", fieldtype: "Data" }];
 	}
 
 	/**
@@ -302,7 +301,7 @@ export class Collection {
 			this.doctype,
 			fields.map((field) => field.fieldname),
 			start,
-			pageLength,
+			pageLength
 		);
 	}
 

@@ -10,10 +10,18 @@
 import { isIdentifier, PythonExpression, toPython } from "./python.js";
 
 /** The fields a data source reads. `name` always comes, so a row has a key. */
-export const getSourceFieldnames = (fields) => [...new Set(["name", ...fields.map((field) => field.fieldname)])];
+export const getSourceFieldnames = (fields) => [
+	...new Set(["name", ...fields.map((field) => field.fieldname)]),
+];
 
 /** A filter value of `{{ route.slug }}` reads the route variable of the page. */
 const ROUTE_VALUE = /^\{\{\s*route\.([A-Za-z_][A-Za-z0-9_]*)\s*\}\}$/;
+
+/**
+ * A filter value that reads the entry a collection page shows. The `entry`
+ * section runs first in the script, so `data.entry` is there for every list.
+ */
+export const CURRENT_ENTRY = "{{ entry.name }}";
 
 export class DataSource {
 	constructor({
@@ -26,11 +34,24 @@ export class DataSource {
 		limit = 20,
 		link = null,
 		publishedField = null,
+		// the filters match when any one holds, not all of them
+		matchAny = false,
 		// sections saved before a collection could name its published field
 		publishedOnly = false,
 	} = {}) {
 		publishedField ??= publishedOnly ? "published" : null;
-		Object.assign(this, { name, type, doctype, fields, filters, orderBy, limit, link, publishedField });
+		Object.assign(this, {
+			name,
+			type,
+			doctype,
+			fields,
+			filters,
+			orderBy,
+			limit,
+			link,
+			publishedField,
+			matchAny,
+		});
 	}
 
 	get isList() {
@@ -44,34 +65,53 @@ export class DataSource {
 
 	/** Throws the first problem, in words a user can act on. */
 	validate() {
-		if (!isIdentifier(this.name)) throw new Error("Use letters, digits, and _ for the name, such as posts.");
+		if (!isIdentifier(this.name))
+			throw new Error("Use letters, digits, and _ for the name, such as posts.");
 		if (!this.doctype) throw new Error("Pick a doctype.");
 		if (!this.fields.length) throw new Error("Pick at least one field.");
 		if (this.isList && !(this.limit > 0)) throw new Error("Give the list a limit above 0.");
 		const linksTo = this.link?.page || this.link?.collection;
-		if (this.link && !(linksTo && this.link.field)) throw new Error("Pick the page and the field to link to.");
+		if (this.link && !(linksTo && this.link.field))
+			throw new Error("Pick the page and the field to link to.");
 	}
 
 	getFilterValue(value, forPreview) {
+		if (value === CURRENT_ENTRY)
+			return new PythonExpression(`(data.get("entry") or {}).get("name")`);
 		const route = typeof value === "string" && value.match(ROUTE_VALUE);
 		if (!route) return value;
-		return forPreview ? undefined : new PythonExpression(`frappe.form_dict.get(${toPython(route[1])})`);
+		return forPreview
+			? undefined
+			: new PythonExpression(`frappe.form_dict.get(${toPython(route[1])})`);
 	}
 
-	/** The Frappe filter form. The preview leaves out route filters: the editor has no route. */
+	/**
+	 * Frappe filter rows, so one field can hold more than one filter, such as a
+	 * date range. The preview leaves out route filters: the editor has no route.
+	 */
 	getFilters(forPreview = false, publishedOnly = true) {
 		// a setting, not a filter row, so nobody removes it by mistake and puts drafts on a public page
-		const filters = this.publishedField && publishedOnly ? { [this.publishedField]: 1 } : {};
-		for (const [field, operator, value] of this.filters) {
+		const published =
+			this.publishedField && publishedOnly ? [[this.publishedField, "=", 1]] : [];
+		return [...published, ...(this.matchAny ? [] : this.getRows(forPreview))];
+	}
+
+	/** With `matchAny`, the rows go to `or_filters`. The published filter still holds for each entry. */
+	getOrFilters(forPreview = false) {
+		return this.matchAny ? this.getRows(forPreview) : [];
+	}
+
+	getRows(forPreview) {
+		return this.filters.flatMap(([field, operator, value]) => {
 			const sent = this.getFilterValue(value, forPreview);
-			if (sent === undefined) continue;
-			filters[field] = operator === "=" ? sent : [operator, sent];
-		}
-		return filters;
+			return sent === undefined ? [] : [[field, operator, sent]];
+		});
 	}
 
 	get hasRouteFilter() {
-		return this.filters.some(([, , value]) => typeof value === "string" && ROUTE_VALUE.test(value));
+		return this.filters.some(
+			([, , value]) => typeof value === "string" && ROUTE_VALUE.test(value)
+		);
 	}
 
 	getReadCall(filters = toPython(this.getFilters())) {
@@ -80,6 +120,9 @@ export class DataSource {
 			`frappe.db.get_all(`,
 			`    ${toPython(this.doctype)},`,
 			`    filters=${filters},`,
+			...(this.getOrFilters().length
+				? [`    or_filters=${toPython(this.getOrFilters())},`]
+				: []),
 			`    fields=${toPython(this.readFields)},`,
 			`    order_by=${toPython(this.orderBy)},`,
 			`    limit_page_length=${limit},`,
@@ -98,12 +141,19 @@ export class DataSource {
 		if (!collection) return { lines: [], page: toPython(page), fallback: '""' };
 		const settings = `cms_${this.name}_collection`;
 		const variable = `cms_${this.name}_page`;
-		const read = `frappe.db.get_all("CMS Collection", filters={"collection": ${toPython(collection)}}, fields=["entry_page", "url"])`;
+		const read = `frappe.db.get_all("CMS Collection", filters={"collection": ${toPython(
+			collection
+		)}}, fields=["entry_page", "url"])`;
 		const url = `${settings}.get("url")`;
 		return {
-			lines: [`${settings} = (${read} or [{}])[0]`, `${variable} = ${settings}.get("entry_page") or ""`],
+			lines: [
+				`${settings} = (${read} or [{}])[0]`,
+				`${variable} = ${settings}.get("entry_page") or ""`,
+			],
 			page: variable,
-			fallback: `((${url} or "").rstrip("/") + ${toPython(`/:${routeVariable}`)} if ${url} else "")`,
+			fallback: `((${url} or "").rstrip("/") + ${toPython(
+				`/:${routeVariable}`
+			)} if ${url} else "")`,
 		};
 	}
 
@@ -118,13 +168,17 @@ export class DataSource {
 		const route = `cms_${this.name}_route`;
 		const { lines, page, fallback } = this.getLinkPageLines(variable);
 		const read = `frappe.db.get_all("Builder Page", filters={"name": ${page}}, fields=["route"])`;
-		const path = `"/" + ${route}.lstrip("/").replace(${toPython(`:${variable}`)}, ${value}).replace(${toPython(`<${variable}>`)}, ${value})`;
+		const path = `"/" + ${route}.lstrip("/").replace(${toPython(
+			`:${variable}`
+		)}, ${value}).replace(${toPython(`<${variable}>`)}, ${value})`;
 		return [
 			...lines,
 			`${route} = (${read} or [{}])[0].get("route") or ${fallback}`,
 			`data.${this.name} = [`,
 			// a route without the variable cannot name a row, so the row gets no link
-			`    dict(row, url=(${path}) if ${toPython(`:${variable}`)} in ${route} or ${toPython(`<${variable}>`)} in ${route} else "")`,
+			`    dict(row, url=(${path}) if ${toPython(`:${variable}`)} in ${route} or ${toPython(
+				`<${variable}>`
+			)} in ${route} else "")`,
 		];
 	}
 
@@ -135,8 +189,16 @@ export class DataSource {
 	getEntryLines() {
 		const filters = `cms_${this.name}_filters`;
 		const rows = `cms_${this.name}_rows`;
-		const published = this.publishedField ? [`if not in_preview:`, `    ${filters}[${toPython(this.publishedField)}] = 1`] : [];
-		const missing = [`if not ${rows} and not in_preview:`, `    raise frappe.PageDoesNotExistError("No entry at this address.")`];
+		const published = this.publishedField
+			? [
+					`if not in_preview:`,
+					`    ${filters}.append([${toPython(this.publishedField)}, "=", 1])`,
+			  ]
+			: [];
+		const missing = [
+			`if not ${rows} and not in_preview:`,
+			`    raise frappe.PageDoesNotExistError("No entry at this address.")`,
+		];
 		return [
 			`${filters} = ${toPython(this.getFilters(false, false))}`,
 			...published,
@@ -167,7 +229,29 @@ export class DataSource {
 	}
 
 	toJSON() {
-		const { name, type, doctype, fields, filters, orderBy, limit, link, publishedField } = this;
-		return { name, type, doctype, fields, filters, orderBy, limit, link, publishedField };
+		const {
+			name,
+			type,
+			doctype,
+			fields,
+			filters,
+			orderBy,
+			limit,
+			link,
+			publishedField,
+			matchAny,
+		} = this;
+		return {
+			name,
+			type,
+			doctype,
+			fields,
+			filters,
+			orderBy,
+			limit,
+			link,
+			publishedField,
+			matchAny,
+		};
 	}
 }
