@@ -555,6 +555,17 @@ describe("collections", () => {
 		]);
 	});
 
+	it("previews an entry on the collection page", () => {
+		expect(
+			owned("Blog Post", { entry_page: "page-1" }).getPreviewUrl("hello world", "dark")
+		).toBe(
+			"/api/method/builder.api.get_page_preview_html?page=page-1&slug=hello+world&prefers_color_scheme=dark"
+		);
+		expect(() => owned("Blog Post").getPreviewUrl("hello", "light")).toThrow(
+			"Set up a collection page first."
+		);
+	});
+
 	it("lets a slug follow the title until the user types one", () => {
 		const posts = owned("Blog Post");
 		expect(posts.isSlugFromTitle("", "")).toBe(true);

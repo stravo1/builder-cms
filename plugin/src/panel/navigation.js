@@ -4,10 +4,11 @@ import { ref } from "vue";
 /** What the CMS drawer shows. It lives here, so the right panel can open a collection in the drawer. */
 export const panelView = ref({ name: "collections" });
 
-/** Opens the CMS drawer at full size on a collection. */
+/** An entry is open: its editor and preview take the place of the entry table and the collection list. */
+export const isEditingEntry = ref(false);
+
+/** Opens the CMS drawer on a collection. */
 export const openCollectionInDrawer = (collection) => {
 	panelView.value = { name: "collection", collection };
-	const store = useBuilderStore();
-	store.activeDrawerTab = "cms";
-	store.isDrawerExpanded = true;
+	useBuilderStore().activeDrawerTab = "cms";
 };

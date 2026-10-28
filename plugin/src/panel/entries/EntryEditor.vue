@@ -12,7 +12,8 @@
 			<SectionLoader v-if="!isLoaded && !error" label="Loading entry" />
 			<div v-if="isLoaded" class="flex flex-col gap-4">
 				<p v-if="!collection.isOwned" class="cms-hint">
-					Saved to {{ collection.doctype }}. Use Desk for child tables and other complex fields.
+					Saved to {{ collection.doctype }}. Use Desk for child tables and other complex
+					fields.
 				</p>
 				<fieldset :disabled="isRunning" class="flex min-w-0 flex-col gap-4">
 					<EntryField
@@ -20,7 +21,8 @@
 						:key="field.fieldname"
 						:ref="(control) => fieldControls.set(field.fieldname, control)"
 						v-model="draft[field.fieldname]"
-						:field="field" />
+						:field="field"
+					/>
 				</fieldset>
 				<Button
 					v-if="!collection.isOwned || entryName"
@@ -28,13 +30,20 @@
 					variant="ghost"
 					icon-left="lucide-external-link"
 					label="Open in Desk"
-					@click="openUrl(collection.getDeskUrl(entryName || 'new'))" />
+					@click="openUrl(collection.getDeskUrl(entryName || 'new'))"
+				/>
 			</div>
 			<p v-if="error" role="alert" class="cms-error mt-3">{{ error }}</p>
 		</div>
 		<footer class="flex shrink-0 justify-end gap-2 p-3">
 			<Button label="Cancel" :disabled="isRunning" @click="emit('back')" />
-			<Button type="submit" variant="solid" label="Save" :loading="isRunning" :disabled="!isLoaded" />
+			<Button
+				type="submit"
+				variant="solid"
+				label="Save"
+				:loading="isRunning"
+				:disabled="!isLoaded"
+			/>
 		</footer>
 	</form>
 </template>
@@ -61,15 +70,16 @@ const draft = ref({});
 const initialDraft = ref("");
 const isLoaded = ref(false);
 const { run, runCached, isRunning, error } = useTask();
-const isDirty = computed(() => isLoaded.value && JSON.stringify(draft.value) !== initialDraft.value);
-defineExpose({ isDirty, isRunning });
+const isDirty = computed(
+	() => isLoaded.value && JSON.stringify(draft.value) !== initialDraft.value
+);
 
 watch(
 	[isLoaded, isRunning, () => props.fieldName],
 	([isReady, isBusy, fieldName]) => {
 		if (isReady && !isBusy && fieldName) fieldControls.get(fieldName)?.focus();
 	},
-	{ flush: "post" },
+	{ flush: "post" }
 );
 
 const readEntry = async () => ({
@@ -82,13 +92,18 @@ const show = (read) => {
 	if (isDirty.value) return;
 	fields.value = read.fields;
 	draft.value = Object.fromEntries(
-		read.fields.map((field) => [field.fieldname, read.entry[field.fieldname] ?? getDefault(field)]),
+		read.fields.map((field) => [
+			field.fieldname,
+			read.entry[field.fieldname] ?? getDefault(field),
+		])
 	);
 	initialDraft.value = JSON.stringify(draft.value);
 	isLoaded.value = true;
 };
 
-onMounted(() => runCached(`entry:${props.collection.doctype}:${props.entryName}`, readEntry, show));
+onMounted(() =>
+	runCached(`entry:${props.collection.doctype}:${props.entryName}`, readEntry, show)
+);
 
 // a new entry's slug follows its title. An existing slug stays, because live links use it
 watch(
@@ -99,7 +114,7 @@ watch(
 		if (props.collection.isSlugFromTitle(draft.value[slugField], previous)) {
 			draft.value[slugField] = slugify(title ?? "");
 		}
-	},
+	}
 );
 
 const getDefault = (field) => {
@@ -117,7 +132,7 @@ const save = async () => {
 				...draft.value,
 				...(props.entryName && { name: props.entryName }),
 			}),
-		"Entry saved",
+		"Entry saved"
 	);
 	if (saved) {
 		initialDraft.value = JSON.stringify(draft.value);

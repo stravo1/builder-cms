@@ -1,6 +1,7 @@
 <template>
 	<div data-cms-panel class="flex h-full min-h-0 bg-surface-base text-ink-gray-8">
 		<aside
+			v-show="!isEditingEntry"
 			class="relative flex shrink-0 flex-col overflow-y-auto border-r border-outline-gray-1"
 			:style="{ width: `${paneWidths.collections}px` }"
 		>
@@ -42,7 +43,7 @@ import { ref } from "vue";
 import CollectionList from "./collections/CollectionList.vue";
 import CollectionWorkspace from "./collections/CollectionWorkspace.vue";
 import NewCollection from "./collections/NewCollection.vue";
-import { panelView as view } from "./navigation.js";
+import { isEditingEntry, panelView as view } from "./navigation.js";
 import { paneWidths } from "./paneWidths.js";
 
 const listRevision = ref(0);

@@ -294,6 +294,17 @@ export class Collection {
 		return openUrl(`/${path.replace(/^\//, "")}`);
 	}
 
+	/** The collection page with one entry, rendered from the page's draft and the entry's saved values. */
+	getPreviewUrl(slug, colorScheme) {
+		if (!this.collectionPage) throw new Error("Set up a collection page first.");
+		const query = new URLSearchParams({
+			page: this.collectionPage,
+			slug,
+			prefers_color_scheme: colorScheme,
+		});
+		return `/api/method/builder.api.get_page_preview_html?${query}`;
+	}
+
 	/**
 	 * Each entry has `slug` and `published` under those names, whatever the
 	 * mapping calls them, so the panel reads one shape. `title` falls back to the slug.
