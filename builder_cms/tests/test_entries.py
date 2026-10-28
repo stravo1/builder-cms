@@ -75,3 +75,22 @@ class TestEntries(CMSTestCase):
 
 		with self.assertRaises(frappe.PermissionError):
 			save_entry(self.doctype, {"title": "Refused"})
+
+
+class TestReferenceEntries(CMSTestCase):
+	def test_a_multi_reference_saves_and_reads_entry_names(self):
+		tags = self.make_collection()["collection"]
+		fields = [
+			{"label": "Topic", "fieldtype": "Link", "options": tags},
+			{"label": "Tags", "fieldtype": "Table MultiSelect", "options": tags},
+		]
+		posts = self.make_collection(fields)["collection"]
+		news, tech = (save_entry(tags, {"title": title})["name"] for title in ("News", "Tech"))
+
+		entry = save_entry(posts, {"title": "Hello", "topic": news, "tags": [news, tech]})
+
+		self.assertEqual((entry["topic"], entry["tags"]), (news, [news, tech]))
+		self.assertEqual(get_rows(posts, ["tags"])[0]["tags"], [news, tech])
+		self.assertEqual(
+			frappe.get_all(posts, filters=[["tags.entry", "=", tech]], pluck="name"), [entry["name"]]
+		)

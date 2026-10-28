@@ -10,9 +10,7 @@ import frappe
 from frappe import _
 from frappe.permissions import AUTOMATIC_ROLES, setup_custom_perms
 
-from builder_cms.collections.schema import FULL_ACCESS
-
-SETTINGS_DOCTYPE = "CMS Collection"
+from builder_cms.collections.schema import FULL_ACCESS, SETTINGS_DOCTYPE
 
 # they always have CMS-wide access, so no picker shows them
 FIXED_ROLES = ("System Manager", "Website Manager")

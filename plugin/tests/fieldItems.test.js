@@ -32,19 +32,21 @@ describe("fields for Set Dynamic Value", () => {
 				name: "entry",
 				isList: false,
 				doctype: "Post",
-				readFields: ["title", "cover", "published"],
+				readFields: ["title", "cover", "published", "topic.title as topic"],
 			},
 		]);
 		builder.fields.mockResolvedValue([
 			{ fieldname: "title", label: "Title", fieldtype: "Data" },
 			{ fieldname: "cover", label: "Cover", fieldtype: "Attach Image" },
 			{ fieldname: "published", label: "Published", fieldtype: "Check" },
+			{ fieldname: "topic", label: "Topic", fieldtype: "Link" },
 		]);
 	});
 
 	it("offers the page entry fields that fit the text content", async () => {
 		expect(await getFieldItems({ block, property: "innerHTML", type: "key" })).toEqual([
 			{ key: "entry.title", label: "Title", comesFrom: "dataScript" },
+			{ key: "entry.topic", label: "Topic", comesFrom: "dataScript" },
 		]);
 	});
 

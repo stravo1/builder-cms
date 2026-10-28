@@ -6,6 +6,16 @@
 		:aria-label="label"
 		@update:model-value="(checked) => emit('save', checked ? 1 : 0)"
 	/>
+	<ReferenceInput
+		v-else-if="field.links_to"
+		size="sm"
+		variant="ghost"
+		:field="field"
+		:model-value="value"
+		:disabled="readOnly"
+		:aria-label="label"
+		@update:model-value="(chosen) => emit('save', chosen)"
+	/>
 	<button
 		v-else-if="isMultilineField(field)"
 		class="line-clamp-2 w-full rounded-1 px-2 text-left text-sm text-ink-gray-7 hover:bg-surface-gray-2"
@@ -58,11 +68,21 @@
 <script setup>
 import { Checkbox, FormControl, TextInput } from "frappe-ui";
 import { computed, ref, watch } from "vue";
-import { getFieldLabel, getSelectOptions, isMultilineField, isNumberField } from "../../data/doctypes.js";
+import {
+	getFieldLabel,
+	getSelectOptions,
+	isMultilineField,
+	isNumberField,
+} from "../../data/doctypes.js";
 import ImageThumbnail from "./ImageThumbnail.vue";
 import ImageUploader from "./ImageUploader.vue";
+import ReferenceInput from "./ReferenceInput.vue";
 
-const props = defineProps({ field: { type: Object, required: true }, value: null, readOnly: Boolean });
+const props = defineProps({
+	field: { type: Object, required: true },
+	value: null,
+	readOnly: Boolean,
+});
 const emit = defineEmits(["save", "open"]);
 
 const label = computed(() => getFieldLabel(props.field));
@@ -71,7 +91,9 @@ const isImage = computed(() => props.field.fieldtype === "Attach Image");
 const selectOptions = computed(() => getSelectOptions(props.field));
 const preview = computed(() => {
 	if (props.field.fieldtype !== "Text Editor") return String(props.value ?? "");
-	return props.value ? new DOMParser().parseFromString(String(props.value), "text/html").body.textContent : "";
+	return props.value
+		? new DOMParser().parseFromString(String(props.value), "text/html").body.textContent
+		: "";
 });
 
 /** The text being typed. It follows the saved value until the user types. */
@@ -79,10 +101,11 @@ const draft = ref("");
 watch(
 	() => props.value,
 	(value) => (draft.value = value ?? ""),
-	{ immediate: true },
+	{ immediate: true }
 );
 
-const typed = () => (isNumber.value ? (draft.value === "" ? null : Number(draft.value)) : draft.value);
+const typed = () =>
+	isNumber.value ? (draft.value === "" ? null : Number(draft.value)) : draft.value;
 
 /** Saves only a real change, when the user leaves the cell or presses Enter. */
 const commit = () => {

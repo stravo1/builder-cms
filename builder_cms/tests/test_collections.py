@@ -109,6 +109,44 @@ class TestDeleteCollection(CMSTestCase):
 			delete_collection(collection["collection"])
 
 
+class TestReferences(CMSTestCase):
+	def setUp(self):
+		super().setUp()
+		self.tags = self.make_collection()["collection"]
+
+	def make_posts(self) -> str:
+		fields = [
+			{"label": "Topic", "fieldtype": "Link", "options": self.tags},
+			{"label": "Tags", "fieldtype": "Table MultiSelect", "options": self.tags},
+		]
+		return self.make_collection(fields)["collection"]
+
+	def test_a_reference_names_the_collection_it_links_to(self):
+		fields = {field["fieldname"]: field for field in get_fields(self.make_posts())}
+
+		self.assertEqual((fields["topic"]["links_to"], fields["topic"]["title_field"]), (self.tags, "title"))
+		self.assertEqual((fields["tags"]["links_to"], fields["tags"]["link_fieldname"]), (self.tags, "entry"))
+
+	def test_a_reference_links_to_a_collection(self):
+		with self.assertRaises(frappe.ValidationError):
+			self.make_collection([{"label": "Task", "fieldtype": "Link", "options": "ToDo"}])
+
+	def test_removing_a_multi_reference_drops_its_table(self):
+		posts = self.make_posts()
+		table = frappe.get_meta(posts).get_field("tags").options
+
+		remove_field(posts, "tags")
+
+		self.assertFalse(frappe.db.exists("DocType", table))
+		self.assertFalse(frappe.db.table_exists(table))
+
+	def test_a_collection_that_others_link_to_stays(self):
+		self.make_posts()
+
+		with self.assertRaises(frappe.ValidationError):
+			delete_collection(self.tags)
+
+
 class TestCollectionPage(CMSTestCase):
 	def test_deleting_the_collection_page_clears_the_setting(self):
 		collection = self.make_collection()

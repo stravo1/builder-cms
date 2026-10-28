@@ -95,6 +95,11 @@ import {
 } from "../cms/filters.js";
 import PropertyRow from "./PropertyRow.vue";
 
+// "not like" or "in" on an entry name means nothing to a user
+const REFERENCE_OPERATORS = ["equals", "not equals", "is"];
+// a multi-reference matches through a join, so "not equals" would match any other entry it holds
+const MULTI_OPERATORS = [{ label: "Contains", value: "equals" }];
+
 const MATCH_OPTIONS = [
 	{ label: "and", value: "all" },
 	{ label: "or", value: "any" },
@@ -127,10 +132,15 @@ const summary = computed(() => {
 });
 
 const findField = (fieldname) => filterFields.value.find((field) => field.fieldname === fieldname);
-const getRowOperators = (row) =>
-	getOperators(findField(row.fieldname)?.fieldtype ?? "").filter(
-		({ value }) => !LEFT_OUT_OPERATORS.includes(value)
-	);
+const getRowOperators = (row) => {
+	const field = findField(row.fieldname);
+	if (field?.isMulti) return MULTI_OPERATORS;
+	const kept = (value) =>
+		field?.links_to
+			? REFERENCE_OPERATORS.includes(value)
+			: !LEFT_OUT_OPERATORS.includes(value);
+	return getOperators(field?.fieldtype ?? "").filter(({ value }) => kept(value));
+};
 const getInput = (row) => getValueInput(findField(row.fieldname), row.operator);
 const blankRow = () => ({ fieldname: "", operator: "equals", value: "" });
 

@@ -20,6 +20,7 @@
 <script setup>
 import { MultiSelect } from "frappe-ui";
 import { computed, ref, shallowRef, watch } from "vue";
+import { canShow } from "../cms/collection.js";
 import { fillDetails, getDetailsFields } from "../cms/pageActions.js";
 import { getBlock } from "../editor/canvas.js";
 import ConnectCollection from "./ConnectCollection.vue";
@@ -35,9 +36,7 @@ const fields = shallowRef([]);
 const pickedFields = ref([]);
 
 const fieldOptions = computed(() =>
-	fields.value
-		.filter((field) => field.fieldtype !== "Check")
-		.map((field) => ({ label: field.label, value: field.fieldname }))
+	fields.value.filter(canShow).map((field) => ({ label: field.label, value: field.fieldname }))
 );
 const chosenFields = computed(() =>
 	getDetailsFields(getBlock(props.blockId), fields.value).map((field) => field.fieldname)

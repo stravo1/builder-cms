@@ -3,6 +3,7 @@
  * card, and offer fields to Builder's "Set Dynamic Value" picker.
  */
 
+import { getReadKey } from "../data/dataSource.js";
 import { getDoctypeFields, getFieldLabel } from "../data/doctypes.js";
 import { PageData } from "../data/pageData.js";
 import { getBlock, setChildren, updateBlock } from "../editor/canvas.js";
@@ -41,7 +42,8 @@ export const getSourceFields = async (source) => {
 		{ fieldname: "name", label: "Name", fieldtype: "Data" },
 		...(await getDoctypeFields(source.doctype)),
 	];
-	const fields = all.filter((field) => source.readFields.includes(field.fieldname));
+	const keys = source.readFields.map(getReadKey);
+	const fields = all.filter((field) => keys.includes(field.fieldname));
 	if (source.link)
 		fields.push({ fieldname: "url", label: "Collection page URL", fieldtype: "Data" });
 	return fields;

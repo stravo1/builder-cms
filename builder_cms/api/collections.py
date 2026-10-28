@@ -6,6 +6,7 @@ A collection is named by its DocType, such as `CMS Blog Post`.
 import frappe
 
 from builder_cms.collections.access import SETTINGS_DOCTYPE, assert_manager
+from builder_cms.collections.references import MultiReference
 from builder_cms.collections.schema import CollectionSchema
 
 SETTINGS_FIELDS = (
@@ -87,13 +88,27 @@ def delete_collection(collection: str) -> None:
 	frappe.delete_doc(SETTINGS_DOCTYPE, get_collection(collection).name)
 
 
+def describe_field(field) -> dict:
+	"""A reference also names the collection it links to, and the field that names its entries."""
+	keys = ("fieldname", "label", "fieldtype", "options", "reqd", "read_only")
+	described = {key: field.get(key) for key in keys}
+	multi = MultiReference(field) if field.fieldtype == "Table MultiSelect" else None
+	links_to = multi.links_to if multi else field.options if field.fieldtype == "Link" else None
+	target = links_to and frappe.db.get_value(SETTINGS_DOCTYPE, {"collection": links_to})
+	if not target:
+		return described
+	described.update(links_to=links_to, title_field=frappe.get_doc(SETTINGS_DOCTYPE, target).title_field)
+	if multi:
+		described["link_fieldname"] = multi.link_field.fieldname
+	return described
+
+
 @frappe.whitelist()
 def get_fields(collection: str) -> list[dict]:
 	"""The fields that hold a value and that are safe to publish."""
 	document = get_collection(collection)
 	frappe.has_permission(document.collection, "read", throw=True)
-	keys = ("fieldname", "label", "fieldtype", "options", "reqd", "read_only")
-	return [{key: field.get(key) for key in keys} for field in CollectionSchema(document.collection).fields]
+	return [describe_field(field) for field in CollectionSchema(document.collection).fields]
 
 
 @frappe.whitelist(methods=["POST"])

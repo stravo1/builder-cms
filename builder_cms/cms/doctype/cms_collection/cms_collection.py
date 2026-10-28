@@ -58,6 +58,13 @@ class CMSCollection(Document):
 	def schema(self) -> CollectionSchema:
 		return CollectionSchema(self.collection)
 
+	@property
+	def title_field(self) -> str:
+		"""The field that names an entry in a picker and on a page that links to it."""
+		if not self.is_mapped:
+			return "title"
+		return frappe.get_meta(self.collection).title_field or self.slug_field
+
 	def before_insert(self):
 		if self.is_mapped:
 			assert_manager()

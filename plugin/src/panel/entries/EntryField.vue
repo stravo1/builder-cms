@@ -1,6 +1,15 @@
 <template>
 	<div ref="container" :class="{ 'flex items-end gap-2': isImage }">
-		<RichTextField ref="control" v-if="field.fieldtype === 'Text Editor'" v-model="value" :label="label" />
+		<RichTextField
+			ref="control"
+			v-if="field.fieldtype === 'Text Editor'"
+			v-model="value"
+			:label="label"
+		/>
+		<div v-else-if="field.links_to" class="flex flex-col gap-1.5">
+			<FormLabel :label="label" :required="Boolean(field.reqd)" />
+			<ReferenceInput v-model="value" :field="field" />
+		</div>
 		<FormControl
 			ref="control"
 			v-else
@@ -17,11 +26,17 @@
 </template>
 
 <script setup>
-import { FormControl } from "frappe-ui";
+import { FormControl, FormLabel } from "frappe-ui";
 import { computed, ref } from "vue";
-import { getFieldLabel, getSelectOptions, isMultilineField, isNumberField } from "../../data/doctypes.js";
+import {
+	getFieldLabel,
+	getSelectOptions,
+	isMultilineField,
+	isNumberField,
+} from "../../data/doctypes.js";
 import RichTextField from "./RichTextField.vue";
 import ImageUploader from "./ImageUploader.vue";
+import ReferenceInput from "./ReferenceInput.vue";
 
 const props = defineProps({ field: { type: Object, required: true } });
 const value = defineModel();
@@ -42,6 +57,8 @@ const type = computed(() => {
 	if (fieldtype === "Check") return "checkbox";
 	if (isNumberField(props.field)) return "number";
 	if (isMultilineField(props.field)) return "textarea";
-	return { Date: "date", Datetime: "datetime", Time: "time", Select: "select" }[fieldtype] || "text";
+	return (
+		{ Date: "date", Datetime: "datetime", Time: "time", Select: "select" }[fieldtype] || "text"
+	);
 });
 </script>

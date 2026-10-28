@@ -9,9 +9,28 @@
 
 import { isIdentifier, PythonExpression, toPython } from "./python.js";
 
-/** The fields a data source reads. `name` always comes, so a row has a key. */
+/**
+ * A reference reads the title of the entry it links to, under its own name, so
+ * a block bound to `topic` shows "News" and not the entry's name. A filter on
+ * `topic` still compares the stored name.
+ */
+const getReadField = ({ fieldname, fieldtype, title_field }) =>
+	fieldtype === "Link" && title_field
+		? `${fieldname}.${title_field} as ${fieldname}`
+		: fieldname;
+
+/** The key a read field gives a row: `topic` for `topic.title as topic`. */
+export const getReadKey = (readField) => readField.split(" as ").pop();
+
+/**
+ * The fields a data source reads. `name` always comes, so a row has a key. A
+ * multi-reference has no column, so a plain read cannot name it.
+ */
 export const getSourceFieldnames = (fields) => [
-	...new Set(["name", ...fields.map((field) => field.fieldname)]),
+	...new Set([
+		"name",
+		...fields.filter((field) => field.fieldtype !== "Table MultiSelect").map(getReadField),
+	]),
 ];
 
 /** A filter value of `{{ route.slug }}` reads the route variable of the page. */

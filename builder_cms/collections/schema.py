@@ -15,6 +15,7 @@ from frappe.utils import get_table_name
 
 MODULE = "CMS"
 PREFIX = "CMS "
+SETTINGS_DOCTYPE = "CMS Collection"
 
 # the page bindings and the entry route need these
 STANDARD_FIELDS = (
@@ -27,7 +28,11 @@ STANDARD_FIELDNAMES = frozenset(field["fieldname"] for field in STANDARD_FIELDS)
 # one access flag for now. Separate read, write, create, and delete can come later
 FULL_ACCESS = {"read": 1, "write": 1, "create": 1, "delete": 1}
 
-FIELD_TYPES = frozenset({"Data", "Small Text", "Text Editor", "Attach Image", "Date", "Int", "Check"})
+# a Reference is a Link to a collection. A Multi-reference is a Table MultiSelect of such Links
+REFERENCE_TYPES = frozenset({"Link", "Table MultiSelect"})
+FIELD_TYPES = frozenset(
+	{"Data", "Small Text", "Text Editor", "Attach Image", "Date", "Int", "Check", *REFERENCE_TYPES}
+)
 
 # a page renders every field it binds to any visitor, so these are never offered
 SECRET_FIELDNAME = re.compile(r"password|secret|token|api_key|_key$")
@@ -48,6 +53,17 @@ def is_secret_field(field) -> bool:
 	return field.fieldtype == "Password" or bool(SECRET_FIELDNAME.search(field.fieldname))
 
 
+def has_value(field) -> bool:
+	"""A multi-reference has no column, but it holds the entries it links to."""
+	return field.fieldtype == "Table MultiSelect" or field.fieldtype not in no_value_fields
+
+
+def drop_doctype(doctype: str) -> None:
+	"""Removes a DocType and drops its table. Frappe keeps the table of a custom DocType by itself."""
+	frappe.delete_doc("DocType", doctype, ignore_permissions=True)
+	frappe.db.sql_ddl(f"DROP TABLE IF EXISTS `{get_table_name(doctype)}`")
+
+
 class CollectionSchema:
 	def __init__(self, doctype: str):
 		self.doctype = doctype
@@ -59,11 +75,21 @@ class CollectionSchema:
 		return [
 			field
 			for field in meta.fields
-			if field.fieldname and field.fieldtype not in no_value_fields and not is_secret_field(field)
+			if field.fieldname and has_value(field) and not is_secret_field(field)
+		]
+
+	@property
+	def reference_tables(self) -> list[str]:
+		"""The child DocTypes of the multi-references."""
+		return [
+			field.options
+			for field in frappe.get_meta(self.doctype).fields
+			if field.fieldtype == "Table MultiSelect"
 		]
 
 	def create(self, fields: list[dict], roles: list[str]) -> None:
 		"""`fields` are read already, by `read_new_fields`."""
+		self.make_reference_tables(fields)
 		frappe.get_doc(
 			{
 				"doctype": "DocType",
@@ -80,7 +106,9 @@ class CollectionSchema:
 	def add_fields(self, fields: list[dict]) -> None:
 		document = frappe.get_doc("DocType", self.doctype)
 		taken = [row.fieldname for row in document.fields]
-		for row in self.read_new_fields(fields, taken):
+		rows = self.read_new_fields(fields, taken)
+		self.make_reference_tables(rows)
+		for row in rows:
 			document.append("fields", row)
 		document.save(ignore_permissions=True)
 
@@ -94,7 +122,9 @@ class CollectionSchema:
 			frappe.throw(_("{0} has no field {1}.").format(self.doctype, fieldname))
 		document.remove(row)
 		document.save(ignore_permissions=True)
-		if frappe.db.has_column(self.doctype, fieldname):
+		if row.fieldtype == "Table MultiSelect":
+			drop_doctype(row.options)
+		elif frappe.db.has_column(self.doctype, fieldname):
 			frappe.db.drop_columns(self.doctype, [fieldname])
 
 	def set_roles(self, roles: list[str]) -> None:
@@ -108,9 +138,51 @@ class CollectionSchema:
 		document.save(ignore_permissions=True)
 
 	def delete(self) -> None:
-		"""Removes the DocType and drops its table. Frappe keeps the table by itself."""
-		frappe.delete_doc("DocType", self.doctype, ignore_permissions=True)
-		frappe.db.sql_ddl(f"DROP TABLE IF EXISTS `{get_table_name(self.doctype)}`")
+		"""Removes the DocType and the child DocTypes of its multi-references, with their tables."""
+		tables = self.reference_tables
+		self.assert_unreferenced(ignored=tables)
+		drop_doctype(self.doctype)
+		for table in tables:
+			drop_doctype(table)
+
+	def assert_unreferenced(self, ignored: list[str]) -> None:
+		"""A Link to a dropped DocType breaks each save of the DocType that holds it."""
+		holders = frappe.get_all(
+			"DocField",
+			filters={
+				"fieldtype": "Link",
+				"options": self.doctype,
+				"parent": ["not in", [self.doctype, *ignored]],
+			},
+			pluck="parent",
+			distinct=True,
+		)
+		if holders:
+			frappe.throw(_("Remove the fields that link to it first, in {0}.").format(", ".join(holders)))
+
+	def make_reference_tables(self, rows: list[dict]) -> None:
+		"""A new multi-reference names the collection it links to, until its child DocType is made."""
+		for row in rows:
+			if row["fieldtype"] == "Table MultiSelect":
+				row["options"] = self.make_reference_table(row["fieldname"], row["options"])
+
+	def make_reference_table(self, fieldname: str, links_to: str) -> str:
+		"""Makes the child DocType, such as `CMS Blog Post Tags`, with one Link."""
+		name = f"{self.doctype} {fieldname.replace('_', ' ').title()}"
+		if frappe.db.exists("DocType", name):
+			frappe.throw(_("A DocType called {0} already exists.").format(name))
+		link = {"fieldname": "entry", "label": "Entry", "fieldtype": "Link", "options": links_to, "reqd": 1}
+		frappe.get_doc(
+			{
+				"doctype": "DocType",
+				"name": name,
+				"module": MODULE,
+				"custom": 1,
+				"istable": 1,
+				"fields": [{**link, "in_list_view": 1}],
+			}
+		).insert(ignore_permissions=True)
+		return name
 
 	def read_new_fields(self, fields: list[dict], taken) -> list[dict]:
 		taken = {"name", *STANDARD_FIELDNAMES, *taken}
@@ -128,4 +200,12 @@ class CollectionSchema:
 			frappe.throw(_('Pick another name for the field "{0}".').format(label))
 		if field.get("fieldtype") not in FIELD_TYPES:
 			frappe.throw(_("A collection cannot have a field of type {0}.").format(field.get("fieldtype")))
-		return {"label": label, "fieldname": fieldname, "fieldtype": field["fieldtype"]}
+		row = {"label": label, "fieldname": fieldname, "fieldtype": field["fieldtype"]}
+		if row["fieldtype"] in REFERENCE_TYPES:
+			row["options"] = self.read_links_to(field.get("options"), label)
+		return row
+
+	def read_links_to(self, collection: str | None, label: str) -> str:
+		if not collection or not frappe.db.exists(SETTINGS_DOCTYPE, {"collection": collection}):
+			frappe.throw(_('Pick the collection that "{0}" links to.').format(label))
+		return collection

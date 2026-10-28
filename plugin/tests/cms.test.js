@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 vi.mock("../src/data/api.js", () => ({ api: {} }));
 vi.mock("../src/data/documents.js", () => ({
+	subscribeDocuments: () => {},
 	getMetadata: async () => ({
 		fields: [
 			{ fieldname: "email", fieldtype: "Data" },
@@ -23,8 +24,15 @@ const { getDoctypeFields, isMultilineField } = await import("../src/data/doctype
 const { getCardBlock, getCollectionListTemplate, getDocumentBlock, getFieldShape, getTableBlock } =
 	await import("../src/blocks/pageBlocks.js");
 const { CURRENT_ENTRY, DataSource } = await import("../src/data/dataSource.js");
-const { ENTRY_FIELD, getStartValue, getValueInput, toControlFilters, toSourceFilters } =
-	await import("../src/cms/filters.js");
+const {
+	ENTRY_FIELD,
+	getFilterFields,
+	getStartValue,
+	getValueInput,
+	toControlFilters,
+	toSourceFilters,
+} = await import("../src/cms/filters.js");
+const { api } = await import("../src/data/api.js");
 const { isIdentifier, toPython } = await import("../src/data/python.js");
 const { readSections, removeSection, writeSection } = await import(
 	"../src/data/scriptSections.js"
@@ -389,10 +397,12 @@ describe("list filters", () => {
 		const source = [
 			["title", "LIKE", "%news%"],
 			["name", "!=", CURRENT_ENTRY],
+			["topic", "=", CURRENT_ENTRY],
 		];
 		const control = [
 			["title", "LIKE", "%news%"],
 			[ENTRY_FIELD.fieldname, "!=", "Current entry"],
+			["topic", "=", CURRENT_ENTRY],
 		];
 		expect(toControlFilters(source)).toEqual(control);
 		expect(toSourceFilters(control)).toEqual(source);
@@ -410,6 +420,31 @@ describe("list filters", () => {
 		expect(getValueInput({ fieldtype: "Data" }, "like")).toEqual({ type: "text" });
 		expect(getStartValue(ENTRY_FIELD, "equals")).toBe("Current entry");
 		expect(getStartValue({ fieldtype: "Data" }, "like")).toBe("");
+	});
+
+	it("filters a reference by an entry it links to, or by the entry the page shows", async () => {
+		api.getCollections = async () => [{ collection: "CMS Tag", label: "Tag" }];
+		api.getEntries = async () => [{ name: "t1", title: "News" }];
+		const fields = [
+			{ fieldname: "body", fieldtype: "Text Editor" },
+			{ fieldname: "topic", fieldtype: "Link", links_to: "CMS Tag" },
+			{
+				fieldname: "tags",
+				fieldtype: "Table MultiSelect",
+				links_to: "CMS Tag",
+				link_fieldname: "entry",
+			},
+		];
+
+		const [topic, tags] = await getFilterFields(fields, "CMS Tag");
+
+		expect(tags.fieldname).toBe("tags.entry");
+		expect([topic.isMulti, tags.isMulti]).toEqual([false, true]);
+		expect(getValueInput(topic, "equals").options).toEqual([
+			{ label: "Current entry", value: CURRENT_ENTRY },
+			{ label: "News", value: "t1" },
+		]);
+		expect(getValueInput(topic, "is").options[0].value).toBe("set");
 	});
 });
 
@@ -485,6 +520,9 @@ describe("collections", () => {
 			{ fieldname: "slug", fieldtype: "Data" },
 			{ fieldname: "published", fieldtype: "Check" },
 			{ fieldname: "body", fieldtype: "Text Editor" },
+			// a reference reads the linked title under its own name. A list holds no multi-reference
+			{ fieldname: "topic", fieldtype: "Link", links_to: "CMS Tag", title_field: "title" },
+			{ fieldname: "tags", fieldtype: "Table MultiSelect", links_to: "CMS Tag" },
 		];
 
 		const defaults = owned("Blog Post").getSourceDefaults(fields);
@@ -494,7 +532,7 @@ describe("collections", () => {
 		expect(defaults).toEqual({
 			name: "collection_blog_post",
 			doctype: "CMS Blog Post",
-			fields: ["name", "title", "slug", "published", "body"],
+			fields: ["name", "title", "slug", "published", "body", "topic.title as topic"],
 			orderBy: "creation desc",
 			publishedField: "published",
 			link: { collection: "CMS Blog Post", field: "slug", variable: "slug" },

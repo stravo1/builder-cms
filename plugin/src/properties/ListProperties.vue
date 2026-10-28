@@ -41,9 +41,8 @@
 					@update:model-value="changeFields"
 				/>
 			</PropertyRow>
-			<!-- after the fields load: a read without them would drop every filter -->
 			<ListFilters
-				v-if="fields.length"
+				v-if="filterFields.length"
 				:source="source"
 				:fields="filterFields"
 				:is-collection-page="isCollectionPage"
@@ -76,7 +75,8 @@
 import { OptionToggle } from "builder";
 import { Button, MultiSelect, Select, TextInput } from "frappe-ui";
 import { computed, ref, shallowRef, watch } from "vue";
-import { Collection } from "../cms/collection.js";
+import { canShow, Collection } from "../cms/collection.js";
+import { getFilterFields } from "../cms/filters.js";
 import {
 	ENTRY_SOURCE,
 	getListFields,
@@ -103,6 +103,8 @@ const collections = shallowRef([]);
 const fields = shallowRef([]);
 /** The ticked fields. They show at once, before the list is built again from them. */
 const pickedFields = ref([]);
+/** The fields a filter can use, with the entries of each reference. */
+const filterFields = shallowRef([]);
 
 // the selected list: a repeater of cards, or a table that holds its repeater
 const list = computed(() => getBlock(props.blockId));
@@ -113,19 +115,13 @@ const collection = computed(() =>
 	collections.value.find((each) => each.doctype === source.value?.doctype)
 );
 const fieldOptions = computed(() =>
-	fields.value
-		.filter((field) => field.fieldtype !== "Check")
-		.map((field) => ({ label: field.label, value: field.fieldname }))
+	fields.value.filter(canShow).map((field) => ({ label: field.label, value: field.fieldname }))
 );
-// a filter on rich text or an image would compare markup or a URL
-const filterFields = computed(() =>
-	fields.value.filter((field) => !["Text Editor", "Attach Image"].includes(field.fieldtype))
+/** The collection of the entry the page shows, on a collection page. */
+const pageDoctype = computed(
+	() => getOpenPageSources().find((each) => each.name === ENTRY_SOURCE)?.doctype
 );
-const isCollectionPage = computed(() =>
-	getOpenPageSources().some(
-		(each) => each.name === ENTRY_SOURCE && each.doctype === source.value?.doctype
-	)
-);
+const isCollectionPage = computed(() => pageDoctype.value === source.value?.doctype);
 const chosenFields = computed(() =>
 	getListFields(repeater.value, fields.value).map((field) => field.fieldname)
 );
@@ -140,6 +136,10 @@ const collectionOptions = computed(() => [
 run(async () => (collections.value = await Collection.all()));
 watch(collection, (current) =>
 	run(async () => (fields.value = current ? await current.getFields() : []))
+);
+// after the fields load: a read without them would drop every filter
+watch([fields, pageDoctype], ([current, doctype]) =>
+	run(async () => (filterFields.value = await getFilterFields(current, doctype)))
 );
 
 const chooseCollection = (doctype) => {

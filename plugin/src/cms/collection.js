@@ -26,8 +26,16 @@ export const FIELD_TYPES = [
 	{ label: "Date", value: "Date" },
 	{ label: "Number", value: "Int" },
 	{ label: "Yes or no", value: "Check" },
+	{ label: "Reference", value: "Link" },
+	{ label: "Multi-reference", value: "Table MultiSelect" },
 ];
 export const blankField = () => ({ label: "", fieldtype: "Data" });
+
+/** A new field of these types names the collection it links to in `options`. */
+export const REFERENCE_TYPES = ["Link", "Table MultiSelect"];
+
+/** A page block can show the field. A multi-reference holds a list, which needs a list of its own. */
+export const canShow = (field) => !["Check", "Table MultiSelect"].includes(field.fieldtype);
 
 /** Every collection the app makes has these. The page bindings and the entry route need them. */
 export const STANDARD_FIELDNAMES = ["title", "slug", "published"];
@@ -230,7 +238,10 @@ export class Collection {
 	syncPageFields(removedFieldname) {
 		return this.updatePageSources(async (page, source) => {
 			source.fields = getSourceFieldnames(await this.getFields());
-			source.filters = source.filters.filter(([name]) => name !== removedFieldname);
+			// a multi-reference filters through its Link, as `tags.entry`
+			source.filters = source.filters.filter(
+				([name]) => name.split(".")[0] !== removedFieldname
+			);
 			await page.save(source);
 		});
 	}
@@ -247,7 +258,7 @@ export class Collection {
 	getDisplayFields(fields) {
 		const steering = [this.slugField, this.publishedField];
 		const display = fields.filter(
-			(field) => !steering.includes(field.fieldname) && field.fieldtype !== "Check"
+			(field) => !steering.includes(field.fieldname) && canShow(field)
 		);
 		return display.length
 			? display
@@ -291,6 +302,13 @@ export class Collection {
 		return api.getEntries(this.doctype, start);
 	}
 
+	/** The entries as picker options, by name. A write to an entry forgets them. */
+	getEntryOptions() {
+		return cached(`entries:${this.doctype}`, async () =>
+			(await this.getEntries()).map((entry) => ({ label: entry.title, value: entry.name }))
+		);
+	}
+
 	getNewestPublished() {
 		return api.getNewestPublished(this.doctype);
 	}
@@ -319,6 +337,7 @@ export class Collection {
 
 	/** The app keeps only the fields it can write, and fills an empty slug from the title. */
 	saveEntry(entry) {
+		forget(`entries:${this.doctype}`);
 		return refreshAfterEntryWrite(api.saveEntry(this.doctype, entry));
 	}
 
@@ -329,6 +348,7 @@ export class Collection {
 
 	deleteEntry(name) {
 		if (!this.isOwned) throw new Error("Delete these entries in Desk.");
+		forget(`entries:${this.doctype}`);
 		return refreshAfterEntryWrite(api.deleteEntry(this.doctype, name));
 	}
 }

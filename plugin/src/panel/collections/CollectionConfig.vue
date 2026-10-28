@@ -151,7 +151,7 @@ import FieldList from "./FieldList.vue";
 import FieldRows from "./FieldRows.vue";
 
 const props = defineProps({ collection: { type: Object, required: true } });
-const emit = defineEmits(["deleted", "open"]);
+const emit = defineEmits(["deleted", "fields-changed", "open"]);
 
 const url = ref(props.collection.url);
 /** The rows of the new fields form. The collection's own fields are `collectionFields`. */
@@ -166,12 +166,12 @@ const loadFields = () =>
 	run(async () => (collectionFields.value = await props.collection.getFields()));
 
 const removeField = async (field) => {
-	await run(async () => {
+	const removed = await run(async () => {
 		await props.collection.removeField(field.fieldname);
 		return true;
 	}, "Field removed");
-	const fields = await props.collection.getFields();
-	collectionFields.value = fields;
+	if (removed) emit("fields-changed");
+	collectionFields.value = await props.collection.getFields();
 };
 
 const saveRoles = async (roles) => {
@@ -188,6 +188,7 @@ const addFields = async () => {
 		"Fields added"
 	);
 	if (!added) return;
+	emit("fields-changed");
 	newFields.value = [];
 	await loadFields();
 };

@@ -35,13 +35,14 @@ export const getDoctypeNames = () => cached("doctype-names", api.getDoctypeNames
  */
 const SECRET_NAME = /password|secret|token|api_key|_key$/;
 
-export const isSecretField = (field) => field.fieldtype === "Password" || SECRET_NAME.test(field.fieldname);
+export const isSecretField = (field) =>
+	field.fieldtype === "Password" || SECRET_NAME.test(field.fieldname);
 
 /** The fields that hold a value, so a read can name them, and that are safe to publish. */
 export const getDoctypeFields = async (doctype) => {
 	const { fields } = await getDoctype(doctype);
 	return fields.filter(
-		(field) => field.fieldname && !NO_VALUE_TYPES.has(field.fieldtype) && !isSecretField(field),
+		(field) => field.fieldname && !NO_VALUE_TYPES.has(field.fieldtype) && !isSecretField(field)
 	);
 };
 
@@ -66,7 +67,10 @@ export const getFieldLabel = (field) => field.label || field.fieldname;
 export const toFieldOption = (field) => ({ label: getFieldLabel(field), value: field.fieldname });
 
 /** The choices of a Select field, with an empty choice first. */
-export const getSelectOptions = (field) => ["", ...(field.options || "").split("\n").filter(Boolean)];
+export const getSelectOptions = (field) => [
+	"",
+	...(field.options || "").split("\n").filter(Boolean),
+];
 
 const EDITABLE_TYPES = new Set([
 	"Data",
@@ -84,6 +88,7 @@ const EDITABLE_TYPES = new Set([
 	"Select",
 	"Link",
 	"Dynamic Link",
+	"Table MultiSelect",
 ]);
 
 export const getWritableFields = (fields) =>

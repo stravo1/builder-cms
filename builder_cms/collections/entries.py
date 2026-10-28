@@ -7,6 +7,7 @@ who can do what. A read names only the fields that are safe to publish.
 import frappe
 from frappe import _
 
+from builder_cms.collections.references import MultiReference
 from builder_cms.collections.schema import CollectionSchema, slugify
 
 # the most rows one request may ask for; the table asks for fewer
@@ -47,6 +48,15 @@ class CollectionEntries:
 		return [field.fieldname for field in CollectionSchema(self.doctype).fields]
 
 	@property
+	def multi_references(self) -> dict[str, MultiReference]:
+		fields = CollectionSchema(self.doctype).fields
+		return {
+			field.fieldname: MultiReference(field)
+			for field in fields
+			if field.fieldtype == "Table MultiSelect"
+		}
+
+	@property
 	def writable_fieldnames(self) -> list[str]:
 		fields = CollectionSchema(self.doctype).fields
 		return [
@@ -85,13 +95,18 @@ class CollectionEntries:
 			frappe.throw(_("{0} has no fields {1}.").format(self.doctype, ", ".join(sorted(unknown))))
 		if not 0 < page_length <= MAX_ROWS_PER_PAGE:
 			frappe.throw(_("Ask for 1 to {0} rows at a time.").format(MAX_ROWS_PER_PAGE))
-		return frappe.get_list(
+		references = {name: each for name, each in self.multi_references.items() if name in fieldnames}
+		columns = [name for name in fieldnames if name not in references]
+		rows = frappe.get_list(
 			self.doctype,
-			fields=["name", *fieldnames],
+			fields=["name", *columns, *(each.child_query for each in references.values())],
 			order_by="modified desc",
 			start=start,
 			page_length=page_length,
 		)
+		for row in rows:
+			row.update({name: each.to_names(row.get(name)) for name, each in references.items()})
+		return rows
 
 	def get(self, name: str) -> dict:
 		document = frappe.get_doc(self.doctype, name)
@@ -99,13 +114,17 @@ class CollectionEntries:
 		return self.read(document)
 
 	def read(self, document) -> dict:
-		return {fieldname: document.get(fieldname) for fieldname in ["name", "modified", *self.fieldnames]}
+		entry = {fieldname: document.get(fieldname) for fieldname in ["name", "modified", *self.fieldnames]}
+		return {**entry, **{name: each.read(document) for name, each in self.multi_references.items()}}
 
 	def save(self, entry: dict) -> dict:
 		"""Inserts an entry with no name. With a name, it changes only the fields the entry holds."""
 		name = entry.get("name")
 		document = frappe.get_doc(self.doctype, name) if name else frappe.new_doc(self.doctype)
 		document.update({key: entry[key] for key in self.writable_fieldnames if key in entry})
+		for name, reference in self.multi_references.items():
+			if name in entry:
+				document.set(name, reference.to_rows(entry[name]))
 		if not self.collection.is_mapped and not document.slug:
 			document.slug = slugify(document.title or "")
 		document.save()
